@@ -6,10 +6,9 @@ def after_install():
     create_sfa_roles()
     setup_sfa_module()
     setup_sfa_workspace()
-    setup_default_configs()
     setup_custom_fields()
     frappe.db.commit()
-    frappe.msgprint(_("SFA Core installed successfully."))
+    frappe.msgprint(_("SFA Core installed successfully. Run bench migrate to create DocTypes."))
 
 def create_sfa_roles():
     """Create SFA-specific roles"""
@@ -57,19 +56,6 @@ def setup_sfa_workspace():
     })
     workspace.insert(ignore_permissions=True, ignore_links=True)
     frappe.db.commit()
-
-def setup_default_configs():
-    """Create default SFA configuration"""
-    configs = [
-        {"activity_type": "Visit Complete", "points": 10},
-        {"activity_type": "Order Placed", "points": 20},
-        {"activity_type": "Payment Collected", "points": 15},
-        {"activity_type": "Form Submitted", "points": 5},
-    ]
-    for config in configs:
-        if not frappe.db.exists("SFA Points Config", {"activity_type": config["activity_type"]}):
-            doc = frappe.get_doc({"doctype": "SFA Points Config", **config})
-            doc.insert(ignore_permissions=True)
 
 def setup_custom_fields():
     """Ensure custom fields exist on standard doctypes"""
