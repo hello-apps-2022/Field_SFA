@@ -1,0 +1,30 @@
+{
+  "creation": "2026-05-25 19:47:00.000000",
+  "docstatus": 0,
+  "doctype": "Page",
+  "icon": "map-marker",
+  "idx": 0,
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "sfa-visits",
+  "owner": "Administrator",
+  "page_name": "sfa-visits",
+  "roles": [
+    {
+      "role": "SFA Manager"
+    },
+    {
+      "role": "SFA Supervisor"
+    },
+    {
+      "role": "SFA Rep"
+    },
+    {
+      "role": "SFA Viewer"
+    }
+  ],
+  "standard": "Yes",
+  "title": "Sfa Visits",
+  "script": "frappe.pages['sfa-visits'].on_page_load = function(wrapper) {\n    var page = frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'Sfa Visits',\n        single_column: true\n    });\n};"
+}

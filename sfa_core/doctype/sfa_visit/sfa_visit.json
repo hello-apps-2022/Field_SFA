@@ -1,0 +1,172 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "beat_plan",
+    "customer",
+    "sales_person",
+    "visit_date",
+    "check_in_time",
+    "check_in_latitude",
+    "check_in_longitude",
+    "check_in_accuracy",
+    "check_out_time",
+    "check_out_latitude",
+    "check_out_longitude",
+    "check_out_accuracy",
+    "status",
+    "visit_purpose",
+    "notes",
+    "photos",
+    "distance_from_customer",
+    "duration_minutes",
+    "is_mandatory_form_completed"
+  ],
+  "fields": [
+    {
+      "fieldname": "beat_plan",
+      "label": "Beat Plan",
+      "fieldtype": "Link",
+      "options": "SFA Beat Plan"
+    },
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "sales_person",
+      "label": "Sales Person",
+      "fieldtype": "Link",
+      "options": "Sales Person",
+      "reqd": 1
+    },
+    {
+      "fieldname": "visit_date",
+      "label": "Visit Date",
+      "fieldtype": "Date",
+      "reqd": 1,
+      "default": "Today"
+    },
+    {
+      "fieldname": "check_in_time",
+      "label": "Check In Time",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "check_in_latitude",
+      "label": "Check In Latitude",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "check_in_longitude",
+      "label": "Check In Longitude",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "check_in_accuracy",
+      "label": "Check In Accuracy (m)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "check_out_time",
+      "label": "Check Out Time",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "check_out_latitude",
+      "label": "Check Out Latitude",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "check_out_longitude",
+      "label": "Check Out Longitude",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "check_out_accuracy",
+      "label": "Check Out Accuracy (m)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Open\\nIn Progress\\nCompleted\\nAuto Closed\\nCancelled",
+      "default": "Open"
+    },
+    {
+      "fieldname": "visit_purpose",
+      "label": "Visit Purpose",
+      "fieldtype": "Select",
+      "options": "Sales Order\\nPayment Collection\\nStock Check\\nMerchandising\\nRelationship\\nOther"
+    },
+    {
+      "fieldname": "notes",
+      "label": "Notes",
+      "fieldtype": "Text Editor"
+    },
+    {
+      "fieldname": "photos",
+      "label": "Photos",
+      "fieldtype": "Attach Image"
+    },
+    {
+      "fieldname": "distance_from_customer",
+      "label": "Distance From Customer (m)",
+      "fieldtype": "Float",
+      "read_only": 1
+    },
+    {
+      "fieldname": "duration_minutes",
+      "label": "Duration (minutes)",
+      "fieldtype": "Int",
+      "read_only": 1
+    },
+    {
+      "fieldname": "is_mandatory_form_completed",
+      "label": "Mandatory Form Completed",
+      "fieldtype": "Check",
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "SFA Visit",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

@@ -1,0 +1,27 @@
+{
+  "name": "sfa_core",
+  "version": "0.0.1",
+  "description": "Sales Force Automation Platform - Vue Desk UI",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0",
+    "pinia": "^2.1.0",
+    "survey-creator-vue": "^1.9.120",
+    "survey-vue-ui": "^1.9.120",
+    "leaflet": "^1.9.4",
+    "@vueuse/core": "^10.7.0",
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.0.0",
+    "sass": "^1.69.0"
+  }
+}

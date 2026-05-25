@@ -1,0 +1,114 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "form_template",
+    "customer",
+    "visit",
+    "assigned_by",
+    "assigned_date",
+    "due_date",
+    "status",
+    "completed_date",
+    "form_response"
+  ],
+  "fields": [
+    {
+      "fieldname": "form_template",
+      "label": "Form Template",
+      "fieldtype": "Link",
+      "options": "SFA Form Template",
+      "reqd": 1
+    },
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "visit",
+      "label": "Visit",
+      "fieldtype": "Link",
+      "options": "SFA Visit"
+    },
+    {
+      "fieldname": "assigned_by",
+      "label": "Assigned By",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1,
+      "default": "__user"
+    },
+    {
+      "fieldname": "assigned_date",
+      "label": "Assigned Date",
+      "fieldtype": "Datetime",
+      "default": "Now",
+      "read_only": 1
+    },
+    {
+      "fieldname": "due_date",
+      "label": "Due Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Pending\\nIn Progress\\nCompleted\\nOverdue",
+      "default": "Pending"
+    },
+    {
+      "fieldname": "completed_date",
+      "label": "Completed Date",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "form_response",
+      "label": "Form Response",
+      "fieldtype": "Link",
+      "options": "SFA Form Response",
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "SFA Form Assignment",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
