@@ -1,0 +1,3 @@
+/* SFA Core Bundle - Frappe esbuild entry point */
+@import '../src/styles/variables.scss';
+@import '../src/styles/main.scss';
