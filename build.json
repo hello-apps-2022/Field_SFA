@@ -1,0 +1,5 @@
+{
+  "apps": ["sfa_core"],
+  "css": ["sfa_core.bundle.css"],
+  "js": ["sfa_desk.bundle.js"]
+}
