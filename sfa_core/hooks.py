@@ -22,6 +22,7 @@ doc_events = {
     "Sales Order": {
         "validate": "sfa_core.doc_events.sales_order.validate",
         "on_submit": "sfa_core.doc_events.sales_order.on_submit",
+        "on_cancel": "sfa_core.doc_events.sales_order.on_cancel",
     },
     "SFA Visit": {
         "validate": "sfa_core.doc_events.visit.validate",

@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 
-def validate_payment(doc, method):
+def validate(doc, method):
     """Validate payment data"""
     if doc.amount <= 0:
         frappe.throw(_("Payment amount must be greater than zero"))

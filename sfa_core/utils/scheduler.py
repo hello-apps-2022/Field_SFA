@@ -50,21 +50,25 @@ def auto_close_visits():
     from datetime import datetime, timedelta
 
     # Close visits that are 500m away and inactive for 30 min
+    from frappe.utils import getdate
+    # Daily EOD: close all visits still open from today
     visits = frappe.get_all("SFA Visit",
         filters={
             "status": ["in", ["Open", "In Progress"]],
-            "check_in_time": ["<", add_days(now(), -1)]
+            "visit_date": getdate()
         },
-        fields=["name", "check_in_latitude", "check_in_longitude", "customer"])
+        fields=["name", "sales_person", "customer"])
 
     for visit in visits:
         try:
             doc = frappe.get_doc("SFA Visit", visit.name)
             doc.status = "Auto Closed"
+            doc.auto_closed = 1
+            doc.auto_close_reason = "Day End"
             doc.check_out_time = now()
             doc.save(ignore_permissions=True)
-        except Exception:
-            pass
+        except Exception as e:
+            frappe.log_error(f"Auto-close failed for visit {visit.name}: {e}")
 
 def check_daily_compliance():
     """Check daily visit compliance"""

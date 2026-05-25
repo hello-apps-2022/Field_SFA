@@ -25,6 +25,6 @@
     }
   ],
   "standard": "Yes",
-  "title": "Sfa Form Templates",
-  "script": "frappe.pages['sfa-form-templates'].on_page_load = function(wrapper) {\n    var page = frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'Sfa Form Templates',\n        single_column: true\n    });\n};"
+  "title": "SFA Form Templates",
+  "script": "frappe.pages['sfa-form-templates'].on_page_load = function(wrapper) {\n    var page = frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'SFA Form Templates',\n        single_column: true\n    });\n\n    var container = document.createElement('div');\n    container.id = 'sfa-forms-app';\n    container.innerHTML = '<form-templates></form-templates>';\n    page.main.append(container);\n\n    frappe.require('/assets/sfa_core/dist/sfa_desk.bundle.js', function() {\n        if (window.SFA_Core && window.SFA_Core.mount) {\n            window.SFA_Core.mount('#sfa-forms-app');\n        }\n    });\n};\n"
 }

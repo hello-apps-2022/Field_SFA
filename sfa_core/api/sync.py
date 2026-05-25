@@ -60,8 +60,8 @@ def push_sync_data(data):
             v = frappe.get_doc({"doctype": "SFA Visit", **visit})
             v.insert(ignore_permissions=True)
             results["visits_created"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            frappe.log_error(f"Sync: failed to create visit: {e}")
 
     # Process payments
     for payment in data.get("payments", []):
@@ -69,8 +69,8 @@ def push_sync_data(data):
             p = frappe.get_doc({"doctype": "SFA Payment", **payment})
             p.insert(ignore_permissions=True)
             results["payments_created"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            frappe.log_error(f"Sync: failed to create payment: {e}")
 
     # Process GPS tracks
     for track in data.get("gps_tracks", []):
@@ -78,8 +78,8 @@ def push_sync_data(data):
             t = frappe.get_doc({"doctype": "SFA GPS Track Point", **track})
             t.insert(ignore_permissions=True)
             results["gps_tracks_created"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            frappe.log_error(f"Sync: failed to create GPS track: {e}")
 
     # Process form responses
     for response in data.get("form_responses", []):
@@ -87,7 +87,7 @@ def push_sync_data(data):
             r = frappe.get_doc({"doctype": "SFA Form Response", **response})
             r.insert(ignore_permissions=True)
             results["form_responses_created"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            frappe.log_error(f"Sync: failed to create form response: {e}")
 
     return results

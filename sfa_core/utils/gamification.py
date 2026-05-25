@@ -12,8 +12,11 @@ def award_points(sales_person, activity_type, base_points, reference_doctype=Non
     points = int(base_points * multiplier)
 
     # Get current balance
-    current_balance = frappe.db.get_value("SFA Rep Points Ledger", 
-        {"sales_person": sales_person}, "SUM(points)") or 0
+    result = frappe.db.sql(
+        "SELECT SUM(points) FROM `tabSFA Rep Points Ledger` WHERE sales_person = %s",
+        (sales_person,)
+    )
+    current_balance = result[0][0] or 0
 
     ledger = frappe.get_doc({
         "doctype": "SFA Rep Points Ledger",

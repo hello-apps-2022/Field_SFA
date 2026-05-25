@@ -11,18 +11,29 @@ def get_leaderboard(period=None, limit=50):
         start_date = add_months(getdate(), -1) if period == "month" else add_months(getdate(), -3)
         filters["timestamp"] = [">=", start_date]
 
-    leaderboard = frappe.db.sql("""
-        SELECT 
-            sales_person,
-            SUM(points) as total_points,
-            COUNT(DISTINCT reference_name) as activities
-        FROM `tabSFA Rep Points Ledger`
-        WHERE 1=1 {condition}
-        GROUP BY sales_person
-        ORDER BY total_points DESC
-        LIMIT %s
-    """.format(condition="AND timestamp >= %(start_date)s" if period else ""),
-    {"start_date": start_date if period else None, "limit": limit}, as_dict=True)
+    if period:
+        leaderboard = frappe.db.sql("""
+            SELECT 
+                sales_person,
+                SUM(points) as total_points,
+                COUNT(DISTINCT reference_name) as activities
+            FROM `tabSFA Rep Points Ledger`
+            WHERE timestamp >= %s
+            GROUP BY sales_person
+            ORDER BY total_points DESC
+            LIMIT %s
+        """, (start_date, limit), as_dict=True)
+    else:
+        leaderboard = frappe.db.sql("""
+            SELECT 
+                sales_person,
+                SUM(points) as total_points,
+                COUNT(DISTINCT reference_name) as activities
+            FROM `tabSFA Rep Points Ledger`
+            GROUP BY sales_person
+            ORDER BY total_points DESC
+            LIMIT %s
+        """, (limit,), as_dict=True)
 
     return leaderboard
 
@@ -39,7 +50,10 @@ def get_rep_badges(sales_person):
 @frappe.whitelist()
 def get_rep_points(sales_person):
     """Get total points for a sales person"""
-    total = frappe.db.get_value("SFA Rep Points Ledger",
-        {"sales_person": sales_person}, "SUM(points)") or 0
+    result = frappe.db.sql(
+        "SELECT SUM(points) FROM `tabSFA Rep Points Ledger` WHERE sales_person = %s",
+        (sales_person,)
+    )
+    total = result[0][0] or 0
 
     return {"sales_person": sales_person, "total_points": total}

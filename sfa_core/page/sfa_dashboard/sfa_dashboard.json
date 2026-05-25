@@ -25,6 +25,6 @@
     }
   ],
   "standard": "Yes",
-  "title": "Sfa Dashboard",
-  "script": "frappe.pages['sfa-dashboard'].on_page_load = function(wrapper) {\n    var page = frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'Sfa Dashboard',\n        single_column: true\n    });\n};"
+  "title": "SFA Dashboard",
+  "script": "frappe.pages['sfa-dashboard'].on_page_load = function(wrapper) {\n    var page = frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'SFA Dashboard',\n        single_column: true\n    });\n\n    // Mount Vue SFA Dashboard component\n    var container = document.createElement('div');\n    container.id = 'sfa-app';\n    container.innerHTML = '<sfa-dashboard></sfa-dashboard>';\n    page.main.append(container);\n\n    // Wait for SFA bundle to be available\n    frappe.require('/assets/sfa_core/dist/sfa_desk.bundle.js', function() {\n        if (window.SFA_Core && window.SFA_Core.mount) {\n            window.SFA_Core.mount('#sfa-app');\n        }\n    });\n};\n"
 }

@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import now, time_diff_in_minutes, getdate
 
-def validate_visit(doc, method):
+def validate(doc, method):
     """Validate visit data"""
     if doc.check_in_time and doc.check_out_time:
         if doc.check_out_time < doc.check_in_time:

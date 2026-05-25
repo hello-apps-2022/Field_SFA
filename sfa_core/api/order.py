@@ -4,8 +4,6 @@ from frappe import _
 @frappe.whitelist()
 def create_order(customer, items, sales_person, visit=None, **kwargs):
     """Create sales order from mobile app"""
-    from erpnext.selling.doctype.sales_order.sales_order import make_sales_order
-
     order_items = []
     for item in items:
         order_items.append({

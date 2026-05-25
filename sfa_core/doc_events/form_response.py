@@ -1,7 +1,8 @@
 import frappe
 from frappe import _
+from frappe.utils import now
 
-def validate_response(doc, method):
+def validate(doc, method):
     """Validate form response"""
     if not doc.responses and not doc.text_responses and not doc.option_responses:
         frappe.throw(_("At least one response is required"))

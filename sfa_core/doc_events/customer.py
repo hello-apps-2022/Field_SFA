@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 
-def validate_customer(doc, method):
+def validate(doc, method):
     """Validate customer SFA fields"""
     if doc.custom_visit_frequency and doc.custom_visit_frequency < 0:
         frappe.throw(_("Visit Frequency cannot be negative"))

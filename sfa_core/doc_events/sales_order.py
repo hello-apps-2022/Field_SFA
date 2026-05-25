@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 
-def validate_order(doc, method):
+def validate(doc, method):
     """Link SFA visit and validate carton quantities"""
     if doc.custom_sfa_visit:
         visit = frappe.get_doc("SFA Visit", doc.custom_sfa_visit)
