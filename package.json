@@ -14,7 +14,7 @@
     "vue-router": "^4.2.0",
     "pinia": "^2.1.0",
     "survey-creator-vue": "^1.9.120",
-    "survey-vue-ui": "^1.9.120",
+    "survey-vue3-ui": "^1.9.120",
     "leaflet": "^1.9.4",
     "@vueuse/core": "^10.7.0",
     "dayjs": "^1.11.10"

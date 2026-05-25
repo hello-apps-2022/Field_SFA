@@ -8,10 +8,9 @@ app_license = "mit"
 required_apps = ["erpnext"]
 app_version = "0.0.1"
 
-# Assets are built via Vite, not Frappe esbuild
-# Run: cd apps/sfa_core && npm install && npm run build
-# app_include_css = "/assets/sfa_core/dist/sfa_core.bundle.css"
-# app_include_js = "/assets/sfa_core/dist/sfa_desk.bundle.js"
+# Assets - placeholders in public/dist, run npm run build for real assets
+app_include_css = "/assets/sfa_core/dist/sfa_core.bundle.css"
+app_include_js = "/assets/sfa_core/dist/sfa_desk.bundle.js"
 
 after_install = "sfa_core.install.after_install.after_install"
 boot_session = "sfa_core.boot.boot_session"
