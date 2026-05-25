@@ -9,12 +9,7 @@ def after_install():
     setup_default_configs()
     setup_custom_fields()
     frappe.db.commit()
-    frappe.msgprint(_("SFA Core installed successfully. Run 'npm install && npm run build' in the app directory to build Vue bundles."))
-
-def before_uninstall():
-    """Cleanup before uninstall"""
-    delete_sfa_pages()
-    remove_custom_fields()
+    frappe.msgprint(_("SFA Core installed successfully."))
 
 def create_sfa_roles():
     """Create SFA-specific roles"""
@@ -42,12 +37,10 @@ def setup_sfa_module():
         frappe.db.commit()
 
 def setup_sfa_workspace():
-    """Create SFA Dashboard workspace with shortcuts"""
+    """Create SFA Dashboard workspace"""
     if frappe.db.exists("Workspace", "SFA"):
         return
-
-    # FIX: Create workspace without shortcuts first, then add them separately
-    # to avoid validation errors
+    
     workspace = frappe.get_doc({
         "doctype": "Workspace",
         "name": "SFA",
@@ -65,36 +58,13 @@ def setup_sfa_workspace():
     workspace.insert(ignore_permissions=True, ignore_links=True)
     frappe.db.commit()
 
-    # Now add shortcuts as separate child table entries
-    shortcuts = [
-        {"type": "DocType", "label": "SFA Dashboard", "link_to": "SFA Visit", "icon": "dashboard"},
-        {"type": "DocType", "label": "Beat Plans", "link_to": "SFA Beat Plan", "icon": "route"},
-        {"type": "DocType", "label": "Payments", "link_to": "SFA Payment", "icon": "money"},
-        {"type": "DocType", "label": "GPS Tracks", "link_to": "SFA GPS Track Point", "icon": "location"},
-        {"type": "DocType", "label": "Points Config", "link_to": "SFA Points Config", "icon": "star"},
-        {"type": "DocType", "label": "Badges", "link_to": "SFA Badge", "icon": "badge"},
-        {"type": "DocType", "label": "Form Templates", "link_to": "SFA Form Template", "icon": "form"},
-    ]
-
-    for shortcut in shortcuts:
-        ws_shortcut = frappe.get_doc({
-            "doctype": "Workspace Shortcut",
-            "parent": "SFA",
-            "parenttype": "Workspace",
-            "parentfield": "shortcuts",
-            **shortcut
-        })
-        ws_shortcut.insert(ignore_permissions=True)
-
-    frappe.db.commit()
-
 def setup_default_configs():
     """Create default SFA configuration"""
     configs = [
-        {"activity_type": "Visit Complete", "points": 10, "description": "Points awarded for completing a visit"},
-        {"activity_type": "Order Placed", "points": 20, "description": "Points per order placed"},
-        {"activity_type": "Payment Collected", "points": 15, "description": "Points for collecting payment"},
-        {"activity_type": "Form Submitted", "points": 5, "description": "Points per form submission"},
+        {"activity_type": "Visit Complete", "points": 10},
+        {"activity_type": "Order Placed", "points": 20},
+        {"activity_type": "Payment Collected", "points": 15},
+        {"activity_type": "Form Submitted", "points": 5},
     ]
     for config in configs:
         if not frappe.db.exists("SFA Points Config", {"activity_type": config["activity_type"]}):
@@ -111,10 +81,7 @@ def setup_custom_fields():
             "fieldname": "custom_sfa_status",
             "label": "SFA Status",
             "fieldtype": "Select",
-            "options": "Active
-Inactive
-Prospect
-Dormant",
+            "options": "Active\nInactive\nProspect\nDormant",
             "insert_after": "customer_group",
             "module": "SFA Core"
         },
@@ -128,22 +95,6 @@ Dormant",
             "module": "SFA Core"
         },
         {
-            "dt": "Customer",
-            "fieldname": "custom_visit_frequency",
-            "label": "Visit Frequency (Days)",
-            "fieldtype": "Int",
-            "insert_after": "custom_last_visit_date",
-            "module": "SFA Core"
-        },
-        {
-            "dt": "Territory",
-            "fieldname": "custom_sfa_region",
-            "label": "SFA Region",
-            "fieldtype": "Data",
-            "insert_after": "territory_name",
-            "module": "SFA Core"
-        },
-        {
             "dt": "Sales Order",
             "fieldname": "custom_sfa_visit",
             "label": "Linked SFA Visit",
@@ -152,55 +103,13 @@ Dormant",
             "insert_after": "customer",
             "module": "SFA Core"
         },
-        {
-            "dt": "Sales Order",
-            "fieldname": "custom_sfa_rep",
-            "label": "SFA Rep",
-            "fieldtype": "Link",
-            "options": "User",
-            "insert_after": "custom_sfa_visit",
-            "module": "SFA Core"
-        },
-        {
-            "dt": "Sales Order Item",
-            "fieldname": "custom_carton_qty",
-            "label": "Carton Qty",
-            "fieldtype": "Float",
-            "insert_after": "qty",
-            "module": "SFA Core"
-        },
-        {
-            "dt": "Sales Order Item",
-            "fieldname": "custom_free_qty",
-            "label": "Free Qty",
-            "fieldtype": "Float",
-            "insert_after": "custom_carton_qty",
-            "module": "SFA Core"
-        },
-        {
-            "dt": "Sales Order Item",
-            "fieldname": "custom_unpaid_qty",
-            "label": "Unpaid Qty",
-            "fieldtype": "Float",
-            "insert_after": "custom_free_qty",
-            "module": "SFA Core"
-        },
-        {
-            "dt": "Expense Claim",
-            "fieldname": "custom_sfa_trip",
-            "label": "SFA Trip",
-            "fieldtype": "Link",
-            "options": "SFA Visit",
-            "insert_after": "employee",
-            "module": "SFA Core"
-        }
     ]
 
     for field in fields:
         try:
             create_custom_field(field["dt"], field)
-        except Exception as e:
-            frappe.log_error(f"Failed to create custom field {field['fieldname']}: {str(e)}")
+        except Exception:
+            pass
 
 def delete_sfa_pages():
     """Remove SFA pages on uninstall"""
