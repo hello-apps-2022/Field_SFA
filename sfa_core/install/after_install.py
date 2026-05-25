@@ -4,11 +4,12 @@ from frappe import _
 def after_install():
     """Post-install setup for SFA Core"""
     create_sfa_roles()
+    frappe.db.commit()
     setup_sfa_module()
     setup_sfa_workspace()
     setup_custom_fields()
     frappe.db.commit()
-    frappe.msgprint(_("SFA Core installed successfully. Run bench migrate to create DocTypes."))
+    frappe.msgprint(_("SFA Core installed successfully."))
 
 def create_sfa_roles():
     """Create SFA-specific roles"""
@@ -40,6 +41,10 @@ def setup_sfa_workspace():
     if frappe.db.exists("Workspace", "SFA"):
         return
     
+    # Ensure module exists before creating workspace
+    if not frappe.db.exists("Module Def", "SFA Core"):
+        setup_sfa_module()
+    
     workspace = frappe.get_doc({
         "doctype": "Workspace",
         "name": "SFA",
@@ -54,7 +59,7 @@ def setup_sfa_workspace():
         "shortcuts": [],
         "links": []
     })
-    workspace.insert(ignore_permissions=True, ignore_links=True)
+    workspace.insert(ignore_permissions=True, ignore_links=True, ignore_mandatory=True)
     frappe.db.commit()
 
 def setup_custom_fields():
@@ -69,7 +74,6 @@ def setup_custom_fields():
             "fieldtype": "Select",
             "options": "Active\nInactive\nProspect\nDormant",
             "insert_after": "customer_group",
-            "module": "SFA Core"
         },
         {
             "dt": "Customer",
@@ -78,7 +82,6 @@ def setup_custom_fields():
             "fieldtype": "Date",
             "insert_after": "custom_sfa_status",
             "read_only": 1,
-            "module": "SFA Core"
         },
         {
             "dt": "Sales Order",
@@ -87,15 +90,15 @@ def setup_custom_fields():
             "fieldtype": "Link",
             "options": "SFA Visit",
             "insert_after": "customer",
-            "module": "SFA Core"
         },
     ]
 
     for field in fields:
         try:
-            create_custom_field(field["dt"], field)
-        except Exception:
-            pass
+            dt = field.pop("dt")
+            create_custom_field(dt, field)
+        except Exception as e:
+            frappe.log_error(f"SFA Core: Failed to create custom field {field.get('fieldname')}: {str(e)}")
 
 def delete_sfa_pages():
     """Remove SFA pages on uninstall"""
