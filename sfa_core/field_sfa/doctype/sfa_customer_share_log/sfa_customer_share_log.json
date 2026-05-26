@@ -1,0 +1,102 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "customer",
+    "sales_person",
+    "share_date",
+    "share_type",
+    "previous_sales_person",
+    "transfer_reason",
+    "approved_by",
+    "is_active"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "sales_person",
+      "label": "Sales Person",
+      "fieldtype": "Link",
+      "options": "Sales Person",
+      "reqd": 1
+    },
+    {
+      "fieldname": "share_date",
+      "label": "Share Date",
+      "fieldtype": "Date",
+      "reqd": 1,
+      "default": "Today"
+    },
+    {
+      "fieldname": "share_type",
+      "label": "Share Type",
+      "fieldtype": "Select",
+      "options": "Primary\nSecondary\nTemporary",
+      "reqd": 1
+    },
+    {
+      "fieldname": "previous_sales_person",
+      "label": "Previous Sales Person",
+      "fieldtype": "Link",
+      "options": "Sales Person"
+    },
+    {
+      "fieldname": "transfer_reason",
+      "label": "Transfer Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "approved_by",
+      "label": "Approved By",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "Field SFA",
+  "name": "SFA Customer Share Log",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

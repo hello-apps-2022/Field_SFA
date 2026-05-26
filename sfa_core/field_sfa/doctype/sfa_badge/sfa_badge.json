@@ -1,0 +1,91 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "badge_name",
+    "description",
+    "icon",
+    "criteria_type",
+    "threshold_value",
+    "period_days",
+    "points_bonus",
+    "is_active"
+  ],
+  "fields": [
+    {
+      "fieldname": "badge_name",
+      "label": "Badge Name",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "icon",
+      "label": "Icon",
+      "fieldtype": "Attach Image",
+      "description": "Badge icon image"
+    },
+    {
+      "fieldname": "criteria_type",
+      "label": "Criteria Type",
+      "fieldtype": "Select",
+      "options": "Visit Count\nOrder Value\nPayment Amount\nPoints Threshold\nConsecutive Days\nCustom",
+      "reqd": 1
+    },
+    {
+      "fieldname": "threshold_value",
+      "label": "Threshold Value",
+      "fieldtype": "Float",
+      "reqd": 1
+    },
+    {
+      "fieldname": "period_days",
+      "label": "Period (Days)",
+      "fieldtype": "Int",
+      "description": "Time window for criteria (0 = all time)"
+    },
+    {
+      "fieldname": "points_bonus",
+      "label": "Points Bonus",
+      "fieldtype": "Int",
+      "default": 0
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "Field SFA",
+  "name": "SFA Badge",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
