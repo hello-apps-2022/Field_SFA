@@ -1,20 +1,31 @@
 frappe.pages['sfa-dashboard'].on_page_load = function(wrapper) {
-    var page = frappe.ui.make_app_page({
+    // Full-screen SFA app - hide sidebar for clean UI like Frappe CRM
+    frappe.ui.make_app_page({
         parent: wrapper,
-        title: 'SFA Dashboard',
+        title: 'SFA',
         single_column: true
     });
 
-    // Mount Vue SFA Dashboard component
-    var container = document.createElement('div');
-    container.id = 'sfa-app';
-    container.innerHTML = '<sfa-dashboard></sfa-dashboard>';
-    page.main.append(container);
+    // Create mount container
+    var $container = $('<div id="sfa-root" style="height: calc(100vh - 60px); overflow: auto;"></div>');
+    $(wrapper).find('.page-content').html($container);
 
-    // Wait for SFA bundle to be available
-    frappe.require('/assets/sfa_core/dist/sfa_desk.bundle.js', function() {
+    // Load and mount Vue SPA
+    frappe.require([
+        '/assets/sfa_core/dist/sfa_desk.bundle.js',
+        '/assets/sfa_core/dist/sfa_core.bundle.css'
+    ], function() {
         if (window.SFA_Core && window.SFA_Core.mount) {
-            window.SFA_Core.mount('#sfa-app');
+            window.SFA_Core.mount('#sfa-root');
+        } else {
+            $container.html('<p style="padding:20px;color:#888;">SFA app failed to load. Run: bench build --apps sfa_core</p>');
         }
     });
+};
+
+frappe.pages['sfa-dashboard'].on_page_show = function(wrapper) {
+    // Restore router view on tab re-focus
+    if (window.SFA_Core && window.SFA_Core.router) {
+        // Router is already active, nothing to do
+    }
 };

@@ -1,15 +1,18 @@
 import frappe
 from frappe import _
 
+
 def after_install():
     """Post-install setup for SFA Core"""
     create_sfa_roles()
     frappe.db.commit()
     setup_sfa_module()
+    frappe.db.commit()
     setup_sfa_workspace()
     setup_custom_fields()
     frappe.db.commit()
-    frappe.msgprint(_("SFA Core installed successfully."))
+    frappe.msgprint(_("SFA Core installed successfully. Please run bench migrate if DocTypes are not visible."))
+
 
 def create_sfa_roles():
     """Create SFA-specific roles"""
@@ -24,6 +27,7 @@ def create_sfa_roles():
             doc = frappe.get_doc({"doctype": "Role", **role})
             doc.insert(ignore_permissions=True)
 
+
 def setup_sfa_module():
     """Create SFA Core module"""
     if not frappe.db.exists("Module Def", "SFA Core"):
@@ -31,36 +35,227 @@ def setup_sfa_module():
             "doctype": "Module Def",
             "module_name": "SFA Core",
             "app_name": "sfa_core",
-            "custom": 0
+            "custom": 0,
         })
         module.insert(ignore_permissions=True)
         frappe.db.commit()
 
+
 def setup_sfa_workspace():
-    """Create SFA Dashboard workspace"""
+    """Create SFA workspace with shortcuts and document links"""
     if frappe.db.exists("Workspace", "SFA"):
-        return
-    
-    # Ensure module exists before creating workspace
-    if not frappe.db.exists("Module Def", "SFA Core"):
-        setup_sfa_module()
-    
-    workspace = frappe.get_doc({
-        "doctype": "Workspace",
-        "name": "SFA",
+        # Update existing workspace with proper content
+        ws = frappe.get_doc("Workspace", "SFA")
+    else:
+        ws = frappe.new_doc("Workspace")
+        ws.name = "SFA"
+
+    ws.update({
         "label": "SFA",
         "title": "SFA",
-        "icon": "dashboard",
+        "icon": "target",
         "module": "SFA Core",
-        "for_user": "",
         "is_standard": 1,
         "public": 1,
-        "charts": [],
-        "shortcuts": [],
-        "links": []
+        "for_user": "",
+        "sequence_id": 99,
+        "shortcuts": [
+            {
+                "type": "Page",
+                "label": "SFA Dashboard",
+                "link_to": "sfa-dashboard",
+                "color": "#2563EB",
+                "icon": "dashboard",
+            },
+            {
+                "type": "Page",
+                "label": "Visits",
+                "link_to": "sfa-visits",
+                "color": "#16A34A",
+                "icon": "map-marker",
+            },
+            {
+                "type": "Page",
+                "label": "Form Templates",
+                "link_to": "sfa-form-templates",
+                "color": "#7C3AED",
+                "icon": "form",
+            },
+            {
+                "type": "DocType",
+                "label": "Beat Plans",
+                "link_to": "SFA Beat Plan",
+                "color": "#D97706",
+                "icon": "calendar",
+            },
+            {
+                "type": "DocType",
+                "label": "SFA Payments",
+                "link_to": "SFA Payment",
+                "color": "#E11D48",
+                "icon": "currency",
+            },
+        ],
+        "links": [
+            {
+                "type": "Card Break",
+                "label": "Field Operations",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Visit",
+                "link_type": "DocType",
+                "link_to": "SFA Visit",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Beat Plan",
+                "link_type": "DocType",
+                "link_to": "SFA Beat Plan",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Payment",
+                "link_type": "DocType",
+                "link_to": "SFA Payment",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Field Activity",
+                "link_type": "DocType",
+                "link_to": "SFA Field Activity",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Card Break",
+                "label": "Customers & Territory",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Customer",
+                "link_type": "DocType",
+                "link_to": "Customer",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Saved Location",
+                "link_type": "DocType",
+                "link_to": "SFA Saved Location",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Card Break",
+                "label": "Forms & Intelligence",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Form Template",
+                "link_type": "DocType",
+                "link_to": "SFA Form Template",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Form Response",
+                "link_type": "DocType",
+                "link_to": "SFA Form Response",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Card Break",
+                "label": "Gamification",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Points Config",
+                "link_type": "DocType",
+                "link_to": "SFA Points Config",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Badge",
+                "link_type": "DocType",
+                "link_to": "SFA Badge",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Rep Points Ledger",
+                "link_type": "DocType",
+                "link_to": "SFA Rep Points Ledger",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Card Break",
+                "label": "Reports",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Visit Compliance",
+                "link_type": "Report",
+                "link_to": "visit_compliance",
+                "is_query_report": 1,
+            },
+            {
+                "type": "Link",
+                "label": "Rep Productivity",
+                "link_type": "Report",
+                "link_to": "rep_productivity",
+                "is_query_report": 1,
+            },
+            {
+                "type": "Link",
+                "label": "Sales Performance",
+                "link_type": "Report",
+                "link_to": "sales_performance",
+                "is_query_report": 1,
+            },
+            {
+                "type": "Link",
+                "label": "Leaderboard",
+                "link_type": "Report",
+                "link_to": "leaderboard",
+                "is_query_report": 1,
+            },
+            {
+                "type": "Card Break",
+                "label": "Settings",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA Target Period",
+                "link_type": "DocType",
+                "link_to": "SFA Target Period",
+                "is_query_report": 0,
+            },
+            {
+                "type": "Link",
+                "label": "SFA SKU Points Multiplier",
+                "link_type": "DocType",
+                "link_to": "SFA SKU Points Multiplier",
+                "is_query_report": 0,
+            },
+        ],
     })
-    workspace.insert(ignore_permissions=True, ignore_links=True, ignore_mandatory=True)
+
+    if ws.is_new():
+        ws.insert(ignore_permissions=True)
+    else:
+        ws.save(ignore_permissions=True)
+
     frappe.db.commit()
+
 
 def setup_custom_fields():
     """Ensure custom fields exist on standard doctypes"""
@@ -99,28 +294,3 @@ def setup_custom_fields():
             create_custom_field(dt, field)
         except Exception as e:
             frappe.log_error(f"SFA Core: Failed to create custom field {field.get('fieldname')}: {str(e)}")
-
-def delete_sfa_pages():
-    """Remove SFA pages on uninstall"""
-    pages = ["sfa-dashboard", "sfa-visits", "sfa-form-templates"]
-    for page in pages:
-        if frappe.db.exists("Page", page):
-            frappe.delete_doc("Page", page, ignore_permissions=True)
-
-def remove_custom_fields():
-    """Remove custom fields on uninstall"""
-    fields = [
-        ("Customer", "custom_sfa_status"),
-        ("Customer", "custom_last_visit_date"),
-        ("Customer", "custom_visit_frequency"),
-        ("Territory", "custom_sfa_region"),
-        ("Sales Order", "custom_sfa_visit"),
-        ("Sales Order", "custom_sfa_rep"),
-        ("Sales Order Item", "custom_carton_qty"),
-        ("Sales Order Item", "custom_free_qty"),
-        ("Sales Order Item", "custom_unpaid_qty"),
-        ("Expense Claim", "custom_sfa_trip"),
-    ]
-    for dt, fieldname in fields:
-        if frappe.db.exists("Custom Field", {"dt": dt, "fieldname": fieldname}):
-            frappe.delete_doc("Custom Field", f"{dt}-{fieldname}", ignore_permissions=True)
