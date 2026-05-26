@@ -1,0 +1,41 @@
+import frappe
+from frappe import _
+
+@frappe.whitelist()
+def upload_gps_track(points):
+    """Upload GPS track points from mobile app"""
+    created = 0
+    for point in points:
+        track = frappe.get_doc({
+            "doctype": "SFA GPS Track Point",
+            "sales_person": point.get("sales_person"),
+            "timestamp": point.get("timestamp"),
+            "latitude": point.get("latitude"),
+            "longitude": point.get("longitude"),
+            "accuracy": point.get("accuracy"),
+            "altitude": point.get("altitude"),
+            "speed": point.get("speed"),
+            "battery_level": point.get("battery_level"),
+            "visit": point.get("visit"),
+            "sync_status": "Synced"
+        })
+        track.insert(ignore_permissions=True)
+        created += 1
+
+    return {"created": created}
+
+@frappe.whitelist()
+def get_gps_tracks(sales_person, date=None, limit=1000):
+    """Get GPS tracks for a sales person"""
+    filters = {"sales_person": sales_person}
+    if date:
+        filters["timestamp"] = ["like", f"{date}%"]
+
+    tracks = frappe.get_all("SFA GPS Track Point",
+        filters=filters,
+        fields=["name", "timestamp", "latitude", "longitude", "accuracy", 
+                "altitude", "speed", "battery_level"],
+        limit=limit,
+        order_by="timestamp")
+
+    return tracks

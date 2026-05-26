@@ -1,0 +1,30 @@
+{
+  "creation": "2026-05-25 19:47:00.000000",
+  "docstatus": 0,
+  "doctype": "Page",
+  "icon": "dashboard",
+  "idx": 0,
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "sfa-dashboard",
+  "owner": "Administrator",
+  "page_name": "sfa-dashboard",
+  "roles": [
+    {
+      "role": "SFA Manager"
+    },
+    {
+      "role": "SFA Supervisor"
+    },
+    {
+      "role": "SFA Rep"
+    },
+    {
+      "role": "SFA Viewer"
+    }
+  ],
+  "standard": "Yes",
+  "title": "SFA Dashboard",
+  "script": "frappe.pages['sfa-dashboard'].on_page_load = function(wrapper) {\n    // Full-screen SFA app - hide sidebar for clean UI like Frappe CRM\n    frappe.ui.make_app_page({\n        parent: wrapper,\n        title: 'SFA',\n        single_column: true\n    });\n\n    // Create mount container\n    var $container = $('<div id=\"sfa-root\" style=\"height: calc(100vh - 60px); overflow: auto;\"></div>');\n    $(wrapper).find('.page-content').html($container);\n\n    // Load and mount Vue SPA\n    frappe.require([\n        '/assets/sfa_core/dist/sfa_desk.bundle.js',\n        '/assets/sfa_core/dist/sfa_core.bundle.css'\n    ], function() {\n        if (window.SFA_Core && window.SFA_Core.mount) {\n            window.SFA_Core.mount('#sfa-root');\n        } else {\n            $container.html('<p style=\"padding:20px;color:#888;\">SFA app failed to load. Run: bench build --apps sfa_core</p>');\n        }\n    });\n};\n\nfrappe.pages['sfa-dashboard'].on_page_show = function(wrapper) {\n    // Restore router view on tab re-focus\n    if (window.SFA_Core && window.SFA_Core.router) {\n        // Router is already active, nothing to do\n    }\n};\n"
+}

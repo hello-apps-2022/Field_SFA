@@ -1,0 +1,73 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "customer",
+    "visit_sequence",
+    "estimated_time",
+    "visit_status",
+    "visit_notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "visit_sequence",
+      "label": "Visit Sequence",
+      "fieldtype": "Int",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "estimated_time",
+      "label": "Estimated Time (min)",
+      "fieldtype": "Int",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "visit_status",
+      "label": "Visit Status",
+      "fieldtype": "Select",
+      "options": "Pending\nVisited\nSkipped\nRescheduled",
+      "default": "Pending",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "visit_notes",
+      "label": "Visit Notes",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "Field SFA",
+  "name": "SFA Beat Plan Customer",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1,
+  "istable": 1
+}

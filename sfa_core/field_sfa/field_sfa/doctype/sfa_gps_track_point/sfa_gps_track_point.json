@@ -1,0 +1,113 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "sales_person",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "accuracy",
+    "altitude",
+    "speed",
+    "battery_level",
+    "visit",
+    "sync_status"
+  ],
+  "fields": [
+    {
+      "fieldname": "sales_person",
+      "label": "Sales Person",
+      "fieldtype": "Link",
+      "options": "Sales Person",
+      "reqd": 1
+    },
+    {
+      "fieldname": "timestamp",
+      "label": "Timestamp",
+      "fieldtype": "Datetime",
+      "reqd": 1,
+      "default": "Now"
+    },
+    {
+      "fieldname": "latitude",
+      "label": "Latitude",
+      "fieldtype": "Float",
+      "reqd": 1
+    },
+    {
+      "fieldname": "longitude",
+      "label": "Longitude",
+      "fieldtype": "Float",
+      "reqd": 1
+    },
+    {
+      "fieldname": "accuracy",
+      "label": "Accuracy (m)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "altitude",
+      "label": "Altitude (m)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "speed",
+      "label": "Speed (m/s)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "battery_level",
+      "label": "Battery Level (%)",
+      "fieldtype": "Percent"
+    },
+    {
+      "fieldname": "visit",
+      "label": "Linked Visit",
+      "fieldtype": "Link",
+      "options": "SFA Visit"
+    },
+    {
+      "fieldname": "sync_status",
+      "label": "Sync Status",
+      "fieldtype": "Select",
+      "options": "Pending\nSynced\nFailed",
+      "default": "Pending"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "Field SFA",
+  "name": "SFA GPS Track Point",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

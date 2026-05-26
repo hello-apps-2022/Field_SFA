@@ -1,0 +1,200 @@
+{
+  "doctype": "Workspace",
+  "name": "SFA",
+  "label": "SFA",
+  "title": "SFA",
+  "icon": "retail",
+  "module": "Field SFA",
+  "is_standard": 1,
+  "public": 1,
+  "for_user": "",
+  "sequence_id": 99.0,
+  "shortcuts": [
+    {
+      "type": "Page",
+      "label": "SFA Dashboard",
+      "link_to": "sfa-dashboard",
+      "color": "#2563EB",
+      "icon": "dashboard"
+    },
+    {
+      "type": "Page",
+      "label": "Visits",
+      "link_to": "sfa-visits",
+      "color": "#16A34A",
+      "icon": "map-marker"
+    },
+    {
+      "type": "Page",
+      "label": "Form Templates",
+      "link_to": "sfa-form-templates",
+      "color": "#7C3AED",
+      "icon": "form"
+    },
+    {
+      "type": "DocType",
+      "label": "Beat Plans",
+      "link_to": "SFA Beat Plan",
+      "color": "#D97706",
+      "icon": "calendar"
+    },
+    {
+      "type": "DocType",
+      "label": "SFA Payments",
+      "link_to": "SFA Payment",
+      "color": "#E11D48",
+      "icon": "currency"
+    }
+  ],
+  "links": [
+    {
+      "type": "Card Break",
+      "label": "Field Operations",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Visit",
+      "link_type": "DocType",
+      "link_to": "SFA Visit",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Beat Plan",
+      "link_type": "DocType",
+      "link_to": "SFA Beat Plan",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Payment",
+      "link_type": "DocType",
+      "link_to": "SFA Payment",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Field Activity",
+      "link_type": "DocType",
+      "link_to": "SFA Field Activity",
+      "is_query_report": 0
+    },
+    {
+      "type": "Card Break",
+      "label": "Customers & Territory",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "Customer",
+      "link_type": "DocType",
+      "link_to": "Customer",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Saved Location",
+      "link_type": "DocType",
+      "link_to": "SFA Saved Location",
+      "is_query_report": 0
+    },
+    {
+      "type": "Card Break",
+      "label": "Forms & Intelligence",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Form Template",
+      "link_type": "DocType",
+      "link_to": "SFA Form Template",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Form Response",
+      "link_type": "DocType",
+      "link_to": "SFA Form Response",
+      "is_query_report": 0
+    },
+    {
+      "type": "Card Break",
+      "label": "Gamification",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Points Config",
+      "link_type": "DocType",
+      "link_to": "SFA Points Config",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Badge",
+      "link_type": "DocType",
+      "link_to": "SFA Badge",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Rep Points Ledger",
+      "link_type": "DocType",
+      "link_to": "SFA Rep Points Ledger",
+      "is_query_report": 0
+    },
+    {
+      "type": "Card Break",
+      "label": "Reports",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "Visit Compliance",
+      "link_type": "Report",
+      "link_to": "visit_compliance",
+      "is_query_report": 1
+    },
+    {
+      "type": "Link",
+      "label": "Rep Productivity",
+      "link_type": "Report",
+      "link_to": "rep_productivity",
+      "is_query_report": 1
+    },
+    {
+      "type": "Link",
+      "label": "Sales Performance",
+      "link_type": "Report",
+      "link_to": "sales_performance",
+      "is_query_report": 1
+    },
+    {
+      "type": "Link",
+      "label": "Leaderboard",
+      "link_type": "Report",
+      "link_to": "leaderboard",
+      "is_query_report": 1
+    },
+    {
+      "type": "Card Break",
+      "label": "Settings",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA Target Period",
+      "link_type": "DocType",
+      "link_to": "SFA Target Period",
+      "is_query_report": 0
+    },
+    {
+      "type": "Link",
+      "label": "SFA SKU Points Multiplier",
+      "link_type": "DocType",
+      "link_to": "SFA SKU Points Multiplier",
+      "is_query_report": 0
+    }
+  ]
+}
