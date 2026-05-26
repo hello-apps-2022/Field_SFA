@@ -1,0 +1,83 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "sales_person",
+    "badge",
+    "awarded_date",
+    "awarded_by",
+    "is_notified"
+  ],
+  "fields": [
+    {
+      "fieldname": "sales_person",
+      "label": "Sales Person",
+      "fieldtype": "Link",
+      "options": "Sales Person",
+      "reqd": 1
+    },
+    {
+      "fieldname": "badge",
+      "label": "Badge",
+      "fieldtype": "Link",
+      "options": "SFA Badge",
+      "reqd": 1
+    },
+    {
+      "fieldname": "awarded_date",
+      "label": "Awarded Date",
+      "fieldtype": "Datetime",
+      "default": "Now",
+      "read_only": 1
+    },
+    {
+      "fieldname": "awarded_by",
+      "label": "Awarded By",
+      "fieldtype": "Link",
+      "options": "User",
+      "default": "__user",
+      "read_only": 1
+    },
+    {
+      "fieldname": "is_notified",
+      "label": "Is Notified",
+      "fieldtype": "Check",
+      "default": 0,
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "SFA Rep Badge",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

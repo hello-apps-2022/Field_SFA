@@ -1,0 +1,110 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "hash",
+  "creation": "2026-05-25 19:47:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "location_name",
+    "latitude",
+    "longitude",
+    "accuracy",
+    "address",
+    "location_type",
+    "linked_customer",
+    "is_active",
+    "created_by"
+  ],
+  "fields": [
+    {
+      "fieldname": "location_name",
+      "label": "Location Name",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "latitude",
+      "label": "Latitude",
+      "fieldtype": "Float",
+      "reqd": 1
+    },
+    {
+      "fieldname": "longitude",
+      "label": "Longitude",
+      "fieldtype": "Float",
+      "reqd": 1
+    },
+    {
+      "fieldname": "accuracy",
+      "label": "Accuracy (m)",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "address",
+      "label": "Address",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "location_type",
+      "label": "Location Type",
+      "fieldtype": "Select",
+      "options": "Customer\nWarehouse\nOffice\nCompetitor\nOther",
+      "reqd": 1
+    },
+    {
+      "fieldname": "linked_customer",
+      "label": "Linked Customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "depends_on": "eval:doc.location_type=='Customer'"
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": 1
+    },
+    {
+      "fieldname": "created_by",
+      "label": "Created By",
+      "fieldtype": "Link",
+      "options": "User",
+      "default": "__user",
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-05-25 19:47:00.000000",
+  "modified_by": "Administrator",
+  "module": "SFA Core",
+  "name": "SFA Saved Location",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "SFA Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "SFA Supervisor",
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "SFA Rep",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

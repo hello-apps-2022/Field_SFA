@@ -47,10 +47,8 @@ function mountSFAApp(selector) {
     return app
 }
 
-// Expose globally for Frappe pages
+// Expose globally for Frappe pages - MUST be an object with mount method
 window.SFA_Core = {
     mount: mountSFAApp,
-    router,
+    router: router,
 }
-
-export default mountSFAApp

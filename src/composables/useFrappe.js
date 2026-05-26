@@ -77,6 +77,7 @@ export function useSFAData() {
     const beatPlans = ref([]);
     const payments = ref([]);
     const leaderboard = ref([]);
+    const territories = ref([]);
 
     async function loadVisits(filters = {}, dateRange = null) {
         const f = { ...filters };
@@ -84,9 +85,9 @@ export function useSFAData() {
             f.visit_date = ['between', dateRange];
         }
         visits.value = await getList('SFA Visit', f, [
-            'name', 'customer', 'rep', 'visit_date', 'status',
-            'check_in_time', 'check_out_time', 'duration',
-            'gps_accuracy', 'order_value', 'payment_collected'
+            'name', 'customer', 'sales_person', 'visit_date', 'status',
+            'check_in_time', 'check_out_time', 'duration_minutes',
+            'check_in_accuracy', 'distance_from_customer', 'notes'
         ], 50, 'visit_date desc');
         return visits.value;
     }
@@ -94,7 +95,7 @@ export function useSFAData() {
     async function loadOrders(filters = {}) {
         orders.value = await getList('Sales Order', filters, [
             'name', 'customer', 'transaction_date', 'status',
-            'total_qty', 'grand_total', 'rep'
+            'total_qty', 'grand_total', 'owner'
         ], 50, 'transaction_date desc');
         return orders.value;
     }
@@ -122,8 +123,8 @@ export function useSFAData() {
 
     async function loadPayments(filters = {}) {
         payments.value = await getList('SFA Payment', filters, [
-            'name', 'customer', 'rep', 'payment_date', 'amount',
-            'payment_mode', 'status'
+            'name', 'customer', 'sales_person', 'payment_date', 'amount',
+            'payment_type', 'status'
         ], 50, 'payment_date desc');
         return payments.value;
     }
@@ -133,23 +134,29 @@ export function useSFAData() {
         return leaderboard.value;
     }
 
+
+    async function loadTerritories() {
+        territories.value = await getList('Territory', {}, ['name'], 100, 'name asc');
+        return territories.value;
+    }
     return {
         loading,
         error,
+
         visits,
         orders,
         reps,
         customers,
         beatPlans,
         payments,
-        leaderboard,
+        leaderboard, territories,
         loadVisits,
         loadOrders,
         loadReps,
         loadCustomers,
         loadBeatPlans,
         loadPayments,
-        loadLeaderboard
+        loadLeaderboard, loadTerritories
     };
 }
 

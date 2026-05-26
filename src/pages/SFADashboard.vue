@@ -15,7 +15,7 @@
           </select>
           <select v-model="territoryFilter" class="territory-select">
             <option value="">All Territories</option>
-            <option v-for="t in territories" :key="t" :value="t">{{ t }}</option>
+            <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
           </select>
         </div>
         <button class="sfa-btn sfa-btn--primary" @click="refreshAll" :disabled="loading">
@@ -189,12 +189,11 @@ import MapView from '../components/MapView.vue';
 import RepActivityCard from '../components/RepActivityCard.vue';
 import { useSFAData, useRealtime } from '../composables/useFrappe';
 
-const { loadVisits, loadOrders, loadPayments, loadReps, loadLeaderboard, visits, orders, payments, reps, leaderboard, loading } = useSFAData();
+const { loadVisits, loadOrders, loadPayments, loadReps, loadLeaderboard, loadTerritories, visits, orders, payments, reps, leaderboard, territories, loading } = useSFAData();
 const { subscribeToVisits, subscribeToOrders, subscribeToPayments, notifications } = useRealtime();
 
 const periodFilter = ref('today');
 const territoryFilter = ref('');
-const territories = ref(['Kampala', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu']);
 const today = ref(new Date().toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
 
 const activeVisits = computed(() => visits.value.filter(v => v.status === 'In Progress').length);
@@ -250,7 +249,7 @@ async function refreshAll() {
     loadOrders(),
     loadPayments(),
     loadReps(),
-    loadLeaderboard(periodFilter.value)
+    loadLeaderboard(periodFilter.value), loadTerritories()
   ]);
 }
 

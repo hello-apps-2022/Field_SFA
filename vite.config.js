@@ -5,6 +5,11 @@ import path from 'path'
 export default defineConfig({
     plugins: [vue()],
     publicDir: false,
+    define: {
+        'process.env': '{}',
+        'process.env.NODE_ENV': '"production"',
+        'process': '{}',
+    },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
@@ -28,9 +33,8 @@ export default defineConfig({
                     if (ext === 'css') return 'sfa_core.bundle.css'
                     return '[name][extname]'
                 },
-                globals: {
-                    frappe: 'frappe',
-                },
+                globals: { frappe: 'frappe' },
+                exports: 'named',
             },
         },
     },
