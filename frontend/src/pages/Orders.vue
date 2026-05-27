@@ -101,7 +101,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getList } from '@/utils/frappe'
+import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import dayjs from 'dayjs'
@@ -135,16 +135,12 @@ const totalCartons = computed(() => filtered.value.reduce((s, o) => s + (o.total
 async function load() {
   loading.value = true
   try {
-    orders.value = await getList('Sales Order', {
-      fields: ['name', 'customer', 'transaction_date', 'status',
-               'grand_total', 'total_qty', 'sales_person'],
-      filters: {
-        transaction_date: ['between', [dateFrom.value, dateTo.value]],
-        docstatus: ['!=', 2],
-      },
-      orderBy: 'transaction_date desc',
-      limit: 500,
-    })
+    orders.value = (await call('sfa_core.api.list.get_orders', {
+      status: statusFilter.value || null,
+      date_from: dateFrom.value || null,
+      date_to: dateTo.value || null,
+      limit: 200,
+    })).message || []
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }

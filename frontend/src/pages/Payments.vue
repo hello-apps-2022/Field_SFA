@@ -128,7 +128,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getList } from '@/utils/frappe'
+import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import dayjs from 'dayjs'
@@ -172,19 +172,13 @@ const totalAll = computed(() => totalCash.value + totalCartonValue.value)
 async function load() {
   loading.value = true
   try {
-    payments.value = await getList('SFA Payment', {
-      fields: [
-        'name', 'customer', 'sales_person', 'payment_date',
-        'payment_type', 'amount', 'status', 'reference_no',
-        'cheque_no', 'mobile_money_transaction_id',
-        'custom_payment_mode', 'custom_carton_total',
-      ],
-      filters: {
-        payment_date: ['between', [dateFrom.value, dateTo.value]],
-      },
-      orderBy: 'payment_date desc',
-      limit: 500,
-    })
+    payments.value = (await call('sfa_core.api.list.get_payments', {
+      status: statusFilter.value || null,
+      date_from: dateFrom.value || null,
+      date_to: dateTo.value || null,
+      payment_mode: modeFilter.value || null,
+      limit: 200,
+    })).message || []
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
