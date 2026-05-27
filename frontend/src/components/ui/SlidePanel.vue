@@ -26,9 +26,10 @@
         <div v-if="saveLabel" class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
           <button
             class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50"
-            @click="$emit('update:modelValue', false)"
+            @click="cancelAction"
           >
-            Cancel
+            <FeatherIcon v-if="cancelIcon" :name="cancelIcon" class="h-3.5 w-3.5" />
+            {{ cancelLabel || 'Cancel' }}
           </button>
           <button
             class="inline-flex h-8 items-center gap-1.5 rounded-md bg-gray-900 px-3 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
@@ -55,16 +56,28 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, useAttrs } from 'vue'
+const attrs = useAttrs()
 
 const props = defineProps({
   modelValue: Boolean,
   title: { type: String, default: 'New Record' },
   saving: Boolean,
   saveLabel: { type: String, default: 'Save' },
+  cancelLabel: { type: String, default: '' },
+  cancelIcon: { type: String, default: '' },
   width: { type: String, default: '480px' },
 })
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'cancel'])
+
+function cancelAction() {
+  emit('cancel')
+  // Default: close the panel. FillFormPanel overrides this via @cancel
+  // Other panels have no @cancel listener so this closes them normally
+  if (!attrs.onCancel) {
+    emit('update:modelValue', false)
+  }
+}
 
 function onKeydown(e) {
   if (e.key === 'Escape' && props.modelValue) {

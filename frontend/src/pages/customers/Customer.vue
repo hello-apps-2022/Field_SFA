@@ -280,14 +280,17 @@
                 </div>
                 <div>
                   <p class="text-sm font-medium text-gray-900">{{ r.form_template }}</p>
-                  <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-400">
+                  <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-400">
                     <span v-if="r.sales_person" class="flex items-center gap-1">
                       <FeatherIcon name="user" class="h-3 w-3" />{{ r.sales_person }}
                     </span>
                     <span class="flex items-center gap-1">
                       <FeatherIcon name="calendar" class="h-3 w-3" />{{ formatDate(r.response_date) }}
+                      <span class="text-gray-300 ml-1">{{ formatTime(r.response_date) }}</span>
                     </span>
-                    <router-link v-if="r.visit" :to="'/visits/'+r.visit" class="flex items-center gap-1 text-blue-400 hover:text-blue-600 hover:underline">
+                    <router-link v-if="r.visit" :to="'/visits/'+r.visit"
+                      class="flex items-center gap-1 text-blue-400 hover:text-blue-600 hover:underline"
+                      @click.stop>
                       <FeatherIcon name="map-pin" class="h-3 w-3" />{{ r.visit }}
                     </router-link>
                   </div>
@@ -778,6 +781,7 @@ async function createPayment() {
 }
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
+const formatTime = (d) => d ? dayjs(d).format('HH:mm') : ''
 const isOverdue = (d) => d && dayjs(d).isBefore(dayjs(), 'day')
 const formatUGX = formatCurrency
 const fmtShort = formatCurrencyShort

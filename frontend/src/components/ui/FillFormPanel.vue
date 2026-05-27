@@ -4,9 +4,12 @@
     :title="panelTitle"
     :saving="submitting"
     :save-label="panelSaveLabel"
+    :cancel-label="panelCancelLabel"
+    :cancel-icon="panelCancelIcon"
     width="600px"
     @update:model-value="$emit('update:modelValue', $event)"
     @save="handleSave"
+    @cancel="handleCancel"
   >
     <!-- Back button in header area via subtitle slot workaround -->
     <template v-if="step === 'fill'">
@@ -15,15 +18,6 @@
         @click="step = 'select'; surveyModel = null; submitError = ''"
       >
         <FeatherIcon name="arrow-left" class="h-3.5 w-3.5" /> Back to template selection
-      </button>
-    </template>
-
-    <template v-if="step === 'review'">
-      <button
-        class="mb-4 flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors"
-        @click="step = 'fill'; submitError = ''"
-      >
-        <FeatherIcon name="arrow-left" class="h-3.5 w-3.5" /> Back to edit answers
       </button>
     </template>
 
@@ -120,11 +114,11 @@
         <span class="text-gray-500">{{ currentSalesPerson || currentUserFullName }}</span>
       </div>
 
-      <div v-if="surveyModel" class="survey-wrapper">
-        <SurveyComponent :model="surveyModel" />
-      </div>
-      <div v-else class="flex justify-center py-8">
-        <FeatherIcon name="loader" class="h-5 w-5 animate-spin text-gray-400" />
+      <div :key="surveyKey" class="survey-wrapper">
+        <SurveyComponent v-if="surveyModel" :model="surveyModel" />
+        <div v-else class="flex justify-center py-8">
+          <FeatherIcon name="loader" class="h-5 w-5 animate-spin text-gray-400" />
+        </div>
       </div>
 
       <p v-if="submitError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{{ submitError }}</p>
@@ -134,7 +128,7 @@
     <div v-else-if="step === 'review'" class="space-y-4">
       <div class="rounded-xl border border-green-100 bg-green-50 px-4 py-3">
         <p class="text-sm font-medium text-green-800">Review your answers before submitting</p>
-        <p class="text-xs text-green-600 mt-0.5">Click "Back to edit answers" above if you need to make changes.</p>
+        <p class="text-xs text-green-600 mt-0.5">All good? Hit Submit Form below. Need changes? Click Edit Answers.</p>
       </div>
 
       <!-- Summary card -->
@@ -157,7 +151,7 @@
         <div class="divide-y divide-gray-50 max-h-80 overflow-y-auto">
           <div v-for="(val, key) in reviewData" :key="key" class="flex items-start gap-3 px-4 py-2.5">
             <span class="w-40 shrink-0 text-xs text-gray-400 pt-0.5">{{ questionLabel(key) }}</span>
-            <span class="flex-1 text-sm text-gray-800">{{ Array.isArray(val) ? val.join(', ') : String(val ?? '—') }}</span>
+            <span class="flex-1 text-sm text-gray-800">{{ formatAnswer(key, val) }}</span>
           </div>
           <div v-if="!Object.keys(reviewData).length" class="px-4 py-3 text-sm italic text-gray-400">No answers recorded</div>
         </div>
@@ -197,6 +191,7 @@ const templateSearch = ref('')
 const dropdownOpen = ref(false)
 const loadingTemplates = ref(false)
 const surveyModel = ref(null)
+const surveyKey = ref(1)
 const submitting = ref(false)
 const submitError = ref('')
 const visitLink = ref('')
@@ -215,6 +210,17 @@ const panelSaveLabel = computed(() => ({
   fill: 'Preview & Review →',
   review: 'Submit Form',
 }[step.value] || 'Next'))
+
+const panelCancelLabel = computed(() => step.value === 'review' ? 'Edit Answers' : 'Cancel')
+const panelCancelIcon = computed(() => step.value === 'review' ? 'edit-2' : '')
+
+function handleCancel() {
+  if (step.value === 'review') {
+    goBackToFill()
+  } else {
+    emit('update:modelValue', false)
+  }
+}
 
 const filteredTemplates = computed(() => {
   const q = templateSearch.value.toLowerCase()
@@ -239,8 +245,47 @@ function questionLabel(name) {
   return q?.title || q?.name || name
 }
 
+function formatAnswer(name, value) {
+  if (!surveyModel.value) return Array.isArray(value) ? value.join(', ') : String(value ?? '—')
+  const q = surveyModel.value.getQuestionByName(name)
+  if (!q) return Array.isArray(value) ? value.join(', ') : String(value ?? '—')
+
+  // For checkbox/dropdown/radio — map values to display text
+  if (q.choices && q.choices.length) {
+    const choiceMap = {}
+    q.choices.forEach(c => {
+      // choices can be strings or {value, text} objects
+      const v = typeof c === 'string' ? c : (c.value ?? c.id ?? c)
+      const t = typeof c === 'string' ? c : (c.text ?? c.title ?? c.value ?? c)
+      choiceMap[String(v)] = String(t)
+    })
+    if (Array.isArray(value)) {
+      return value.map(v => choiceMap[String(v)] || v).join(', ')
+    }
+    return choiceMap[String(value)] || String(value ?? '—')
+  }
+
+  return Array.isArray(value) ? value.join(', ') : String(value ?? '—')
+}
+
 function onSearchBlur() {
   window.setTimeout(() => { dropdownOpen.value = false }, 150)
+}
+
+function goBackToFill() {
+  // Rebuild survey fresh with previous answers and increment key to force Vue re-render
+  const previousAnswers = { ...reviewData.value }
+  const freshModel = buildSurvey(selectedTemplate.value)
+  if (freshModel && Object.keys(previousAnswers).length) {
+    freshModel.data = previousAnswers
+  }
+  surveyModel.value = null  // clear first to trigger reactivity
+  surveyKey.value++          // force component remount
+  setTimeout(() => {
+    surveyModel.value = freshModel
+  }, 50)
+  submitError.value = ''
+  step.value = 'fill'
 }
 
 function selectTemplate(t) {
@@ -299,6 +344,8 @@ function buildSurvey(template) {
         }
     const model = new SurveyModel(json)
     model.showCompletedPage = false
+    model.showNavigationButtons = 'none'  // hide SurveyJS prev/next/complete buttons
+    model.questionsOnPageMode = 'singlePage'  // show all questions on one page
     return model
   } catch (e) {
     console.error('Survey build error', e)
@@ -333,10 +380,11 @@ async function handleSave() {
     submitting.value = true
     try {
       const responseData = surveyModel.value.data
+      // Build response items with display labels resolved
       const responseItems = Object.entries(responseData).map(([key, value]) => ({
         doctype: 'SFA Response Item',
-        question_name: key,
-        answer_value: Array.isArray(value) ? value.join(', ') : String(value ?? ''),
+        question_name: questionLabel(key),
+        answer_value: formatAnswer(key, value),
       }))
 
       await insertDoc({
@@ -388,9 +436,14 @@ onMounted(() => loadCurrentSalesPerson())
 <style>
 .survey-wrapper .sd-root-modern { --sd-base-padding: 0; font-family: inherit !important; }
 .survey-wrapper .sd-container-modern { box-shadow: none !important; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
-.survey-wrapper .sd-title { display: none !important; }
+/* Hide only the top-level survey title, NOT question titles */
+.survey-wrapper .sd-container-modern > .sd-title { display: none !important; }
+/* Hide SurveyJS navigation buttons — we use our own Preview & Review button */
+.survey-wrapper .sd-navigation { display: none !important; }
+.survey-wrapper .sd-btn--navigation { display: none !important; }
+.survey-wrapper .sd-action-bar { display: none !important; }
 .survey-wrapper .sd-body { padding: 16px !important; }
 .survey-wrapper .sd-question__title { font-size: 13px !important; font-weight: 500 !important; color: #374151 !important; }
+.survey-wrapper .sd-question__title .sv-string-viewer { font-size: 13px !important; }
 .survey-wrapper .sd-input { border-radius: 8px !important; border-color: #e5e7eb !important; font-size: 13px !important; }
-.survey-wrapper .sd-btn--action { background: #111827 !important; border-radius: 8px !important; }
 </style>

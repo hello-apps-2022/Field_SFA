@@ -4,32 +4,28 @@ const routes = [
   { path: '/', redirect: '/dashboard' },
   { path: '/dashboard', name: 'Dashboard', component: () => import('@/pages/Dashboard.vue') },
 
-  // Customers
   { path: '/customers', name: 'Customers', component: () => import('@/pages/customers/Customers.vue') },
   { path: '/customers/:name', name: 'Customer', component: () => import('@/pages/customers/Customer.vue'), props: true },
 
-  // Visits
   { path: '/visits', name: 'Visits', component: () => import('@/pages/visits/Visits.vue') },
   { path: '/visits/:name', name: 'Visit', component: () => import('@/pages/visits/Visit.vue'), props: true },
 
-  // Beat Plans
   { path: '/beat-plans', name: 'BeatPlans', component: () => import('@/pages/BeatPlans.vue') },
 
-  // Orders & Payments
   { path: '/orders', name: 'Orders', component: () => import('@/pages/Orders.vue') },
   { path: '/payments', name: 'Payments', component: () => import('@/pages/Payments.vue') },
 
-  // Forms
   { path: '/form-templates', name: 'FormTemplates', component: () => import('@/pages/forms/FormTemplates.vue') },
   { path: '/form-templates/new', name: 'NewFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue') },
   { path: '/form-templates/:name', name: 'EditFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue'), props: true },
 
-  // Gamification
   { path: '/gamification', name: 'Gamification', component: () => import('@/pages/Gamification.vue') },
-
-  // Reports & Settings
   { path: '/reports', name: 'Reports', component: () => import('@/pages/Reports.vue') },
   { path: '/settings', name: 'Settings', component: () => import('@/pages/Settings.vue') },
+
+  // Maps
+  { path: '/rep-activity-map', name: 'RepActivityMap', component: () => import('@/pages/RepActivityMap.vue') },
+  { path: '/customer-map', name: 'CustomerMap', component: () => import('@/pages/CustomerMap.vue') },
 
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/pages/NotFound.vue') },
 ]
