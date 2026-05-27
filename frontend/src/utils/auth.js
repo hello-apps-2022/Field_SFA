@@ -33,6 +33,9 @@ export const auth = {
       'targets':             r.isAdmin || r.isManager,
       'targets/performance':  r.isAdmin || r.isManager,
       'settings':            r.isAdmin,
+      'settings/team':       r.isAdmin,
+      'settings/territories': r.isAdmin,
+      'settings/beat-plan-permissions': r.isAdmin || r.isManager,
     }
     return rules[page] ?? r.isAdmin
   },

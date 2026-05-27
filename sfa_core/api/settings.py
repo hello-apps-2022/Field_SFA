@@ -4,6 +4,77 @@ from sfa_core.api.auth import require_role
 
 
 @frappe.whitelist()
+def get_team_hierarchy():
+    """Returns tree structure of all SFA users for hierarchy view."""
+    require_role('SFA Admin')
+    users = _get_all_users()
+    by_sp = {u['sales_person']: u for u in users}
+
+    # Initialize children lists
+    for u in users:
+        u['children'] = []
+
+    roots = []
+    for u in users:
+        manager = u.get('reports_to')
+        if manager and manager in by_sp:
+            by_sp[manager]['children'].append(u)
+        else:
+            roots.append(u)
+
+    # If everything is flat (all roots), group by role for visual hierarchy
+    if len(roots) == len(users) and len(users) > 1:
+        # Sort: admins first, then managers, then reps
+        role_order = {'SFA Admin': 0, 'SFA Manager': 1, 'SFA Rep': 2, None: 3}
+        roots.sort(key=lambda u: role_order.get(u.get('role'), 3))
+
+    return roots
+
+
+def _get_all_users():
+    sales_persons = frappe.get_all('Sales Person',
+        filters={'is_group': 0},
+        fields=['name', 'sales_person_name', 'custom_user_id', 'parent_sales_person',
+                'custom_territory', 'custom_mobile_no', 'custom_sfa_active', 'custom_last_seen'],
+        order_by='sales_person_name asc',
+    )
+    result = []
+    for sp in sales_persons:
+        user = None
+        role = None
+        if sp.custom_user_id:
+            user = frappe.db.get_value('User', sp.custom_user_id,
+                ['name', 'full_name', 'email', 'enabled', 'user_image'], as_dict=True)
+            if user:
+                roles = frappe.get_roles(sp.custom_user_id)
+                if 'SFA Admin' in roles: role = 'SFA Admin'
+                elif 'SFA Manager' in roles: role = 'SFA Manager'
+                elif 'SFA Rep' in roles: role = 'SFA Rep'
+        # Get manager name for display
+        reports_to_name = None
+        if sp.parent_sales_person and sp.parent_sales_person != 'Sales Team':
+            reports_to_name = frappe.db.get_value('Sales Person', sp.parent_sales_person, 'sales_person_name')
+        result.append({
+            'sales_person': sp.name,
+            'sales_person_name': sp.sales_person_name,
+            'user_id': sp.custom_user_id,
+            'full_name': user.full_name if user else sp.sales_person_name,
+            'email': user.email if user else sp.custom_user_id,
+            'enabled': user.enabled if user else 0,
+            'user_image': user.user_image if user else None,
+            'territory': sp.custom_territory,
+            'mobile_no': sp.custom_mobile_no,
+            'sfa_active': sp.custom_sfa_active,
+            'last_seen': sp.custom_last_seen,
+            'role': role,
+            'has_user': bool(user),
+            'reports_to': sp.parent_sales_person if sp.parent_sales_person != 'Sales Team' else None,
+            'reports_to_name': reports_to_name,
+        })
+    return result
+
+
+@frappe.whitelist()
 def get_users():
     """Get all SFA users with their Sales Person details."""
     require_role('SFA Admin')
@@ -55,7 +126,8 @@ def get_users():
 
 
 @frappe.whitelist()
-def create_user(first_name, last_name, email, password, role, territory=None, mobile_no=None):
+def create_user(first_name, last_name, email, password, role,
+                territory=None, mobile_no=None, reports_to=None):
     """Create a Frappe User + Sales Person and link them."""
     require_role('SFA Admin')
 
@@ -83,10 +155,18 @@ def create_user(first_name, last_name, email, password, role, territory=None, mo
 
     # Create Sales Person
     sales_person_name = f'{first_name} {last_name}'.strip()
+    # Determine parent and territory
+    parent_sp = 'Sales Team'
+    if reports_to:
+        parent_sp = reports_to
+        # Inherit territory from manager if not specified
+        if not territory:
+            territory = frappe.db.get_value('Sales Person', reports_to, 'custom_territory') or ''
+
     sp = frappe.get_doc({
         'doctype': 'Sales Person',
         'sales_person_name': sales_person_name,
-        'parent_sales_person': 'Sales Team',
+        'parent_sales_person': parent_sp,
         'is_group': 0,
         'custom_user_id': email,
         'custom_territory': territory or '',
@@ -105,7 +185,7 @@ def create_user(first_name, last_name, email, password, role, territory=None, mo
 
 @frappe.whitelist()
 def update_user(sales_person, role=None, territory=None, mobile_no=None,
-                sfa_active=None, first_name=None, last_name=None):
+                sfa_active=None, first_name=None, last_name=None, reports_to=None):
     """Update a user's role, territory, or status."""
     require_role('SFA Admin')
 
@@ -117,6 +197,8 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
         sp_update['custom_mobile_no'] = mobile_no
     if sfa_active is not None:
         sp_update['custom_sfa_active'] = 1 if sfa_active else 0
+    if reports_to is not None:
+        sp_update['parent_sales_person'] = reports_to or 'Sales Team'
     if sp_update:
         frappe.db.set_value('Sales Person', sales_person, sp_update)
 

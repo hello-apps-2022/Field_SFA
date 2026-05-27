@@ -25,7 +25,10 @@ const routes = [
   { path: '/territory-dashboard', name: 'TerritoryDashboard', component: () => import('@/pages/TerritoryDashboard.vue') },
   { path: '/targets', name: 'Targets', component: () => import('@/pages/Targets.vue') },
   { path: '/targets/performance', name: 'TargetsPerformance', component: () => import('@/pages/TargetsPerformance.vue') },
-  { path: '/settings', name: 'Settings', component: () => import('@/pages/Settings.vue') },
+  { path: '/settings', name: 'SettingsHub', component: () => import('@/pages/SettingsHub.vue') },
+  { path: '/settings/team', name: 'SettingsTeam', component: () => import('@/pages/Settings.vue') },
+  { path: '/settings/territories', name: 'SettingsTerritories', component: () => import('@/pages/SettingsTerritories.vue') },
+  { path: '/settings/beat-plan-permissions', name: 'BeatPlanPermissions', component: () => import('@/pages/BeatPlans.vue') },
 
   // Maps
   { path: '/rep-activity-map', name: 'RepActivityMap', component: () => import('@/pages/RepActivityMap.vue') },

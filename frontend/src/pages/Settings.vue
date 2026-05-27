@@ -3,33 +3,57 @@
 
     <!-- Header -->
     <div class="flex h-[52px] shrink-0 items-center border-b border-gray-100 bg-white px-5 gap-3">
-      <h1 class="text-sm font-semibold text-gray-900">Settings</h1>
+      <router-link to="/settings" class="flex items-center justify-center h-7 w-7 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+        <FeatherIcon name="chevron-left" class="h-4 w-4" />
+      </router-link>
+      <h1 class="text-sm font-semibold text-gray-900">Team</h1>
       <div class="flex-1" />
       <Btn icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
     </div>
 
     <!-- Tabs -->
-    <div class="flex shrink-0 border-b border-gray-100 bg-white px-5">
-      <button
-        class="mr-1 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors"
-        :class="tab === 'users' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'"
-        @click="tab = 'users'"
-      >Users</button>
+    <div class="flex shrink-0 border-b border-gray-100 bg-white px-5 gap-1">
+      <button v-for="t in ['Hierarchy', 'List']" :key="t"
+        class="border-b-2 px-3 py-2.5 text-sm font-medium transition-colors"
+        :class="tab === t
+          ? 'border-gray-900 text-gray-900'
+          : 'border-transparent text-gray-500 hover:text-gray-700'"
+        @click="tab = t"
+      >{{ t }}</button>
     </div>
 
-    <!-- Users tab -->
-    <div class="flex-1 overflow-y-auto bg-gray-50 p-5">
-      <div v-if="loading" class="flex h-40 items-center justify-center">
-        <FeatherIcon name="loader" class="h-6 w-6 animate-spin text-gray-400" />
-      </div>
+    <!-- Loading -->
+    <div v-if="loading" class="flex flex-1 items-center justify-center">
+      <FeatherIcon name="loader" class="h-6 w-6 animate-spin text-gray-400" />
+    </div>
 
-      <div v-else class="space-y-2">
-        <!-- Column headers -->
+    <!-- Hierarchy view -->
+    <div v-else-if="tab === 'Hierarchy'" class="flex-1 overflow-y-auto bg-gray-50 p-6">
+      <div v-if="hierarchy.length" class="max-w-3xl mx-auto">
+        <TreeNode
+          v-for="node in hierarchy" :key="node.sales_person"
+          :node="node"
+          :is-last="true"
+          :is-root="true"
+          @edit="openEdit"
+          @reset-password="openResetPassword"
+        />
+      </div>
+      <div v-else class="flex flex-col items-center py-20 text-gray-400">
+        <FeatherIcon name="users" class="h-10 w-10 mb-3" />
+        <p class="text-sm font-medium text-gray-600">No team members yet</p>
+        <Btn icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add First User</Btn>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div v-else class="flex-1 overflow-y-auto bg-gray-50 p-5">
+      <div class="space-y-2">
         <div class="grid grid-cols-12 gap-4 px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
           <div class="col-span-3">Name</div>
           <div class="col-span-2">Role</div>
           <div class="col-span-2">Territory</div>
-          <div class="col-span-2">Mobile</div>
+          <div class="col-span-2">Reports To</div>
           <div class="col-span-1">Last Seen</div>
           <div class="col-span-1 text-center">Status</div>
           <div class="col-span-1" />
@@ -38,7 +62,6 @@
         <div v-for="user in users" :key="user.sales_person"
           class="grid grid-cols-12 gap-4 items-center rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm transition-shadow"
         >
-          <!-- Name + email -->
           <div class="col-span-3 flex items-center gap-3 min-w-0">
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
               :class="roleColor(user.role).bg">
@@ -49,27 +72,14 @@
               <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
             </div>
           </div>
-
-          <!-- Role badge -->
           <div class="col-span-2">
-            <span class="rounded-full px-2.5 py-1 text-xs font-medium"
-              :class="roleColor(user.role).badge">
+            <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="roleColor(user.role).badge">
               {{ user.role || 'No role' }}
             </span>
           </div>
-
-          <!-- Territory -->
           <div class="col-span-2 text-sm text-gray-600">{{ user.territory || '—' }}</div>
-
-          <!-- Mobile -->
-          <div class="col-span-2 text-sm text-gray-600">{{ user.mobile_no || '—' }}</div>
-
-          <!-- Last seen -->
-          <div class="col-span-1 text-xs text-gray-400">
-            {{ user.last_seen ? fmtDate(user.last_seen) : 'Never' }}
-          </div>
-
-          <!-- Status toggle -->
+          <div class="col-span-2 text-sm text-gray-500">{{ user.reports_to_name || '—' }}</div>
+          <div class="col-span-1 text-xs text-gray-400">{{ user.last_seen ? fmtDate(user.last_seen) : 'Never' }}</div>
           <div class="col-span-1 flex justify-center">
             <button
               class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors"
@@ -80,15 +90,13 @@
                 :class="user.sfa_active ? 'translate-x-4' : 'translate-x-0'" />
             </button>
           </div>
-
-          <!-- Actions -->
           <div class="col-span-1 flex justify-end gap-1">
             <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              @click="openEdit(user)" title="Edit">
+              @click="openEdit(user)">
               <FeatherIcon name="edit-2" class="h-3.5 w-3.5" />
             </button>
             <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-amber-600"
-              @click="openResetPassword(user)" title="Reset password">
+              @click="openResetPassword(user)">
               <FeatherIcon name="key" class="h-3.5 w-3.5" />
             </button>
           </div>
@@ -97,14 +105,13 @@
         <div v-if="!users.length" class="flex flex-col items-center py-16 text-gray-400">
           <FeatherIcon name="users" class="h-10 w-10 mb-3" />
           <p class="text-sm font-medium text-gray-600">No users yet</p>
-          <p class="text-xs mt-1 mb-4">Add your first rep or manager</p>
-          <Btn icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
+          <Btn icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add User</Btn>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Create user panel -->
+  <!-- Create panel -->
   <SlidePanel v-model="createPanel" title="Add User" :saving="saving" save-label="Create User" @save="createUser">
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
@@ -113,8 +120,11 @@
       </div>
       <FormField v-model="form.email" label="Email" type="email" required :error="errors.email"
         placeholder="rep@hema.ug" />
+      <FormField v-model="form.mobile_no" label="Mobile Number" placeholder="+256 7XX XXX XXX" />
       <FormField v-model="form.password" label="Password" type="password" required :error="errors.password"
         placeholder="Min 8 characters" />
+
+      <!-- Role -->
       <div>
         <label class="mb-2 block text-xs font-medium text-gray-600">Role <span class="text-red-500">*</span></label>
         <div class="grid grid-cols-3 gap-2">
@@ -130,17 +140,36 @@
           </button>
         </div>
       </div>
-      <FormField v-model="form.territory" label="Territory" type="select" :options="territoryOptions"
-        help="Determines which data this user can access" />
-      <FormField v-model="form.mobile_no" label="Mobile Number" placeholder="+256 7XX XXX XXX" />
+
+      <!-- Reports To -->
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-gray-600">Reports To</label>
+        <select v-model="form.reports_to" @change="onReportsToChange"
+          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+          <option value="">— Top level (no manager) —</option>
+          <option v-for="u in managerOptions" :key="u.sales_person" :value="u.sales_person">
+            {{ u.full_name }} ({{ u.role }})
+          </option>
+        </select>
+        <p class="mt-1 text-xs text-gray-400">Territory will be inherited from manager if not set</p>
+      </div>
+
+      <!-- Territory -->
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-gray-600">Territory</label>
+        <select v-model="form.territory"
+          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+          <option value="">{{ form.reports_to ? 'Inherited from manager' : 'Select territory…' }}</option>
+          <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
+        </select>
+      </div>
     </div>
   </SlidePanel>
 
-  <!-- Edit user panel -->
+  <!-- Edit panel -->
   <SlidePanel v-model="editPanel" :title="'Edit — ' + (editUser?.full_name || '')"
     :saving="saving" save-label="Save Changes" @save="saveEdit">
     <div v-if="editUser" class="space-y-4">
-      <!-- User info strip -->
       <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
           :class="roleColor(editUser.role).bg">
@@ -151,12 +180,10 @@
           <p class="text-xs text-gray-400">{{ editUser.email }}</p>
         </div>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <FormField v-model="editForm.first_name" label="First Name" />
         <FormField v-model="editForm.last_name" label="Last Name" />
       </div>
-
       <div>
         <label class="mb-2 block text-xs font-medium text-gray-600">Role</label>
         <div class="grid grid-cols-3 gap-2">
@@ -172,12 +199,30 @@
           </button>
         </div>
       </div>
-      <FormField v-model="editForm.territory" label="Territory" type="select" :options="territoryOptions" />
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-gray-600">Reports To</label>
+        <select v-model="editForm.reports_to"
+          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+          <option value="">— Top level —</option>
+          <option v-for="u in managerOptions.filter(u => u.sales_person !== editUser.sales_person)"
+            :key="u.sales_person" :value="u.sales_person">
+            {{ u.full_name }} ({{ u.role }})
+          </option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-gray-600">Territory</label>
+        <select v-model="editForm.territory"
+          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+          <option value="">Select territory…</option>
+          <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
+        </select>
+      </div>
       <FormField v-model="editForm.mobile_no" label="Mobile Number" />
     </div>
   </SlidePanel>
 
-  <!-- Reset password panel -->
+  <!-- Reset password -->
   <SlidePanel v-model="resetPanel" :title="'Reset Password — ' + (resetUser?.full_name || '')"
     :saving="saving" save-label="Reset Password" @save="doResetPassword">
     <div class="space-y-4">
@@ -190,6 +235,115 @@
   </SlidePanel>
 </template>
 
+<!-- TreeNode: recursive interactive hierarchy component -->
+<script>
+import { defineComponent, ref, h } from 'vue'
+import FeatherIcon from '@/components/ui/FeatherIcon.vue'
+
+const roleStyles = {
+  'SFA Admin':   { avatar: 'bg-purple-100 text-purple-700', badge: 'bg-purple-100 text-purple-700', border: 'border-purple-200' },
+  'SFA Manager': { avatar: 'bg-blue-100 text-blue-700',     badge: 'bg-blue-100 text-blue-700',     border: 'border-blue-200' },
+  'SFA Rep':     { avatar: 'bg-green-100 text-green-700',   badge: 'bg-green-100 text-green-700',   border: 'border-green-200' },
+}
+const defaultStyle = { avatar: 'bg-gray-100 text-gray-600', badge: 'bg-gray-100 text-gray-600', border: 'border-gray-200' }
+
+export const TreeNode = defineComponent({
+  name: 'TreeNode',
+  props: {
+    node: Object,
+    isLast: Boolean,
+    isRoot: Boolean,
+  },
+  emits: ['edit', 'reset-password'],
+  setup(props, { emit }) {
+    const expanded = ref(true)
+    const initials = (name) => (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+
+    return () => {
+      const n = props.node
+      const style = roleStyles[n.role] || defaultStyle
+      const hasChildren = n.children && n.children.length > 0
+
+      return h('div', { class: 'relative' }, [
+
+        // Node row
+        h('div', { class: 'flex items-start gap-0' }, [
+
+          // Tree lines column (for non-root)
+          !props.isRoot && h('div', { class: 'flex flex-col items-center w-8 shrink-0' }, [
+            h('div', { class: 'w-px bg-gray-200 h-5 shrink-0' }),       // vertical line to parent
+            h('div', { class: 'w-4 h-px bg-gray-200 mb-auto mt-0' }), // horizontal connector
+          ]),
+
+          // Card
+          h('div', {
+            class: `flex-1 mb-2 rounded-xl border bg-white px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow ${style.border}`,
+            onClick: () => emit('edit', n),
+          }, [
+            h('div', { class: 'flex items-center gap-3' }, [
+
+              // Expand/collapse button (only if has children)
+              hasChildren
+                ? h('button', {
+                    class: 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors',
+                    onClick: (e) => { e.stopPropagation(); expanded.value = !expanded.value },
+                  }, h(FeatherIcon, {
+                    name: expanded.value ? 'minus' : 'plus',
+                    class: 'h-2.5 w-2.5 text-gray-500',
+                  }))
+                : h('div', { class: 'w-5 shrink-0' }),
+
+              // Avatar
+              h('div', { class: `flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${style.avatar}` },
+                initials(n.full_name)),
+
+              // Info
+              h('div', { class: 'flex-1 min-w-0' }, [
+                h('div', { class: 'flex items-center gap-2 flex-wrap' }, [
+                  h('p', { class: 'text-sm font-semibold text-gray-900' }, n.full_name),
+                  n.role && h('span', { class: `rounded-full px-2 py-0.5 text-[10px] font-medium ${style.badge}` }, n.role),
+                  h('div', { class: `h-2 w-2 rounded-full shrink-0 ${n.sfa_active ? 'bg-green-400' : 'bg-gray-300'}` }),
+                ]),
+                h('p', { class: 'text-xs text-gray-400 mt-0.5' },
+                  [n.territory || 'No territory', n.email ? ' · ' + n.email : '', hasChildren ? ` · ${n.children.length} direct report${n.children.length !== 1 ? 's' : ''}` : ''].filter(Boolean).join('')),
+              ]),
+
+              // Actions (stop propagation so card click doesn't trigger edit)
+              h('div', { class: 'flex gap-1 shrink-0', onClick: (e) => e.stopPropagation() }, [
+                h('button', {
+                  class: 'h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700',
+                  title: 'Edit',
+                  onClick: () => emit('edit', n),
+                }, h(FeatherIcon, { name: 'edit-2', class: 'h-3.5 w-3.5' })),
+                h('button', {
+                  class: 'h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-amber-600',
+                  title: 'Reset password',
+                  onClick: () => emit('reset-password', n),
+                }, h(FeatherIcon, { name: 'key', class: 'h-3.5 w-3.5' })),
+              ]),
+            ]),
+          ]),
+        ]),
+
+        // Children subtree
+        hasChildren && expanded.value && h('div', { class: 'ml-8 pl-0 border-l-2 border-gray-100 ml-12' },
+          n.children.map((child, i) =>
+            h(TreeNode, {
+              key: child.sales_person,
+              node: child,
+              isLast: i === n.children.length - 1,
+              isRoot: false,
+              onEdit: (u) => emit('edit', u),
+              onResetPassword: (u) => emit('reset-password', u),
+            })
+          )
+        ),
+      ])
+    }
+  }
+})
+</script>
+
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
@@ -199,8 +353,9 @@ import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import dayjs from 'dayjs'
 
-const tab = ref('users')
+const tab = ref('Team')
 const users = ref([])
+const hierarchy = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const createPanel = ref(false)
@@ -220,14 +375,16 @@ const roleOptions = [
 
 const form = reactive({
   first_name: '', last_name: '', email: '', password: '',
-  role: 'SFA Rep', territory: '', mobile_no: '',
+  role: 'SFA Rep', territory: '', mobile_no: '', reports_to: '',
 })
 
 const editForm = reactive({
-  first_name: '', last_name: '', role: '', territory: '', mobile_no: '',
+  first_name: '', last_name: '', role: '', territory: '', mobile_no: '', reports_to: '',
 })
 
-const territoryOptions = computed(() => ['', ...territories.value.map(t => t.name)])
+const managerOptions = computed(() =>
+  users.value.filter(u => u.role === 'SFA Admin' || u.role === 'SFA Manager')
+)
 
 function roleColor(role) {
   const map = {
@@ -239,17 +396,28 @@ function roleColor(role) {
 }
 
 function initials(name) {
-  return (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  return (name||'?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function onReportsToChange() {
+  if (form.reports_to) {
+    const manager = users.value.find(u => u.sales_person === form.reports_to)
+    if (manager?.territory && !form.territory) {
+      form.territory = manager.territory
+    }
+  }
 }
 
 async function load() {
   loading.value = true
   try {
-    const [usersRes, terrRes] = await Promise.all([
+    const [usersRes, hierRes, terrRes] = await Promise.all([
       call('sfa_core.api.settings.get_users'),
+      call('sfa_core.api.settings.get_team_hierarchy'),
       call('sfa_core.api.settings.get_territories'),
     ])
     users.value = usersRes.message || []
+    hierarchy.value = hierRes.message || []
     territories.value = terrRes.message || []
   } catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -258,7 +426,7 @@ async function load() {
 function openCreate() {
   Object.assign(form, {
     first_name: '', last_name: '', email: '', password: '',
-    role: 'SFA Rep', territory: '', mobile_no: '',
+    role: 'SFA Rep', territory: '', mobile_no: '', reports_to: '',
   })
   Object.keys(errors).forEach(k => delete errors[k])
   createPanel.value = true
@@ -266,13 +434,14 @@ function openCreate() {
 
 function openEdit(user) {
   editUser.value = user
-  const nameParts = (user.full_name || '').split(' ')
+  const parts = (user.full_name || '').split(' ')
   Object.assign(editForm, {
-    first_name: nameParts[0] || '',
-    last_name: nameParts.slice(1).join(' ') || '',
+    first_name: parts[0] || '',
+    last_name: parts.slice(1).join(' ') || '',
     role: user.role || 'SFA Rep',
     territory: user.territory || '',
     mobile_no: user.mobile_no || '',
+    reports_to: user.reports_to || '',
   })
   editPanel.value = true
 }
@@ -288,9 +457,7 @@ async function createUser() {
   Object.keys(errors).forEach(k => delete errors[k])
   if (!form.first_name) { errors.first_name = 'Required'; return }
   if (!form.email) { errors.email = 'Required'; return }
-  if (!form.password || form.password.length < 8) {
-    errors.password = 'Min 8 characters'; return
-  }
+  if (!form.password || form.password.length < 8) { errors.password = 'Min 8 characters'; return }
   saving.value = true
   try {
     await call('sfa_core.api.settings.create_user', {
@@ -301,6 +468,7 @@ async function createUser() {
       role: form.role,
       territory: form.territory || null,
       mobile_no: form.mobile_no || null,
+      reports_to: form.reports_to || null,
     })
     successToast(`${form.first_name} added successfully`)
     createPanel.value = false
@@ -320,18 +488,17 @@ async function saveEdit() {
       mobile_no: editForm.mobile_no || null,
       first_name: editForm.first_name,
       last_name: editForm.last_name,
+      reports_to: editForm.reports_to || null,
     })
     successToast('User updated')
     editPanel.value = false
     await load()
-  } catch (e) { errorToast(e.message || 'Failed to update') }
+  } catch (e) { errorToast(e.message || 'Failed') }
   finally { saving.value = false }
 }
 
 async function doResetPassword() {
-  if (!newPassword.value || newPassword.value.length < 8) {
-    errors.password = 'Min 8 characters'; return
-  }
+  if (!newPassword.value || newPassword.value.length < 8) { errors.password = 'Min 8 characters'; return }
   saving.value = true
   try {
     await call('sfa_core.api.settings.reset_password', {
@@ -340,7 +507,7 @@ async function doResetPassword() {
     })
     successToast('Password reset successfully')
     resetPanel.value = false
-  } catch (e) { errorToast(e.message || 'Failed to reset password') }
+  } catch (e) { errorToast(e.message) }
   finally { saving.value = false }
 }
 
