@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import now, time_diff_in_minutes, getdate
+from frappe.utils import now, time_diff_in_seconds, getdate
 
 def validate(doc, method):
     """Validate visit data"""
@@ -8,7 +8,7 @@ def validate(doc, method):
         if doc.check_out_time < doc.check_in_time:
             frappe.throw(_("Check Out time cannot be before Check In time"))
 
-        duration = time_diff_in_minutes(doc.check_out_time, doc.check_in_time)
+        duration = (time_diff_in_seconds(doc.check_out_time, doc.check_in_time) or 0) / 60
         doc.duration_minutes = int(duration)
 
     # Validate geofence if customer has saved location

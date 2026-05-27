@@ -1,25 +1,12 @@
-/**
- * Composable: useLinkedData
- * Fetches and caches common linked field options used across slide-in forms.
- */
 import { ref } from 'vue'
+import { getList } from '@/utils/frappe'
 
 const cache = {}
 
-async function fetchList(doctype, fields = ['name'], filters = {}, limit = 500) {
-  const key = doctype
+async function cached(key, fetcher) {
   if (cache[key]) return cache[key]
-  try {
-    const res = await frappe.call({
-      method: 'frappe.client.get_list',
-      args: { doctype, fields, filters, limit, order_by: fields[0] + ' asc' }
-    })
-    cache[key] = res.message || []
-    return cache[key]
-  } catch (e) {
-    console.error('useLinkedData error:', e)
-    return []
-  }
+  cache[key] = await fetcher()
+  return cache[key]
 }
 
 export function useLinkedData() {
@@ -29,53 +16,53 @@ export function useLinkedData() {
   const customerGroups = ref([])
   const beatPlans = ref([])
   const items = ref([])
-  const visitPurposes = ref([])
   const paymentTypes = ref([])
+  const visitPurposes = ref([])
 
   async function loadCustomers() {
-    const data = await fetchList('Customer', ['name', 'customer_name', 'territory'])
+    const data = await cached('customers', () => getList('Customer', { fields: ['name', 'customer_name'], limit: 500 }))
     customers.value = data.map(c => ({ value: c.name, label: c.customer_name || c.name }))
   }
 
   async function loadTerritories() {
-    const data = await fetchList('Territory', ['name'])
+    const data = await cached('territories', () => getList('Territory', { fields: ['name'], limit: 200 }))
     territories.value = data.map(t => t.name)
   }
 
   async function loadSalesPersons() {
-    const data = await fetchList('Sales Person', ['name'])
+    const data = await cached('sales_persons', () => getList('Sales Person', { fields: ['name'], limit: 200 }))
     salesPersons.value = data.map(s => s.name)
   }
 
   async function loadCustomerGroups() {
-    const data = await fetchList('Customer Group', ['name'])
+    const data = await cached('customer_groups', () => getList('Customer Group', { fields: ['name'], limit: 100 }))
     customerGroups.value = data.map(g => g.name)
   }
 
   async function loadBeatPlans() {
-    const data = await fetchList('SFA Beat Plan', ['name', 'plan_name'])
+    const data = await cached('beat_plans', () => getList('SFA Beat Plan', { fields: ['name', 'plan_name'], limit: 200 }))
     beatPlans.value = data.map(b => ({ value: b.name, label: b.plan_name || b.name }))
   }
 
   async function loadItems() {
-    const data = await fetchList('Item', ['name', 'item_name', 'standard_rate'], { is_sales_item: 1 })
-    items.value = data.map(i => ({ value: i.name, label: i.item_name || i.name, rate: i.standard_rate }))
-  }
-
-  async function loadVisitPurposes() {
-    const data = await fetchList('SFA Visit Purpose', ['name'])
-    visitPurposes.value = data.map(v => v.name)
+    const data = await cached('items', () => getList('Item', { fields: ['name', 'item_name', 'standard_rate'], filters: { is_sales_item: 1 }, limit: 500 }))
+    items.value = data.map(i => ({ value: i.name, label: i.item_name || i.name, rate: i.standard_rate || 0 }))
   }
 
   async function loadPaymentTypes() {
-    const data = await fetchList('SFA Payment Type', ['name'])
+    const data = await cached('payment_types', () => getList('SFA Payment Type', { fields: ['name'], limit: 50 }))
     paymentTypes.value = data.map(p => p.name)
+  }
+
+  async function loadVisitPurposes() {
+    const data = await cached('visit_purposes', () => getList('SFA Visit Purpose', { fields: ['name'], limit: 50 }))
+    visitPurposes.value = data.map(v => v.name)
   }
 
   return {
     customers, territories, salesPersons, customerGroups,
-    beatPlans, items, visitPurposes, paymentTypes,
+    beatPlans, items, paymentTypes, visitPurposes,
     loadCustomers, loadTerritories, loadSalesPersons, loadCustomerGroups,
-    loadBeatPlans, loadItems, loadVisitPurposes, loadPaymentTypes,
+    loadBeatPlans, loadItems, loadPaymentTypes, loadVisitPurposes,
   }
 }

@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SurveyJS editor overrides */
+/* SurveyJS */
 .svc-creator__banner { display: none !important; }
 .svc-footer-bar { display: none !important; }
+
+/* Smooth page transitions */
+.page-enter-active, .page-leave-active { transition: opacity 0.15s ease; }
+.page-enter-from, .page-leave-to { opacity: 0; }

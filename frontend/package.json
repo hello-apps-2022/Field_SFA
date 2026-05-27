@@ -1,6 +1,6 @@
 {
   "name": "sfa-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,16 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vueuse/core": "^10.7.0",
-    "dayjs": "^1.11.10",
-    "frappe-ui": "^0.0.80",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0",
     "pinia": "^2.1.0",
-    "survey-core": "^1.9.120",
-    "survey-creator-core": "^1.9.120",
+    "frappe-ui": "0.0.80",
     "survey-creator-vue": "^1.9.120",
     "survey-vue3-ui": "^1.9.120",
-    "vue": "^3.4.0",
-    "vue-router": "^4.2.0"
+    "survey-creator-core": "^1.9.120",
+    "survey-core": "^1.9.120",
+    "dayjs": "^1.11.10",
+    "@vueuse/core": "^10.7.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

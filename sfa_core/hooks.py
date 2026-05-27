@@ -54,3 +54,8 @@ scheduler_events = {
 fixtures = [
     {"doctype": "Role", "filters": [["role_name", "in", ["SFA Manager", "SFA Supervisor", "SFA Rep", "SFA Viewer"]]]},
 ]
+
+# Serve SFA app for all /sfa/* routes
+website_route_rules = [
+    {"from_route": "/sfa/<path:app_path>", "to_route": "sfa"},
+]

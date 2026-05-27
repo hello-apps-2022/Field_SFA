@@ -2,7 +2,8 @@ import frappe
 
 
 def validate(doc, method):
-    if getattr(doc, 'custom_visit_frequency', None) and doc.custom_visit_frequency < 0:
+    freq = getattr(doc, 'custom_visit_frequency', None)
+    if freq is not None and freq < 0:
         frappe.throw("Visit frequency cannot be negative")
 
 

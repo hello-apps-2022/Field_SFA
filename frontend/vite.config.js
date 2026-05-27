@@ -10,33 +10,30 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env': '{}',
     'process.env.NODE_ENV': JSON.stringify('production'),
-    
+    '__VUE_OPTIONS_API__': true,
+    '__VUE_PROD_DEVTOOLS__': false,
   },
   build: {
-    outDir: path.resolve(__dirname, '../public/dist'),
+    outDir: path.resolve(__dirname, '../public/sfa'),
     emptyOutDir: true,
-    lib: {
-      entry: path.resolve(__dirname, 'src/main.js'),
-      name: 'SFA',
-      fileName: () => 'sfa_desk.bundle.js',
-      formats: ['iife'],
-    },
     rollupOptions: {
-      external: [],
+      input: path.resolve(__dirname, 'index.html'),
       output: {
+        entryFileNames: 'sfa.js',
+        chunkFileNames: 'sfa-[hash].js',
         assetFileNames: (info) =>
-          info.name?.endsWith('.css') ? 'sfa_core.bundle.css' : '[name][extname]',
-        globals: {},
+          info.name?.endsWith('.css') ? 'sfa.css' : '[name]-[hash][extname]',
         inlineDynamicImports: true,
       },
     },
   },
   server: {
+    port: 8080,
     proxy: {
       '/api': { target: 'http://hema.local:8000', changeOrigin: true },
       '/assets': { target: 'http://hema.local:8000', changeOrigin: true },
+      '/sfa': { target: 'http://hema.local:8000', changeOrigin: true },
     },
   },
 })
