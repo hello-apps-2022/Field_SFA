@@ -626,11 +626,13 @@ const geocoding = ref(false)
 
 const form = reactive({ customer_name:'', customer_type:'Company', customer_group:'', territory:'', mobile_no:'', email_id:'', customer_details:'', custom_sfa_rep:'', custom_visit_frequency:'' })
 const locationForm = reactive({ latitude:'', longitude:'', area:'', city:'', district:'', address:'' })
-const visitForm = reactive({ sales_person:'', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', notes:'' })
+import { auth } from '@/utils/auth'
+
+const visitForm = reactive({ sales_person: auth.salesPerson || '', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', notes:'' })
 const visitErrors = reactive({})
 const orderForm = reactive({ transaction_date:dayjs().format('YYYY-MM-DD'), delivery_date:'', items:[], remarks:'' })
 const paymentForm = reactive({
-  sales_person: '', payment_date: dayjs().format('YYYY-MM-DD'),
+  sales_person: auth.salesPerson || '', payment_date: dayjs().format('YYYY-MM-DD'),
   payment_mode: 'Cash', payment_type: '', amount: '',
   reference_no: '', notes: '',
   carton_items: [],

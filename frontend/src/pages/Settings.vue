@@ -1,49 +1,362 @@
 <template>
-  <div class="flex h-full flex-col">
-    <PageHeader title="Settings" />
-    <div class="flex-1 overflow-auto p-5 max-w-2xl space-y-4">
-      <div v-for="s in sections" :key="s.title" class="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-        <div class="border-b border-gray-100 bg-gray-50 px-4 py-2.5">
-          <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{{ s.title }}</p>
+  <div class="flex h-full flex-col overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex h-[52px] shrink-0 items-center border-b border-gray-100 bg-white px-5 gap-3">
+      <h1 class="text-sm font-semibold text-gray-900">Settings</h1>
+      <div class="flex-1" />
+      <Btn icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex shrink-0 border-b border-gray-100 bg-white px-5">
+      <button
+        class="mr-1 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors"
+        :class="tab === 'users' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        @click="tab = 'users'"
+      >Users</button>
+    </div>
+
+    <!-- Users tab -->
+    <div class="flex-1 overflow-y-auto bg-gray-50 p-5">
+      <div v-if="loading" class="flex h-40 items-center justify-center">
+        <FeatherIcon name="loader" class="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+
+      <div v-else class="space-y-2">
+        <!-- Column headers -->
+        <div class="grid grid-cols-12 gap-4 px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+          <div class="col-span-3">Name</div>
+          <div class="col-span-2">Role</div>
+          <div class="col-span-2">Territory</div>
+          <div class="col-span-2">Mobile</div>
+          <div class="col-span-1">Last Seen</div>
+          <div class="col-span-1 text-center">Status</div>
+          <div class="col-span-1" />
         </div>
-        <div class="divide-y divide-gray-50">
-          <a v-for="item in s.items" :key="item.label" :href="item.href" target="_blank"
-            class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group">
-            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-colors">
-              <FeatherIcon :name="item.icon" class="h-3.5 w-3.5 text-gray-600" />
+
+        <div v-for="user in users" :key="user.sales_person"
+          class="grid grid-cols-12 gap-4 items-center rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm transition-shadow"
+        >
+          <!-- Name + email -->
+          <div class="col-span-3 flex items-center gap-3 min-w-0">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+              :class="roleColor(user.role).bg">
+              <span :class="roleColor(user.role).text">{{ initials(user.full_name) }}</span>
             </div>
-            <div class="flex-1"><p class="text-sm font-medium text-gray-800">{{ item.label }}</p><p class="text-xs text-gray-400">{{ item.desc }}</p></div>
-            <FeatherIcon name="external-link" class="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 shrink-0" />
-          </a>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">{{ user.full_name }}</p>
+              <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
+            </div>
+          </div>
+
+          <!-- Role badge -->
+          <div class="col-span-2">
+            <span class="rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="roleColor(user.role).badge">
+              {{ user.role || 'No role' }}
+            </span>
+          </div>
+
+          <!-- Territory -->
+          <div class="col-span-2 text-sm text-gray-600">{{ user.territory || '—' }}</div>
+
+          <!-- Mobile -->
+          <div class="col-span-2 text-sm text-gray-600">{{ user.mobile_no || '—' }}</div>
+
+          <!-- Last seen -->
+          <div class="col-span-1 text-xs text-gray-400">
+            {{ user.last_seen ? fmtDate(user.last_seen) : 'Never' }}
+          </div>
+
+          <!-- Status toggle -->
+          <div class="col-span-1 flex justify-center">
+            <button
+              class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors"
+              :class="user.sfa_active ? 'bg-gray-900' : 'bg-gray-200'"
+              @click="toggleActive(user)"
+            >
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                :class="user.sfa_active ? 'translate-x-4' : 'translate-x-0'" />
+            </button>
+          </div>
+
+          <!-- Actions -->
+          <div class="col-span-1 flex justify-end gap-1">
+            <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              @click="openEdit(user)" title="Edit">
+              <FeatherIcon name="edit-2" class="h-3.5 w-3.5" />
+            </button>
+            <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-amber-600"
+              @click="openResetPassword(user)" title="Reset password">
+              <FeatherIcon name="key" class="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!users.length" class="flex flex-col items-center py-16 text-gray-400">
+          <FeatherIcon name="users" class="h-10 w-10 mb-3" />
+          <p class="text-sm font-medium text-gray-600">No users yet</p>
+          <p class="text-xs mt-1 mb-4">Add your first rep or manager</p>
+          <Btn icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Create user panel -->
+  <SlidePanel v-model="createPanel" title="Add User" :saving="saving" save-label="Create User" @save="createUser">
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <FormField v-model="form.first_name" label="First Name" required :error="errors.first_name" />
+        <FormField v-model="form.last_name" label="Last Name" />
+      </div>
+      <FormField v-model="form.email" label="Email" type="email" required :error="errors.email"
+        placeholder="rep@hema.ug" />
+      <FormField v-model="form.password" label="Password" type="password" required :error="errors.password"
+        placeholder="Min 8 characters" />
+      <div>
+        <label class="mb-2 block text-xs font-medium text-gray-600">Role <span class="text-red-500">*</span></label>
+        <div class="grid grid-cols-3 gap-2">
+          <button v-for="r in roleOptions" :key="r.value"
+            class="rounded-lg border py-2.5 px-3 text-left transition-colors"
+            :class="form.role === r.value
+              ? 'border-gray-900 bg-gray-900 text-white'
+              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'"
+            @click="form.role = r.value"
+          >
+            <p class="text-xs font-semibold">{{ r.label }}</p>
+            <p class="text-[10px] mt-0.5 opacity-70">{{ r.desc }}</p>
+          </button>
+        </div>
+      </div>
+      <FormField v-model="form.territory" label="Territory" type="select" :options="territoryOptions"
+        help="Determines which data this user can access" />
+      <FormField v-model="form.mobile_no" label="Mobile Number" placeholder="+256 7XX XXX XXX" />
+    </div>
+  </SlidePanel>
+
+  <!-- Edit user panel -->
+  <SlidePanel v-model="editPanel" :title="'Edit — ' + (editUser?.full_name || '')"
+    :saving="saving" save-label="Save Changes" @save="saveEdit">
+    <div v-if="editUser" class="space-y-4">
+      <!-- User info strip -->
+      <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
+          :class="roleColor(editUser.role).bg">
+          <span :class="roleColor(editUser.role).text">{{ initials(editUser.full_name) }}</span>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-900">{{ editUser.full_name }}</p>
+          <p class="text-xs text-gray-400">{{ editUser.email }}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <FormField v-model="editForm.first_name" label="First Name" />
+        <FormField v-model="editForm.last_name" label="Last Name" />
+      </div>
+
+      <div>
+        <label class="mb-2 block text-xs font-medium text-gray-600">Role</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button v-for="r in roleOptions" :key="r.value"
+            class="rounded-lg border py-2.5 px-3 text-left transition-colors"
+            :class="editForm.role === r.value
+              ? 'border-gray-900 bg-gray-900 text-white'
+              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'"
+            @click="editForm.role = r.value"
+          >
+            <p class="text-xs font-semibold">{{ r.label }}</p>
+            <p class="text-[10px] mt-0.5 opacity-70">{{ r.desc }}</p>
+          </button>
+        </div>
+      </div>
+      <FormField v-model="editForm.territory" label="Territory" type="select" :options="territoryOptions" />
+      <FormField v-model="editForm.mobile_no" label="Mobile Number" />
+    </div>
+  </SlidePanel>
+
+  <!-- Reset password panel -->
+  <SlidePanel v-model="resetPanel" :title="'Reset Password — ' + (resetUser?.full_name || '')"
+    :saving="saving" save-label="Reset Password" @save="doResetPassword">
+    <div class="space-y-4">
+      <div class="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
+        The user will be able to log in with this new password immediately.
+      </div>
+      <FormField v-model="newPassword" label="New Password" type="password"
+        required :error="errors.password" placeholder="Min 8 characters" />
+    </div>
+  </SlidePanel>
 </template>
 
 <script setup>
-import PageHeader from '@/components/ui/PageHeader.vue'
-const sections = [
-  { title: 'Field Operations', items: [
-    { label: 'Visit Purposes', icon: 'list', desc: 'Visit purpose types', href: '/app/sfa-visit-purpose' },
-    { label: 'Activity Types', icon: 'activity', desc: 'Field activity categories', href: '/app/sfa-activity-type' },
-    { label: 'Location Types', icon: 'map-pin', desc: 'Outlet / customer location types', href: '/app/sfa-location-type' },
-  ]},
-  { title: 'Payments', items: [
-    { label: 'Payment Types', icon: 'credit-card', desc: 'Cash, cheque, mobile money etc.', href: '/app/sfa-payment-type' },
-    { label: 'Amendment Types', icon: 'edit-2', desc: 'Beat plan amendment categories', href: '/app/sfa-amendment-type' },
-  ]},
-  { title: 'Gamification', items: [
-    { label: 'Points Config', icon: 'star', desc: 'Points per activity type', href: '/app/sfa-points-config' },
-    { label: 'Badges', icon: 'award', desc: 'Achievement badge definitions', href: '/app/sfa-badge' },
-    { label: 'SKU Multipliers', icon: 'package', desc: 'Bonus points per product', href: '/app/sfa-sku-points-multiplier' },
-    { label: 'Target Periods', icon: 'calendar', desc: 'Sales target period definitions', href: '/app/sfa-target-period' },
-  ]},
-  { title: 'Users & Territories', items: [
-    { label: 'Users', icon: 'users', desc: 'Manage user accounts and roles', href: '/app/user' },
-    { label: 'Territories', icon: 'globe', desc: 'Territory hierarchy', href: '/app/territory' },
-    { label: 'Sales Persons', icon: 'user-check', desc: 'Sales person records', href: '/app/sales-person' },
-    { label: 'Customer Groups', icon: 'layers', desc: 'Customer classification groups', href: '/app/customer-group' },
-  ]},
+import { ref, reactive, computed, onMounted } from 'vue'
+import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
+import Btn from '@/components/ui/Btn.vue'
+import SlidePanel from '@/components/ui/SlidePanel.vue'
+import FormField from '@/components/ui/FormField.vue'
+import dayjs from 'dayjs'
+
+const tab = ref('users')
+const users = ref([])
+const loading = ref(false)
+const saving = ref(false)
+const createPanel = ref(false)
+const editPanel = ref(false)
+const resetPanel = ref(false)
+const editUser = ref(null)
+const resetUser = ref(null)
+const newPassword = ref('')
+const errors = reactive({})
+const territories = ref([])
+
+const roleOptions = [
+  { value: 'SFA Rep',     label: 'Rep',     desc: 'Field sales exec' },
+  { value: 'SFA Manager', label: 'Manager', desc: 'Territory manager' },
+  { value: 'SFA Admin',   label: 'Admin',   desc: 'Full access' },
 ]
+
+const form = reactive({
+  first_name: '', last_name: '', email: '', password: '',
+  role: 'SFA Rep', territory: '', mobile_no: '',
+})
+
+const editForm = reactive({
+  first_name: '', last_name: '', role: '', territory: '', mobile_no: '',
+})
+
+const territoryOptions = computed(() => ['', ...territories.value.map(t => t.name)])
+
+function roleColor(role) {
+  const map = {
+    'SFA Admin':   { bg: 'bg-purple-100', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700' },
+    'SFA Manager': { bg: 'bg-blue-100',   text: 'text-blue-700',   badge: 'bg-blue-100 text-blue-700' },
+    'SFA Rep':     { bg: 'bg-green-100',  text: 'text-green-700',  badge: 'bg-green-100 text-green-700' },
+  }
+  return map[role] || { bg: 'bg-gray-100', text: 'text-gray-600', badge: 'bg-gray-100 text-gray-600' }
+}
+
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const [usersRes, terrRes] = await Promise.all([
+      call('sfa_core.api.settings.get_users'),
+      call('sfa_core.api.settings.get_territories'),
+    ])
+    users.value = usersRes.message || []
+    territories.value = terrRes.message || []
+  } catch (e) { console.error(e) }
+  finally { loading.value = false }
+}
+
+function openCreate() {
+  Object.assign(form, {
+    first_name: '', last_name: '', email: '', password: '',
+    role: 'SFA Rep', territory: '', mobile_no: '',
+  })
+  Object.keys(errors).forEach(k => delete errors[k])
+  createPanel.value = true
+}
+
+function openEdit(user) {
+  editUser.value = user
+  const nameParts = (user.full_name || '').split(' ')
+  Object.assign(editForm, {
+    first_name: nameParts[0] || '',
+    last_name: nameParts.slice(1).join(' ') || '',
+    role: user.role || 'SFA Rep',
+    territory: user.territory || '',
+    mobile_no: user.mobile_no || '',
+  })
+  editPanel.value = true
+}
+
+function openResetPassword(user) {
+  resetUser.value = user
+  newPassword.value = ''
+  Object.keys(errors).forEach(k => delete errors[k])
+  resetPanel.value = true
+}
+
+async function createUser() {
+  Object.keys(errors).forEach(k => delete errors[k])
+  if (!form.first_name) { errors.first_name = 'Required'; return }
+  if (!form.email) { errors.email = 'Required'; return }
+  if (!form.password || form.password.length < 8) {
+    errors.password = 'Min 8 characters'; return
+  }
+  saving.value = true
+  try {
+    await call('sfa_core.api.settings.create_user', {
+      first_name: form.first_name,
+      last_name: form.last_name,
+      email: form.email,
+      password: form.password,
+      role: form.role,
+      territory: form.territory || null,
+      mobile_no: form.mobile_no || null,
+    })
+    successToast(`${form.first_name} added successfully`)
+    createPanel.value = false
+    await load()
+  } catch (e) { errorToast(e.message || 'Failed to create user') }
+  finally { saving.value = false }
+}
+
+async function saveEdit() {
+  if (!editUser.value) return
+  saving.value = true
+  try {
+    await call('sfa_core.api.settings.update_user', {
+      sales_person: editUser.value.sales_person,
+      role: editForm.role,
+      territory: editForm.territory || null,
+      mobile_no: editForm.mobile_no || null,
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+    })
+    successToast('User updated')
+    editPanel.value = false
+    await load()
+  } catch (e) { errorToast(e.message || 'Failed to update') }
+  finally { saving.value = false }
+}
+
+async function doResetPassword() {
+  if (!newPassword.value || newPassword.value.length < 8) {
+    errors.password = 'Min 8 characters'; return
+  }
+  saving.value = true
+  try {
+    await call('sfa_core.api.settings.reset_password', {
+      sales_person: resetUser.value.sales_person,
+      new_password: newPassword.value,
+    })
+    successToast('Password reset successfully')
+    resetPanel.value = false
+  } catch (e) { errorToast(e.message || 'Failed to reset password') }
+  finally { saving.value = false }
+}
+
+async function toggleActive(user) {
+  const newState = !user.sfa_active
+  try {
+    await call('sfa_core.api.settings.toggle_user_active', {
+      sales_person: user.sales_person,
+      enabled: newState,
+    })
+    user.sfa_active = newState
+    successToast(newState ? `${user.full_name} activated` : `${user.full_name} deactivated`)
+  } catch (e) { errorToast(e.message) }
+}
+
+const fmtDate = (d) => d ? dayjs(d).format('D MMM') : '—'
+
+onMounted(load)
 </script>

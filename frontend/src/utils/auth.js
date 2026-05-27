@@ -30,6 +30,8 @@ export const auth = {
       'rep-activity-map':    r.isAdmin || r.isManager,
       'customer-map':        r.isAdmin || r.isManager,
       'territory-dashboard': r.isAdmin || r.isManager,
+      'targets':             r.isAdmin || r.isManager,
+      'targets/performance':  r.isAdmin || r.isManager,
       'settings':            r.isAdmin,
     }
     return rules[page] ?? r.isAdmin

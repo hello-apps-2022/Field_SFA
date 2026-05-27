@@ -60,6 +60,12 @@ export async function saveDoc(doc) {
 }
 
 export async function insertDoc(doc) {
+  // Use our own endpoint for SFA docs — auto-assigns sales_person from logged-in user
+  const sfaDoctypes = ['SFA Visit', 'SFA Payment', 'SFA Form Response']
+  if (sfaDoctypes.includes(doc.doctype)) {
+    const data = await _post('sfa_core.api.utils.insert_doc', { doc })
+    return data.message
+  }
   const data = await _post('frappe.client.insert', { doc })
   return data.message
 }

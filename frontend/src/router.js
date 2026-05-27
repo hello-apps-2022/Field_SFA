@@ -23,6 +23,8 @@ const routes = [
   { path: '/gamification', name: 'Gamification', component: () => import('@/pages/Gamification.vue') },
   { path: '/reports', name: 'Reports', component: () => import('@/pages/Reports.vue') },
   { path: '/territory-dashboard', name: 'TerritoryDashboard', component: () => import('@/pages/TerritoryDashboard.vue') },
+  { path: '/targets', name: 'Targets', component: () => import('@/pages/Targets.vue') },
+  { path: '/targets/performance', name: 'TargetsPerformance', component: () => import('@/pages/TargetsPerformance.vue') },
   { path: '/settings', name: 'Settings', component: () => import('@/pages/Settings.vue') },
 
   // Maps
