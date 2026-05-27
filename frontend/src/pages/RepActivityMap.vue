@@ -87,7 +87,7 @@
 
       <!-- Map -->
       <div class="relative flex-1">
-        <div id="rep-activity-map" class="h-full w-full" />
+        <div id="rep-activity-map" style="height:100%;width:100%;min-height:400px" />
 
         <!-- Empty / loading overlays -->
         <div v-if="!selectedRep" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90">
@@ -169,6 +169,7 @@ import { call } from '@/utils/frappe'
 import Btn from '@/components/ui/Btn.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import dayjs from 'dayjs'
+import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 // Inline VisitCard component
 const VisitCard = defineComponent({
@@ -296,41 +297,28 @@ async function load() {
 }
 
 // Map
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const l = document.createElement('link'); l.id = 'leaflet-css'; l.rel = 'stylesheet'
-    l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l)
-  }
-  if (!document.getElementById('leaflet-js')) {
-    const s = document.createElement('script'); s.id = 'leaflet-js'
-    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload = cb; document.head.appendChild(s)
-  } else { window.setTimeout(cb, 300) }
-}
 
-function initBaseMap() {
-  return new Promise(resolve => {
-    loadLeaflet(() => {
-      const el = document.getElementById('rep-activity-map')
-      if (!el) { resolve(null); return }
-      if (mapInstance) { resolve(mapInstance); return }
-      const map = window.L.map(el)
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(map)
-      map.setView([1.3733, 32.2903], 7)
-      mapInstance = map
-      resolve(map)
-    })
-  })
+async function initBaseMap() {
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('rep-activity-map')
+  if (!el) return null
+  if (mapInstance) { mapInstance.invalidateSize(); return mapInstance }
+  const map = L.map(el)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map)
+  map.setView([1.3733, 32.2903], 7)
+  mapInstance = map
+  window.setTimeout(() => map.invalidateSize(), 100)
+  return map
 }
 
 // Day colors for multi-day view
 const DAY_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#ec4899','#06b6d4']
 
 async function renderMap() {
-  const L = window.L
-  const map = await initBaseMap()
+    const map = await initBaseMap()
   if (!map || !data.value) return
 
   if (layerGroup) { map.removeLayer(layerGroup); layerGroup = null }
@@ -418,7 +406,7 @@ async function renderMap() {
   })
 
   if (allPoints.length > 0) {
-    map.fitBounds(window.L.latLngBounds(allPoints).pad(0.15))
+    map.fitBounds(L.latLngBounds(allPoints).pad(0.15))
   }
 }
 
@@ -433,7 +421,7 @@ const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 
 onMounted(async () => {
   await loadReps()
-  loadLeaflet(() => initBaseMap())
+  initBaseMap()
 })
 </script>
 

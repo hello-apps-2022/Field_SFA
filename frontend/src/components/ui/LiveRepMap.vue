@@ -36,7 +36,7 @@
 
       <!-- Map -->
       <div class="relative flex-1">
-        <div id="dashboard-live-map" class="h-full w-full" />
+        <div id="dashboard-live-map" style="height:100%;width:100%" />
 
         <!-- Empty state -->
         <div v-if="!loading && reps.length === 0"
@@ -110,6 +110,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { call } from '@/utils/frappe'
 import dayjs from 'dayjs'
+import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
 
@@ -130,7 +131,9 @@ async function load() {
   loading.value = true
   try {
     const res = await call('sfa_core.api.dashboard.get_live_reps')
-    reps.value = res.message || []
+    const msg = res.message
+    // Handle both array and object responses
+    reps.value = Array.isArray(msg) ? msg : (msg ? Object.values(msg) : [])
     await renderMarkers()
   } catch (e) {
     console.error('Failed to load live reps', e)
@@ -139,37 +142,23 @@ async function load() {
   }
 }
 
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const l = document.createElement('link'); l.id = 'leaflet-css'; l.rel = 'stylesheet'
-    l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l)
-  }
-  if (!document.getElementById('leaflet-js')) {
-    const s = document.createElement('script'); s.id = 'leaflet-js'
-    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload = cb; document.head.appendChild(s)
-  } else { window.setTimeout(cb, 300) }
+
+async function initMap() {
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('dashboard-live-map')
+  if (!el) return null
+  if (mapInstance) return mapInstance
+  const map = L.map(el, { zoomControl: true })
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map)
+  map.setView([1.3733, 32.2903], 8)
+  mapInstance = map
+  return map
 }
 
-function initMap() {
-  return new Promise(resolve => {
-    loadLeaflet(() => {
-      const el = document.getElementById('dashboard-live-map')
-      if (!el) { resolve(null); return }
-      if (mapInstance) { resolve(mapInstance); return }
-      const L = window.L
-      const map = L.map(el, { zoomControl: true })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(map)
-      map.setView([1.3733, 32.2903], 8)
-      mapInstance = map
-      resolve(map)
-    })
-  })
-}
-
-function repIcon(rep) {
+function repIcon(L, rep) {
   const colors = {
     visiting: { bg: '#22c55e', border: '#16a34a' },
     active: { bg: '#60a5fa', border: '#2563eb' },
@@ -177,7 +166,7 @@ function repIcon(rep) {
   }
   const c = colors[rep.status] || colors.inactive
   const initial = (rep.name || '?').charAt(0).toUpperCase()
-  return window.L.divIcon({
+  return L.divIcon({
     className: '',
     iconSize: [32, 32],
     iconAnchor: [16, 16],
@@ -188,8 +177,7 @@ function repIcon(rep) {
 async function renderMarkers() {
   const map = await initMap()
   if (!map) return
-  const L = window.L
-
+  
   if (markersLayer) { map.removeLayer(markersLayer); markersLayer = null }
   const group = L.layerGroup().addTo(map)
   markersLayer = group
@@ -200,7 +188,7 @@ async function renderMarkers() {
     const pt = [rep.latitude, rep.longitude]
     bounds.push(pt)
 
-    const marker = L.marker(pt, { icon: repIcon(rep) })
+    const marker = L.marker(pt, { icon: repIcon(L, rep) })
 
     const visitInfo = rep.active_visit
       ? `<p style="font-size:11px;color:#16a34a;margin:2px 0 0">@ ${rep.active_visit.customer}</p>`
@@ -231,7 +219,7 @@ async function renderMarkers() {
     if (bounds.length === 1) {
       map.setView(bounds[0], 13)
     } else {
-      map.fitBounds(window.L.latLngBounds(bounds).pad(0.2))
+      map.fitBounds(L.latLngBounds(bounds).pad(0.2))
     }
   }
 }

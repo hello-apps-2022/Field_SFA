@@ -206,7 +206,7 @@
               </div>
 
               <div v-if="doc?.custom_latitude && doc?.custom_longitude">
-                <div id="customer-map" class="h-64 w-full" />
+                <div id="customer-map" style="height:256px;width:100%;z-index:0" />
                 <!-- Address info from reverse geocoding -->
                 <div class="border-t border-gray-100 px-4 py-3 space-y-1">
                   <div v-if="doc.custom_location_address" class="text-sm text-gray-700">{{ doc.custom_location_address }}</div>
@@ -473,17 +473,92 @@
   <!-- New Payment Panel -->
   <SlidePanel v-model="newPaymentPanel" title="Record Payment" :saving="savingPayment" save-label="Record" @save="createPayment">
     <div class="space-y-4">
+      <!-- Customer context -->
       <div class="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-sm text-gray-700">
         <span class="text-xs text-gray-400 block mb-0.5">Customer</span>
         {{ doc?.customer_name }}
       </div>
+
       <FormField v-model="paymentForm.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="paymentErrors.sales_person" />
       <FormField v-model="paymentForm.payment_date" label="Payment Date" type="date" required />
-      <FormField v-model="paymentForm.payment_type" label="Payment Type" type="select"
-        :options="['Cash','Cheque','Mobile Money','Bank Transfer','Credit Note']" required :error="paymentErrors.payment_type" />
-      <FormField v-model="paymentForm.amount" :label="`Amount (${currencyLabel()})`" type="number" required :error="paymentErrors.amount" />
-      <FormField v-model="paymentForm.reference_no" label="Reference / Receipt No" />
-      <FormField v-model="paymentForm.mobile_money_provider" label="Mobile Money Provider" help="e.g. MTN MoMo, Airtel Money" />
+
+      <!-- Payment Mode toggle -->
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-gray-600">Payment Mode</label>
+        <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            class="flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+            :class="paymentForm.payment_mode === 'Cash' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+            @click="paymentForm.payment_mode = 'Cash'"
+          >
+            <FeatherIcon name="credit-card" class="h-3.5 w-3.5" /> Cash
+          </button>
+          <button
+            class="flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 border-l border-gray-200"
+            :class="paymentForm.payment_mode === 'Cartons' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+            @click="paymentForm.payment_mode = 'Cartons'"
+          >
+            <FeatherIcon name="package" class="h-3.5 w-3.5" /> Cartons
+          </button>
+        </div>
+        <p class="mt-1 text-[10px] text-gray-400">
+          {{ paymentForm.payment_mode === 'Cartons' ? 'Record items and carton quantities — no pricing required' : 'Enter the cash amount collected' }}
+        </p>
+      </div>
+
+      <!-- Cash mode -->
+      <template v-if="paymentForm.payment_mode === 'Cash'">
+        <FormField v-model="paymentForm.payment_type" label="Payment Type" type="select"
+          :options="['Cash','Cheque','Bank Transfer','Credit Note']" required :error="paymentErrors.payment_type" />
+        <FormField v-model="paymentForm.amount" :label="`Amount (${currencyLabel()})`" type="number" required :error="paymentErrors.amount" />
+        <FormField v-model="paymentForm.reference_no" label="Reference / Receipt No" />
+      </template>
+
+      <!-- Carton mode -->
+      <template v-else>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-medium text-gray-600">Items <span class="text-red-500">*</span></label>
+            <button class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800" @click="addCartonItem">
+              <FeatherIcon name="plus" class="h-3 w-3" /> Add Item
+            </button>
+          </div>
+
+          <div v-if="paymentForm.carton_items.length" class="mb-1.5 flex items-center gap-2 px-0.5">
+            <span class="flex-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">Item</span>
+            <span class="w-20 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">Cartons</span>
+            <span class="w-5" />
+          </div>
+
+          <div class="space-y-2">
+            <div v-for="(row, i) in paymentForm.carton_items" :key="i" class="flex items-center gap-2">
+              <select v-model="row.item_code" @change="onCartonItemChange(row)"
+                class="flex-1 rounded-md border border-gray-200 bg-white px-2 py-2 text-sm focus:border-gray-400 focus:outline-none">
+                <option value="">Select item…</option>
+                <option v-for="it in items" :key="it.value" :value="it.value">{{ it.label }}</option>
+              </select>
+              <input v-model.number="row.cartons" type="number" min="0" placeholder="0"
+                class="w-20 rounded-md border border-gray-200 px-2 py-2 text-sm text-center focus:border-gray-400 focus:outline-none" />
+              <button @click="removeCartonItem(i)" class="shrink-0 text-gray-300 hover:text-red-500 transition-colors">
+                <FeatherIcon name="x" class="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div v-if="!paymentForm.carton_items.length" class="rounded-lg border border-dashed border-gray-200 py-4 text-center text-xs text-gray-400">
+              No items added — click "+ Add Item" above
+            </div>
+          </div>
+
+          <div v-if="paymentForm.carton_items.some(r => r.item_code && r.cartons > 0)"
+            class="mt-3 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
+            <p class="text-xs font-medium text-amber-700">
+              {{ paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0).reduce((s,r) => s + r.cartons, 0) }} total cartons
+            </p>
+            <p class="text-[10px] text-amber-600 mt-0.5">No monetary value — carton-based credit</p>
+          </div>
+        </div>
+        <FormField v-model="paymentForm.reference_no" label="Reference / Delivery Note No" />
+      </template>
+
       <FormField v-model="paymentForm.notes" label="Notes" type="textarea" />
     </div>
   </SlidePanel>
@@ -505,6 +580,8 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
 import { getDoc, getList, saveDoc, insertDoc } from '@/utils/frappe'
 import { successToast, errorToast } from '@/utils/toast'
 import { useLinkedData } from '@/composables/useLinkedData'
@@ -516,6 +593,7 @@ import StatusBadge from '@/components/ui/StatusBadge.vue'
 import Btn from '@/components/ui/Btn.vue'
 import { formatCurrency, formatCurrencyShort, currencyLabel } from '@/utils/currency'
 import dayjs from 'dayjs'
+import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 const props = defineProps({ name: String })
 const {
@@ -551,8 +629,24 @@ const locationForm = reactive({ latitude:'', longitude:'', area:'', city:'', dis
 const visitForm = reactive({ sales_person:'', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', notes:'' })
 const visitErrors = reactive({})
 const orderForm = reactive({ transaction_date:dayjs().format('YYYY-MM-DD'), delivery_date:'', items:[], remarks:'' })
-const paymentForm = reactive({ sales_person:'', payment_date:dayjs().format('YYYY-MM-DD'), payment_type:'', amount:'', reference_no:'', mobile_money_provider:'', notes:'' })
+const paymentForm = reactive({
+  sales_person: '', payment_date: dayjs().format('YYYY-MM-DD'),
+  payment_mode: 'Cash', payment_type: '', amount: '',
+  reference_no: '', notes: '',
+  carton_items: [],
+})
 const paymentErrors = reactive({})
+
+const cartonTotal = computed(() => 0) // No pricing in carton mode
+
+function addCartonItem() {
+  paymentForm.carton_items.push({ item_code: '', item_name: '', cartons: 1, rate_per_carton: 0 })
+}
+function removeCartonItem(i) { paymentForm.carton_items.splice(i, 1) }
+function onCartonItemChange(row) {
+  const item = items.value.find(i => i.value === row.item_code)
+  if (item) row.item_name = item.label
+}
 
 const orderTotal = computed(() => orderForm.items.reduce((s,i) => s+(i.qty||0)*(i.rate||0), 0))
 const tabs = computed(() => [
@@ -590,34 +684,28 @@ async function load() {
 }
 
 // ── Leaflet helpers ───────────────────────────────────────────────────────
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const l = document.createElement('link'); l.id='leaflet-css'; l.rel='stylesheet'
-    l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l)
-  }
-  const s = document.createElement('script'); s.id='leaflet-js'
-  s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=cb
-  if (!document.getElementById('leaflet-js')) document.head.appendChild(s)
-  else setTimeout(cb, 500)
-}
 
 function makeIcon(color='#4f46e5') {
-  return window.L.divIcon({ className:'', iconSize:[16,16], iconAnchor:[8,8],
+  return L.divIcon({ className:'', iconSize:[16,16], iconAnchor:[8,8],
     html:`<div style="background:${color};width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>` })
 }
 
-function initMap(lat, lng, label) {
-  loadLeaflet(() => {
-    const el = document.getElementById('customer-map')
-    if (!el) return
-    if (el._map) { el._map.setView([lat,lng],16); return }
-    const map = window.L.map(el)
-    el._map = map
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map)
-    map.setView([lat,lng],16)
-    window.L.marker([lat,lng],{icon:makeIcon()}).addTo(map).bindPopup(`<b>${label}</b>`).openPopup()
-  })
+async function initMap(lat, lng, label) {
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('customer-map')
+  if (!el) return
+  if (el._map) {
+    el._map.invalidateSize()
+    el._map.setView([lat, lng], 16)
+    return
+  }
+  const map = L.map(el)
+  el._map = map
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map)
+  map.setView([lat, lng], 16)
+  L.marker([lat, lng], { icon: makeIcon() }).addTo(map).bindPopup(`<b>${label}</b>`).openPopup()
+  window.setTimeout(() => map.invalidateSize(), 100)
 }
 
 let pickerMap = null
@@ -628,25 +716,25 @@ async function openLocationPicker() {
   locationForm.longitude = doc.value?.custom_longitude || ''
   locationForm.address = doc.value?.custom_location_address || ''
   await nextTick()
-  loadLeaflet(() => {
-    const el = document.getElementById('location-picker-map')
-    if (!el) return
-    if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
-    const L = window.L
-    const center = locationForm.latitude ? [+locationForm.latitude, +locationForm.longitude] : [0.3476, 32.5825]
-    pickerMap = L.map(el)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(pickerMap)
-    pickerMap.setView(center, locationForm.latitude ? 16 : 12)
-    if (locationForm.latitude) {
-      pickerMarker = L.marker(center, { icon:makeIcon(), draggable:true }).addTo(pickerMap)
-      pickerMarker.on('dragend', (e) => setPickerCoords(e.target.getLatLng().lat, e.target.getLatLng().lng))
-    }
-    pickerMap.on('click', (e) => {
-      setPickerCoords(e.latlng.lat, e.latlng.lng)
-      if (pickerMarker) pickerMap.removeLayer(pickerMarker)
-      pickerMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon:makeIcon(), draggable:true }).addTo(pickerMap)
-      pickerMarker.on('dragend', (ev) => setPickerCoords(ev.target.getLatLng().lat, ev.target.getLatLng().lng))
-    })
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('location-picker-map')
+  if (!el) return
+  if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
+  const center = locationForm.latitude ? [+locationForm.latitude, +locationForm.longitude] : [0.3476, 32.5825]
+  pickerMap = L.map(el)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(pickerMap)
+  pickerMap.setView(center, locationForm.latitude ? 16 : 12)
+  window.setTimeout(() => pickerMap.invalidateSize(), 100)
+  if (locationForm.latitude) {
+    pickerMarker = L.marker(center, { icon: makeIcon(), draggable: true }).addTo(pickerMap)
+    pickerMarker.on('dragend', (e) => setPickerCoords(e.target.getLatLng().lat, e.target.getLatLng().lng))
+  }
+  pickerMap.on('click', (e) => {
+    setPickerCoords(e.latlng.lat, e.latlng.lng)
+    if (pickerMarker) pickerMap.removeLayer(pickerMarker)
+    pickerMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: makeIcon(), draggable: true }).addTo(pickerMap)
+    pickerMarker.on('dragend', (ev) => setPickerCoords(ev.target.getLatLng().lat, ev.target.getLatLng().lng))
   })
 }
 
@@ -767,14 +855,46 @@ async function createOrder() {
 }
 
 async function createPayment() {
-  if (!paymentForm.sales_person) { paymentErrors.sales_person='Required'; return }
-  if (!paymentForm.payment_type) { paymentErrors.payment_type='Required'; return }
-  if (!paymentForm.amount || Number(paymentForm.amount)<=0) { paymentErrors.amount='Enter a valid amount'; return }
+  Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
+  if (!paymentForm.sales_person) { paymentErrors.sales_person = 'Required'; return }
+
+  if (paymentForm.payment_mode === 'Cash') {
+    if (!paymentForm.payment_type) { paymentErrors.payment_type = 'Required'; return }
+    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) { paymentErrors.amount = 'Enter a valid amount'; return }
+  } else {
+    const validItems = paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0 && r.rate_per_carton > 0)
+    if (!validItems.length) { errorToast('Add at least one item with cartons and rate'); return }
+  }
+
   savingPayment.value = true
   try {
-    await insertDoc({ doctype:'SFA Payment', customer:props.name, currency:'UGX', amount:Number(paymentForm.amount), ...paymentForm })
+    const isCarton = paymentForm.payment_mode === 'Cartons'
+    const finalAmount = isCarton ? 0 : Number(paymentForm.amount)
+    const cartonItems = isCarton
+      ? paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0).map(r => ({
+          doctype: 'SFA Payment Carton Item',
+          item_code: r.item_code, item_name: r.item_name,
+          cartons: r.cartons,
+        }))
+      : []
+
+    await insertDoc({
+      doctype: 'SFA Payment', customer: props.name,
+      sales_person: paymentForm.sales_person,
+      payment_date: paymentForm.payment_date,
+      payment_type: isCarton ? 'Cartons' : paymentForm.payment_type,
+      amount: isCarton ? 0 : finalAmount,
+      custom_payment_mode: paymentForm.payment_mode,
+      custom_carton_total: 0,
+      custom_carton_items: cartonItems,
+      reference_no: paymentForm.reference_no,
+      notes: paymentForm.notes, status: 'Draft',
+    })
+
     successToast('Payment recorded')
     newPaymentPanel.value = false
+    paymentForm.carton_items = []
+    paymentForm.payment_mode = 'Cash'
     await load()
   } catch (e) { errorToast(e.message || 'Failed') }
   finally { savingPayment.value = false }
@@ -785,11 +905,16 @@ const formatTime = (d) => d ? dayjs(d).format('HH:mm') : ''
 const isOverdue = (d) => d && dayjs(d).isBefore(dayjs(), 'day')
 const formatUGX = formatCurrency
 const fmtShort = formatCurrencyShort
+const fmt = formatCurrency
 
-onMounted(() => {
-  load()
+const route = useRoute()
+
+onMounted(async () => {
+  await load()
   loadCustomerGroups(); loadTerritories(); loadSalesPersons()
   loadBeatPlans(); loadItems(); loadPaymentTypes()
+  // Auto-open tab from query param (e.g. navigating from Orders/Payments page)
+  if (route.query.tab) activeTab.value = route.query.tab
 })
 </script>
 

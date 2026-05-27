@@ -297,6 +297,7 @@ import Btn from '@/components/ui/Btn.vue'
 import FillFormPanel from '@/components/ui/FillFormPanel.vue'
 import FormResponsePanel from '@/components/ui/FormResponsePanel.vue'
 import dayjs from 'dayjs'
+import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 const props = defineProps({ name: String })
 
@@ -345,49 +346,38 @@ async function load() {
   if (d.check_in_latitude) { await nextTick(); initMap(d) }
 }
 
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const l = document.createElement('link'); l.id='leaflet-css'; l.rel='stylesheet'
-    l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l)
+
+async function initMap(d) {
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('visit-map')
+  if (!el) return
+  if (el._map) { el._map.invalidateSize(); return }
+  const map = L.map(el)
+  el._map = map
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map)
+  window.setTimeout(() => map.invalidateSize(), 100)
+
+  const inIcon = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7], html: '<div style="background:#22c55e;width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>' })
+  const outIcon = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7], html: '<div style="background:#ef4444;width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>' })
+
+  const bounds = []
+  if (d.check_in_latitude) {
+    const pt = [d.check_in_latitude, d.check_in_longitude]
+    L.marker(pt, { icon: inIcon }).addTo(map).bindPopup('Check In')
+    bounds.push(pt)
   }
-  const existing = document.getElementById('leaflet-js')
-  if (!existing) {
-    const s = document.createElement('script'); s.id='leaflet-js'
-    s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=cb; document.head.appendChild(s)
-  } else { window.setTimeout(cb, 500) }
-}
-
-function initMap(d) {
-  loadLeaflet(() => {
-    const el = document.getElementById('visit-map')
-    if (!el || el._map) return
-    const L = window.L
-    const map = L.map(el)
-    el._map = map
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OSM' }).addTo(map)
-
-    const inIcon = L.divIcon({ className:'', iconSize:[14,14], iconAnchor:[7,7], html:'<div style="background:#22c55e;width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>' })
-    const outIcon = L.divIcon({ className:'', iconSize:[14,14], iconAnchor:[7,7], html:'<div style="background:#ef4444;width:14px;height:14px;border-radius:50%;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>' })
-
-    const bounds = []
-    if (d.check_in_latitude) {
-      const pt = [d.check_in_latitude, d.check_in_longitude]
-      L.marker(pt, {icon: inIcon}).addTo(map).bindPopup('Check In')
-      bounds.push(pt)
-    }
-    if (d.check_out_latitude) {
-      const pt = [d.check_out_latitude, d.check_out_longitude]
-      L.marker(pt, {icon: outIcon}).addTo(map).bindPopup('Check Out')
-      bounds.push(pt)
-    }
-    if (bounds.length === 2) {
-      L.polyline(bounds, { color:'#3b82f6', dashArray:'5,5', weight:2 }).addTo(map)
-      map.fitBounds(L.latLngBounds(bounds).pad(0.3))
-    } else if (bounds.length === 1) {
-      map.setView(bounds[0], 16)
-    }
-  })
+  if (d.check_out_latitude) {
+    const pt = [d.check_out_latitude, d.check_out_longitude]
+    L.marker(pt, { icon: outIcon }).addTo(map).bindPopup('Check Out')
+    bounds.push(pt)
+  }
+  if (bounds.length === 2) {
+    L.polyline(bounds, { color: '#3b82f6', dashArray: '5,5', weight: 2 }).addTo(map)
+    map.fitBounds(L.latLngBounds(bounds).pad(0.3))
+  } else if (bounds.length === 1) {
+    map.setView(bounds[0], 16)
+  }
 }
 
 async function save() {

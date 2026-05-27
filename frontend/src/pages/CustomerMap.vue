@@ -79,7 +79,7 @@
 
       <!-- Map -->
       <div class="relative flex-1">
-        <div id="customer-map-view" class="h-full w-full" />
+        <div id="customer-map-view" style="height:100%;width:100%;min-height:400px" />
 
         <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white/60">
           <FeatherIcon name="loader" class="h-8 w-8 animate-spin text-gray-400" />
@@ -192,6 +192,7 @@ import { formatCurrency } from '@/utils/currency'
 import Btn from '@/components/ui/Btn.vue'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import dayjs from 'dayjs'
+import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 const customers = ref([])
 const loading = ref(false)
@@ -248,34 +249,21 @@ async function load() {
   }
 }
 
-function loadLeaflet(cb) {
-  if (window.L) { cb(); return }
-  if (!document.getElementById('leaflet-css')) {
-    const l = document.createElement('link'); l.id = 'leaflet-css'; l.rel = 'stylesheet'
-    l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l)
-  }
-  if (!document.getElementById('leaflet-js')) {
-    const s = document.createElement('script'); s.id = 'leaflet-js'
-    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload = cb; document.head.appendChild(s)
-  } else { window.setTimeout(cb, 300) }
-}
 
-function initBaseMap() {
-  return new Promise(resolve => {
-    loadLeaflet(() => {
-      const el = document.getElementById('customer-map-view')
-      if (!el) { resolve(null); return }
-      if (mapInstance) { resolve(mapInstance); return }
-      const L = window.L
-      const map = L.map(el)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map)
-      map.setView([1.3733, 32.2903], 8)
-      mapInstance = map
-      resolve(map)
-    })
-  })
+async function initBaseMap() {
+  await ensureLeafletCSS()
+  const L = await getL()
+  const el = document.getElementById('customer-map-view')
+  if (!el) return null
+  if (mapInstance) { mapInstance.invalidateSize(); return mapInstance }
+  const map = L.map(el)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map)
+  map.setView([1.3733, 32.2903], 8)
+  mapInstance = map
+  window.setTimeout(() => map.invalidateSize(), 100)
+  return map
 }
 
 function markerColor(c) {
@@ -286,10 +274,10 @@ function markerColor(c) {
 }
 
 async function renderMarkers() {
+  const L = await getL()
   const map = await initBaseMap()
   if (!map) return
-  const L = window.L
-
+  
   if (markersLayer) { map.removeLayer(markersLayer); markersLayer = null }
   const group = L.layerGroup().addTo(map)
   markersLayer = group
