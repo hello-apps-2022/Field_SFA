@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SurveyJS editor overrides */
+.svc-creator__banner { display: none !important; }
+.svc-footer-bar { display: none !important; }

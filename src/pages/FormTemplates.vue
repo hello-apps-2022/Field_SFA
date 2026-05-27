@@ -177,7 +177,7 @@ async function duplicateTemplate(template) {
 }
 
 function viewResponses(template) {
-  frappe.set_route('List', 'SFA Form Response', { form_template: template.name });
+  window.location.href = `/app/sfa-form-response?form_template=${encodeURIComponent(template.name)}`;
 }
 
 function onCreatorSave() {
