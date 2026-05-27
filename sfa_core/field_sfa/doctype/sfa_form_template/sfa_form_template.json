@@ -1,7 +1,7 @@
 {
   "actions": [],
   "allow_rename": 1,
-  "autoname": "hash",
+  "autoname": "field:template_name",
   "creation": "2026-05-27 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
@@ -31,7 +31,8 @@
       "fieldtype": "Data",
       "reqd": 1,
       "in_list_view": 1,
-      "in_standard_filter": 1
+      "in_standard_filter": 1,
+      "unique": 1
     },
     {
       "fieldname": "category",
@@ -132,7 +133,7 @@
       "fieldname": "survey_json",
       "label": "Survey JSON",
       "fieldtype": "JSON",
-      "description": "SurveyJS Creator JSON — managed via the Form Templates page, do not edit manually"
+      "description": "SurveyJS Creator JSON \u2014 managed via the Form Templates page, do not edit manually"
     }
   ],
   "links": [],

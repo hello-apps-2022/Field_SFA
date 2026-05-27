@@ -1,77 +1,78 @@
 {
-  "actions": [],
-  "allow_rename": 1,
-  "autoname": "hash",
-  "creation": "2026-05-25 19:47:00.000000",
-  "doctype": "DocType",
-  "editable_grid": 0,
-  "engine": "InnoDB",
-  "field_order": [
-    "activity_type",
-    "points",
-    "description",
-    "is_active",
-    "multiplier_field"
-  ],
-  "fields": [
-    {
-      "fieldname": "activity_type",
-      "label": "Activity Type",
-      "fieldtype": "Select",
-      "options": "Visit Complete\nOrder Placed\nPayment Collected\nForm Submitted\nBeat Plan Completed\nGPS Track Uploaded",
-      "reqd": 1,
-      "unique": 1
-    },
-    {
-      "fieldname": "points",
-      "label": "Points",
-      "fieldtype": "Int",
-      "reqd": 1,
-      "default": 0
-    },
-    {
-      "fieldname": "description",
-      "label": "Description",
-      "fieldtype": "Small Text"
-    },
-    {
-      "fieldname": "is_active",
-      "label": "Is Active",
-      "fieldtype": "Check",
-      "default": 1
-    },
-    {
-      "fieldname": "multiplier_field",
-      "label": "Multiplier Field",
-      "fieldtype": "Select",
-      "options": "None\nCarton Qty\nOrder Value\nPayment Amount",
-      "default": "None",
-      "description": "Field to multiply points by (e.g., carton qty for order points)"
-    }
-  ],
-  "index_web_pages_for_search": 1,
-  "links": [],
-  "modified": "2026-05-25 19:47:00.000000",
-  "modified_by": "Administrator",
-  "module": "Field SFA",
-  "name": "SFA Points Config",
-  "naming_rule": "Random",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "role": "SFA Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1
-    },
-    {
-      "role": "SFA Supervisor",
-      "read": 1
-    }
-  ],
-  "sort_field": "modified",
-  "sort_order": "DESC",
-  "states": [],
-  "track_changes": 1
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:activity_type",
+ "creation": "2026-05-25 19:47:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "activity_type",
+  "points",
+  "description",
+  "is_active",
+  "multiplier_field"
+ ],
+ "fields": [
+  {
+   "fieldname": "activity_type",
+   "label": "Activity Type",
+   "fieldtype": "Select",
+   "options": "Visit Complete\nOrder Placed\nPayment Collected\nForm Submitted\nBeat Plan Completed\nGPS Track Uploaded",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "points",
+   "label": "Points",
+   "fieldtype": "Int",
+   "reqd": 1,
+   "default": 0
+  },
+  {
+   "fieldname": "description",
+   "label": "Description",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "is_active",
+   "label": "Is Active",
+   "fieldtype": "Check",
+   "default": 1
+  },
+  {
+   "fieldname": "multiplier_field",
+   "label": "Multiplier Field",
+   "fieldtype": "Select",
+   "options": "None\nCarton Qty\nOrder Value\nPayment Amount",
+   "default": "None",
+   "description": "Field to multiply points by (e.g., carton qty for order points)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-25 19:47:00.000000",
+ "modified_by": "Administrator",
+ "module": "Field SFA",
+ "name": "SFA Points Config",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "SFA Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "SFA Supervisor",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "activity_type"
 }

@@ -1,79 +1,80 @@
 {
-  "actions": [],
-  "allow_rename": 1,
-  "autoname": "hash",
-  "creation": "2026-05-25 19:47:00.000000",
-  "doctype": "DocType",
-  "editable_grid": 0,
-  "engine": "InnoDB",
-  "field_order": [
-    "alert_name",
-    "threshold_days",
-    "alert_type",
-    "recipient_role",
-    "message_template",
-    "is_active"
-  ],
-  "fields": [
-    {
-      "fieldname": "alert_name",
-      "label": "Alert Name",
-      "fieldtype": "Data",
-      "reqd": 1
-    },
-    {
-      "fieldname": "threshold_days",
-      "label": "Threshold (Days)",
-      "fieldtype": "Int",
-      "reqd": 1,
-      "description": "Days without visit before alert"
-    },
-    {
-      "fieldname": "alert_type",
-      "label": "Alert Type",
-      "fieldtype": "Select",
-      "options": "Email\nPush Notification\nBoth",
-      "reqd": 1
-    },
-    {
-      "fieldname": "recipient_role",
-      "label": "Recipient Role",
-      "fieldtype": "Link",
-      "options": "Role",
-      "reqd": 1
-    },
-    {
-      "fieldname": "message_template",
-      "label": "Message Template",
-      "fieldtype": "Text",
-      "description": "Use {customer}, {sales_person}, {days} as placeholders"
-    },
-    {
-      "fieldname": "is_active",
-      "label": "Is Active",
-      "fieldtype": "Check",
-      "default": 1
-    }
-  ],
-  "index_web_pages_for_search": 1,
-  "links": [],
-  "modified": "2026-05-25 19:47:00.000000",
-  "modified_by": "Administrator",
-  "module": "Field SFA",
-  "name": "SFA Share Alert Config",
-  "naming_rule": "Random",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "role": "SFA Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1
-    }
-  ],
-  "sort_field": "modified",
-  "sort_order": "DESC",
-  "states": [],
-  "track_changes": 1
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:alert_name",
+ "creation": "2026-05-25 19:47:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "alert_name",
+  "threshold_days",
+  "alert_type",
+  "recipient_role",
+  "message_template",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "alert_name",
+   "label": "Alert Name",
+   "fieldtype": "Data",
+   "reqd": 1
+  },
+  {
+   "fieldname": "threshold_days",
+   "label": "Threshold (Days)",
+   "fieldtype": "Int",
+   "reqd": 1,
+   "description": "Days without visit before alert"
+  },
+  {
+   "fieldname": "alert_type",
+   "label": "Alert Type",
+   "fieldtype": "Select",
+   "options": "Email\nPush Notification\nBoth",
+   "reqd": 1
+  },
+  {
+   "fieldname": "recipient_role",
+   "label": "Recipient Role",
+   "fieldtype": "Link",
+   "options": "Role",
+   "reqd": 1
+  },
+  {
+   "fieldname": "message_template",
+   "label": "Message Template",
+   "fieldtype": "Text",
+   "description": "Use {customer}, {sales_person}, {days} as placeholders"
+  },
+  {
+   "fieldname": "is_active",
+   "label": "Is Active",
+   "fieldtype": "Check",
+   "default": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-25 19:47:00.000000",
+ "modified_by": "Administrator",
+ "module": "Field SFA",
+ "name": "SFA Share Alert Config",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "SFA Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "alert_name"
 }
