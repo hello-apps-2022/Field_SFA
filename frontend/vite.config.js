@@ -1,32 +1,42 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
-import frappeUIPlugin from 'frappe-ui/vite'
 
 export default defineConfig({
-  plugins: [
-    frappeUIPlugin({
-      frappeProxy: true,
-      jinjaBootData: true,
-      buildConfig: {
-        indexHtmlPath: '../sfa_core/www/sfa.html',
-        emptyOutDir: true,
-        sourcemap: false,
-      },
-    }),
-    vue(),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
   },
-  server: {
-    fs: {
-      allow: [path.resolve(__dirname, '..')],
+  define: {
+    'process.env': '{}',
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    
+  },
+  build: {
+    outDir: path.resolve(__dirname, '../public/dist'),
+    emptyOutDir: true,
+    lib: {
+      entry: path.resolve(__dirname, 'src/main.js'),
+      name: 'SFA',
+      fileName: () => 'sfa_desk.bundle.js',
+      formats: ['iife'],
+    },
+    rollupOptions: {
+      external: [],
+      output: {
+        assetFileNames: (info) =>
+          info.name?.endsWith('.css') ? 'sfa_core.bundle.css' : '[name][extname]',
+        globals: {},
+        inlineDynamicImports: true,
+      },
     },
   },
-  optimizeDeps: {
-    include: ['feather-icons'],
+  server: {
+    proxy: {
+      '/api': { target: 'http://hema.local:8000', changeOrigin: true },
+      '/assets': { target: 'http://hema.local:8000', changeOrigin: true },
+    },
   },
 })

@@ -1,14 +1,17 @@
 <template>
   <router-link
     :to="item.to"
-    class="flex h-8 w-full items-center gap-2.5 rounded px-2 text-ink-gray-6 hover:bg-surface-gray-2 hover:text-ink-gray-8 transition-colors"
-    :class="{
-      'bg-surface-gray-3 text-ink-gray-9 font-medium': isActive,
-    }"
+    class="flex h-8 w-full items-center rounded px-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150 no-underline"
+    :class="isActive ? 'bg-gray-100 text-gray-900 font-medium' : ''"
     :title="collapsed ? item.label : ''"
   >
     <FeatherIcon :name="item.icon" class="h-3.5 w-3.5 shrink-0" />
-    <span v-if="!collapsed" class="text-sm truncate">{{ item.label }}</span>
+    <span
+      v-show="!collapsed"
+      class="ml-2 truncate text-sm"
+    >
+      {{ item.label }}
+    </span>
   </router-link>
 </template>
 
@@ -22,5 +25,8 @@ const props = defineProps({
 })
 
 const route = useRoute()
-const isActive = computed(() => route.path.startsWith(props.item.to) && props.item.to !== '/')
+const isActive = computed(() =>
+  route.path === props.item.to ||
+  (props.item.to !== '/dashboard' && route.path.startsWith(props.item.to))
+)
 </script>

@@ -4,61 +4,37 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
+import { Button, Badge, Avatar, LoadingIndicator, Dialog, Alert, Input, FeatherIcon } from 'frappe-ui'
+import 'frappe-ui/src/style.css'
 
-import {
-  FrappeUI,
-  Button,
-  Input,
-  TextInput,
-  FormControl,
-  ErrorMessage,
-  Dialog,
-  Alert,
-  Badge,
-  Avatar,
-  Tooltip,
-  Spinner,
-  setConfig,
-  frappeRequest,
-  FeatherIcon,
-} from 'frappe-ui'
+function mountSFAApp(selector) {
+  const el = document.querySelector(selector)
+  if (!el) {
+    console.error('SFA: mount element not found:', selector)
+    return
+  }
 
-const globalComponents = {
-  Button,
-  Input,
-  TextInput,
-  FormControl,
-  ErrorMessage,
-  Dialog,
-  Alert,
-  Badge,
-  Avatar,
-  Tooltip,
-  Spinner,
-  FeatherIcon,
+  // frappe.call, frappe.session etc are all available here
+  // because we're inside the Frappe desk context
+
+  const pinia = createPinia()
+  const app = createApp(App)
+  app.use(pinia)
+  app.use(router)
+  app.component('Button', Button)
+  app.component('Badge', Badge)
+  app.component('Avatar', Avatar)
+  app.component('LoadingIndicator', LoadingIndicator)
+  app.component('Dialog', Dialog)
+  app.component('Alert', Alert)
+  app.component('Input', Input)
+  app.component('FeatherIcon', FeatherIcon)
+  app.mount(el)
+  return app
 }
 
-const pinia = createPinia()
-const app = createApp(App)
-
-setConfig('resourceFetcher', frappeRequest)
-
-app.use(FrappeUI)
-app.use(pinia)
-app.use(router)
-
-for (const key in globalComponents) {
-  app.component(key, globalComponents[key])
-}
-
-// Mount — in production boot data is injected by sfa.py via Jinja
-if (import.meta.env.DEV) {
-  frappeRequest({ url: '/api/method/sfa_core.www.sfa.get_context_for_dev' }).then(
-    (values) => {
-      for (const key in values) window[key] = values[key]
-      app.mount('#app')
-    }
-  )
-} else {
-  app.mount('#app')
+// Expose for Frappe Page to call
+window.SFA_Core = {
+  mount: mountSFAApp,
+  router,
 }

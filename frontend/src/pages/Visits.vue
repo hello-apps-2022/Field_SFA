@@ -1,123 +1,156 @@
 <template>
   <div class="flex h-full flex-col">
-
-    <!-- Toolbar -->
-    <div class="flex items-center gap-3 border-b border-outline-gray-2 bg-surface-white px-4 py-2.5">
-      <TextInput
-        v-model="search"
-        placeholder="Search visits..."
-        size="sm"
-        class="w-64"
-      >
-        <template #prefix><FeatherIcon name="search" class="h-3.5 w-3.5 text-ink-gray-4" /></template>
-      </TextInput>
-      <FormControl type="select" v-model="statusFilter" :options="statusOptions" size="sm" class="w-36" />
-      <FormControl type="date" v-model="dateFilter" size="sm" class="w-36" />
+    <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2.5">
+      <div class="relative">
+        <FeatherIcon name="search" class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
+        <input v-model="search" type="text" placeholder="Search visits..."
+          class="h-9 rounded-md border border-gray-200 bg-white pl-8 pr-3 text-sm focus:border-gray-400 focus:outline-none w-56" />
+      </div>
+      <select v-model="statusFilter" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+        <option value="">All Statuses</option>
+        <option>Planned</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
+      </select>
+      <input v-model="dateFilter" type="date" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none" />
       <div class="flex-1" />
-      <Button size="sm" :loading="visitsList.loading.value" @click="visitsList.reload()">
-        <template #prefix><FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" /></template>
+      <span class="text-xs text-gray-400">{{ filtered.length }} visits</span>
+      <button class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors" @click="load">
+        <FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
         Refresh
-      </Button>
+      </button>
+      <button class="flex h-9 items-center gap-1.5 rounded-md bg-gray-900 px-3 text-sm font-medium text-white hover:bg-gray-700 transition-colors" @click="openNew">
+        <FeatherIcon name="plus" class="h-3.5 w-3.5" />
+        New Visit
+      </button>
     </div>
 
-    <!-- Table -->
     <div class="flex-1 overflow-auto">
       <table class="w-full text-sm">
-        <thead class="sticky top-0 bg-surface-gray-1 border-b border-outline-gray-2">
+        <thead class="sticky top-0 border-b border-gray-200 bg-gray-50">
           <tr>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Visit ID</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Customer</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Sales Person</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Date</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Check In</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-ink-gray-5 uppercase tracking-wide">Status</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Visit ID</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Customer</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Sales Person</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Date</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Check In</th>
+            <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
             <th class="px-4 py-2.5" />
           </tr>
         </thead>
-        <tbody class="divide-y divide-outline-gray-1">
-          <tr
-            v-for="visit in filteredVisits"
-            :key="visit.name"
-            class="hover:bg-surface-gray-1 cursor-pointer"
-            @click="$router.push('/visits/' + visit.name)"
-          >
-            <td class="px-4 py-3 font-mono text-xs text-ink-gray-5">{{ visit.name }}</td>
-            <td class="px-4 py-3 font-medium text-ink-gray-8">{{ visit.customer }}</td>
-            <td class="px-4 py-3 text-ink-gray-6">{{ visit.sales_person }}</td>
-            <td class="px-4 py-3 text-ink-gray-6">{{ formatDate(visit.visit_date) }}</td>
-            <td class="px-4 py-3 text-ink-gray-6">{{ visit.check_in_time ? formatTime(visit.check_in_time) : '—' }}</td>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="v in filtered" :key="v.name"
+            class="cursor-pointer hover:bg-gray-50 transition-colors group"
+            @click="$router.push('/visits/' + v.name)">
+            <td class="px-4 py-3 font-mono text-xs text-gray-400">{{ v.name }}</td>
+            <td class="px-4 py-3 font-medium text-gray-900">{{ v.customer }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ v.sales_person }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ formatDate(v.visit_date) }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ v.check_in_time ? formatTime(v.check_in_time) : '—' }}</td>
             <td class="px-4 py-3">
-              <Badge :label="visit.status" :variant="statusVariant(visit.status)" size="sm" />
+              <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="statusClass(v.status)">{{ v.status }}</span>
             </td>
-            <td class="px-4 py-3">
-              <FeatherIcon name="chevron-right" class="h-4 w-4 text-ink-gray-4" />
+            <td class="px-4 py-3" @click.stop>
+              <button class="opacity-0 group-hover:opacity-100 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 transition-all" @click="openEdit(v)">
+                Edit
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
-      <div v-if="!visitsList.loading.value && !filteredVisits.length" class="flex flex-col items-center justify-center py-20 text-ink-gray-4">
+      <div v-if="!loading && !filtered.length" class="flex flex-col items-center justify-center py-20 text-gray-400">
         <FeatherIcon name="map-pin" class="h-10 w-10 mb-3" />
         <p class="text-sm font-medium">No visits found</p>
-        <p class="text-xs mt-1">Try adjusting your filters</p>
       </div>
-      <div v-if="visitsList.loading.value" class="flex justify-center py-10">
-        <Spinner class="h-5 w-5 text-ink-gray-5" />
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div class="flex items-center justify-between border-t border-outline-gray-2 px-4 py-2.5 bg-surface-white">
-      <p class="text-xs text-ink-gray-4">{{ filteredVisits.length }} visits</p>
-      <div class="flex items-center gap-2">
-        <Button size="sm" variant="ghost" :disabled="!visitsList.hasPreviousPage" @click="visitsList.previousPage()">Previous</Button>
-        <Button size="sm" variant="ghost" :disabled="!visitsList.hasNextPage" @click="visitsList.nextPage()">Next</Button>
+      <div v-if="loading" class="flex justify-center py-12">
+        <FeatherIcon name="loader" class="h-6 w-6 animate-spin text-gray-400" />
       </div>
     </div>
 
+    <!-- Slide Panel -->
+    <SlidePanel v-model="panelOpen" :title="editing ? 'Edit Visit' : 'New Visit'" :saving="saving" @save="save">
+      <div class="space-y-4">
+        <FormField v-model="form.customer" label="Customer" type="select" :options="customers" required :error="errors.customer" />
+        <FormField v-model="form.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="errors.sales_person" />
+        <FormField v-model="form.beat_plan" label="Beat Plan" type="select" :options="beatPlans" />
+        <FormField v-model="form.visit_date" label="Visit Date" type="date" required :error="errors.visit_date" />
+        <FormField v-model="form.status" label="Status" type="select" :options="['Planned','In Progress','Completed','Cancelled']" />
+        <FormField v-model="form.notes" label="Notes" type="textarea" />
+      </div>
+    </SlidePanel>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { createListResource } from 'frappe-ui'
+import { ref, computed, onMounted, reactive } from 'vue'
+import SlidePanel from '@/components/ui/SlidePanel.vue'
+import FormField from '@/components/ui/FormField.vue'
+import { useLinkedData } from '@/composables/useLinkedData'
 import dayjs from 'dayjs'
+
+const { customers, salesPersons, beatPlans, loadCustomers, loadSalesPersons, loadBeatPlans } = useLinkedData()
 
 const search = ref('')
 const statusFilter = ref('')
 const dateFilter = ref('')
+const loading = ref(false)
+const saving = ref(false)
+const panelOpen = ref(false)
+const editing = ref(null)
+const visits = ref([])
+const errors = reactive({})
 
-const statusOptions = [
-  { label: 'All Statuses', value: '' },
-  { label: 'Planned', value: 'Planned' },
-  { label: 'In Progress', value: 'In Progress' },
-  { label: 'Completed', value: 'Completed' },
-  { label: 'Cancelled', value: 'Cancelled' },
-]
+const form = reactive({ customer: '', sales_person: '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Planned', notes: '' })
 
-const visitsList = createListResource({
-  doctype: 'SFA Visit',
-  fields: ['name', 'customer', 'sales_person', 'visit_date', 'check_in_time', 'check_out_time', 'status', 'beat_plan'],
-  orderBy: 'visit_date desc',
-  pageLength: 50,
-  auto: true,
-})
+async function load() {
+  loading.value = true
+  try {
+    const res = await frappe.call({ method: 'frappe.client.get_list', args: { doctype: 'SFA Visit', fields: ['name','customer','sales_person','visit_date','check_in_time','status','beat_plan','notes'], order_by: 'visit_date desc', limit: 200 } })
+    visits.value = res.message || []
+  } catch (e) { console.error(e) } finally { loading.value = false }
+}
 
-const filteredVisits = computed(() => {
-  let list = visitsList.data || []
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    list = list.filter(v =>
-      v.customer?.toLowerCase().includes(q) ||
-      v.sales_person?.toLowerCase().includes(q) ||
-      v.name?.toLowerCase().includes(q)
-    )
-  }
-  if (statusFilter.value) list = list.filter(v => v.status === statusFilter.value)
-  if (dateFilter.value) list = list.filter(v => v.visit_date === dateFilter.value)
-  return list
+function openNew() {
+  editing.value = null
+  Object.assign(form, { customer: '', sales_person: '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Planned', notes: '' })
+  Object.keys(errors).forEach(k => delete errors[k])
+  panelOpen.value = true
+}
+
+function openEdit(v) {
+  editing.value = v.name
+  Object.assign(form, { customer: v.customer, sales_person: v.sales_person, beat_plan: v.beat_plan || '', visit_date: v.visit_date, status: v.status, notes: v.notes || '' })
+  Object.keys(errors).forEach(k => delete errors[k])
+  panelOpen.value = true
+}
+
+async function save() {
+  let valid = true
+  if (!form.customer) { errors.customer = 'Required'; valid = false }
+  if (!form.sales_person) { errors.sales_person = 'Required'; valid = false }
+  if (!form.visit_date) { errors.visit_date = 'Required'; valid = false }
+  if (!valid) return
+  saving.value = true
+  try {
+    const doc = { doctype: 'SFA Visit', ...form }
+    if (editing.value) { doc.name = editing.value; await frappe.call({ method: 'frappe.client.save', args: { doc } }) }
+    else { await frappe.call({ method: 'frappe.client.insert', args: { doc } }) }
+    frappe.show_alert({ message: editing.value ? 'Visit updated' : 'Visit created', indicator: 'green' })
+    panelOpen.value = false
+    load()
+  } catch (e) { frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' }) }
+  finally { saving.value = false }
+}
+
+const filtered = computed(() => {
+  let l = visits.value
+  if (search.value) { const q = search.value.toLowerCase(); l = l.filter(v => v.customer?.toLowerCase().includes(q) || v.sales_person?.toLowerCase().includes(q)) }
+  if (statusFilter.value) l = l.filter(v => v.status === statusFilter.value)
+  if (dateFilter.value) l = l.filter(v => v.visit_date === dateFilter.value)
+  return l
 })
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 const formatTime = (t) => t ? dayjs(t).format('HH:mm') : '—'
-const statusVariant = (s) => ({ 'In Progress': 'success', 'Completed': 'info', 'Planned': 'subtle', 'Cancelled': 'danger' })[s] || 'subtle'
+const statusClass = (s) => ({ 'In Progress': 'bg-green-50 text-green-700', 'Completed': 'bg-blue-50 text-blue-700', 'Planned': 'bg-gray-100 text-gray-600', 'Cancelled': 'bg-red-50 text-red-700' })[s] || 'bg-gray-100 text-gray-600'
+
+onMounted(() => { load(); loadCustomers(); loadSalesPersons(); loadBeatPlans() })
 </script>

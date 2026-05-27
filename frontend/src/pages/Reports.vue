@@ -1,26 +1,26 @@
 <template>
   <div class="p-6 space-y-6">
     <div>
-      <h2 class="text-base font-semibold text-ink-gray-9">Reports</h2>
-      <p class="text-sm text-ink-gray-5 mt-0.5">Open any report in the Frappe desk report builder</p>
+      <h2 class="text-base font-semibold text-gray-900">Reports</h2>
+      <p class="text-sm text-gray-500 mt-0.5">Opens in Frappe desk — full filter and export support</p>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <a
         v-for="report in reports"
         :key="report.name"
-        :href="`/app/query-report/${encodeURIComponent(report.name)}`"
+        :href="reportUrl(report.name)"
         target="_blank"
-        class="group flex items-start gap-4 rounded-lg border border-outline-gray-2 bg-surface-white p-4 hover:border-outline-gray-4 hover:shadow-sm transition-all"
+        class="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-gray-300 hover:shadow-md transition-all"
       >
         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" :class="report.color">
           <FeatherIcon :name="report.icon" class="h-4 w-4 text-white" />
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-ink-gray-9 group-hover:text-ink-blue-4 transition-colors">{{ report.name }}</p>
-          <p class="text-xs text-ink-gray-4 mt-0.5">{{ report.description }}</p>
+          <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{{ report.name }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">{{ report.description }}</p>
         </div>
-        <FeatherIcon name="external-link" class="h-3.5 w-3.5 text-ink-gray-3 group-hover:text-ink-blue-4 shrink-0 mt-0.5 transition-colors" />
+        <FeatherIcon name="external-link" class="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-300 group-hover:text-blue-500 transition-colors" />
       </a>
     </div>
   </div>
@@ -39,4 +39,6 @@ const reports = [
   { name: 'Sales Performance', icon: 'bar-chart-2', color: 'bg-slate-500', description: 'Revenue and order performance by territory' },
   { name: 'Leaderboard', icon: 'award', color: 'bg-yellow-500', description: 'Gamification points and badges ranking' },
 ]
+
+const reportUrl = (name) => `/app/query-report/${encodeURIComponent(name)}`
 </script>

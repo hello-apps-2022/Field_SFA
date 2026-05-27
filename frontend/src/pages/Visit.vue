@@ -69,7 +69,7 @@
     </div>
   </div>
   <div v-else class="flex h-full items-center justify-center">
-    <Spinner class="h-6 w-6 text-ink-gray-4" />
+    <LoadingIndicator class="h-6 w-6 text-ink-gray-4" />
   </div>
 </template>
 

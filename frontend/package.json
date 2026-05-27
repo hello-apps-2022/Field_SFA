@@ -9,16 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "frappe-ui": "0.1.261",
+    "@vueuse/core": "^10.7.0",
+    "dayjs": "^1.11.10",
+    "frappe-ui": "^0.0.80",
     "pinia": "^2.1.0",
-    "vue": "^3.4.0",
-    "vue-router": "^4.2.0",
+    "survey-core": "^1.9.120",
+    "survey-creator-core": "^1.9.120",
     "survey-creator-vue": "^1.9.120",
     "survey-vue3-ui": "^1.9.120",
-    "survey-creator-core": "^1.9.120",
-    "survey-core": "^1.9.120",
-    "dayjs": "^1.11.10",
-    "@vueuse/core": "^10.7.0"
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
