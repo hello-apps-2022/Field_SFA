@@ -194,8 +194,8 @@
         </div>
       </div>
 
-      <!-- Live Rep Map -->
-      <LiveRepMap />
+      <!-- Live Rep Map — managers/admins only -->
+      <LiveRepMap v-if="auth.isManager || auth.isAdmin" />
 
       <!-- Visit trend (7 days) -->
       <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -259,6 +259,7 @@ import StatusBadge from '@/components/ui/StatusBadge.vue'
 import MetricCard from '@/components/ui/MetricCard.vue'
 import dayjs from 'dayjs'
 import LiveRepMap from '@/components/ui/LiveRepMap.vue'
+import { auth } from '@/utils/auth'
 
 const period = ref('today')
 const loading = ref(false)

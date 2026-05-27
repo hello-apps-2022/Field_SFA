@@ -83,8 +83,12 @@ def filter_by_user(filters=None):
         filters['territory'] = ctx['territory']
         return filters
 
-    if ctx['is_rep'] and ctx['sales_person']:
-        filters['custom_sfa_rep'] = ctx['sales_person']
+    if ctx['is_rep']:
+        if ctx['sales_person']:
+            filters['custom_sfa_rep'] = ctx['sales_person']
+        else:
+            # Rep with no Sales Person linked — show nothing
+            filters['name'] = '__no_access__'
         return filters
 
     # No role — return impossible filter to show nothing

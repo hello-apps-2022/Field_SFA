@@ -151,6 +151,9 @@ def get_recent_visits(limit=10):
 @frappe.whitelist()
 def get_overdue_customers(limit=10):
     ctx = get_user_context()
+    # If rep has no sales person linked, return nothing
+    if ctx['is_rep'] and not ctx['sales_person']:
+        return []
     filters = {
         'disabled': 0,
         'custom_next_visit_due': ['<', str(getdate(nowdate()))],
@@ -199,12 +202,11 @@ def get_visit_trend(days=7):
 @frappe.whitelist()
 def get_live_reps():
     ctx = get_user_context()
-    filters = {'custom_sfa_active': 1}
-    if ctx['is_manager'] and ctx['territory']:
-        filters['custom_territory'] = ctx['territory']
-    # Reps don't see the live map (frontend hides it, but guard here too)
     if ctx['is_rep']:
         return []
+    filters = {'custom_sfa_active': 1, 'is_group': 0}
+    if ctx['is_manager'] and ctx['territory']:
+        filters['custom_territory'] = ctx['territory']
     return frappe.get_all('Sales Person',
         filters=filters,
         fields=['name', 'sales_person_name', 'custom_territory',
