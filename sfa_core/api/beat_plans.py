@@ -1,14 +1,27 @@
 import frappe
 from frappe.utils import nowdate, getdate
 import json
+from sfa_core.api.auth import get_user_context, require_role
 
 
 @frappe.whitelist()
 def get_beat_plans(sales_person=None, territory=None, status=None):
+    ctx = get_user_context()
+
     filters = {}
-    if sales_person: filters['sales_person'] = sales_person
-    if territory: filters['territory'] = territory
-    if status: filters['status'] = status
+    # Reps only see their own beat plans
+    if ctx['is_rep']:
+        filters['sales_person'] = ctx['sales_person']
+    elif ctx['is_manager'] and not territory:
+        if ctx['territory']:
+            filters['territory'] = ctx['territory']
+    else:
+        if territory: filters['territory'] = territory
+
+    if sales_person and not ctx['is_rep']:
+        filters['sales_person'] = sales_person
+    if status:
+        filters['status'] = status
 
     plans = frappe.get_all('SFA Beat Plan',
         filters=filters,
@@ -21,20 +34,16 @@ def get_beat_plans(sales_person=None, territory=None, status=None):
     )
 
     for plan in plans:
-        # Count beats and total customers
         beats = frappe.get_all('SFA Beat Plan Beat',
             filters={'parent': plan['name'], 'parentfield': 'custom_beats'},
             fields=['name', 'beat_name', 'monday', 'tuesday', 'wednesday',
                     'thursday', 'friday', 'saturday', 'sunday', 'area_name'],
         )
         plan['beat_count'] = len(beats)
-        plan['beats_summary'] = beats  # for day coverage display
-
-        # Total unique customers across all beats
+        plan['beats_summary'] = beats
         total = 0
         for beat in beats:
-            total += frappe.db.count('SFA Beat Plan Beat Customer',
-                {'parent': beat['name']})
+            total += frappe.db.count('SFA Beat Plan Beat Customer', {'parent': beat['name']})
         plan['customer_count'] = total
 
     return plans
@@ -43,22 +52,24 @@ def get_beat_plans(sales_person=None, territory=None, status=None):
 @frappe.whitelist()
 def get_beat_plan(name):
     doc = frappe.get_doc('SFA Beat Plan', name)
+    ctx = get_user_context()
+
+    # Reps can only view their own beat plan
+    if ctx['is_rep'] and doc.sales_person != ctx['sales_person']:
+        frappe.throw('You do not have access to this beat plan.', frappe.PermissionError)
+
     result = doc.as_dict()
 
-    # Fetch beats directly from DB — custom Table fields need explicit query
     beats_raw = frappe.get_all('SFA Beat Plan Beat',
         filters={'parent': name, 'parentfield': 'custom_beats'},
-        fields=[
-            'name', 'beat_name', 'area_name', 'area_notes', 'estimated_outlets',
-            'monday', 'tuesday', 'wednesday', 'thursday',
-            'friday', 'saturday', 'sunday', 'idx',
-        ],
+        fields=['name', 'beat_name', 'area_name', 'area_notes', 'estimated_outlets',
+                'monday', 'tuesday', 'wednesday', 'thursday',
+                'friday', 'saturday', 'sunday', 'idx'],
         order_by='idx asc',
     )
 
     enriched_beats = []
     for beat in beats_raw:
-        # Get customers for this beat
         customers_raw = frappe.get_all('SFA Beat Plan Beat Customer',
             filters={'parent': beat['name']},
             fields=['name', 'customer', 'customer_name', 'visit_sequence', 'notes'],
@@ -88,20 +99,22 @@ def get_beat_plan(name):
 
 @frappe.whitelist()
 def can_rep_create():
-    user_roles = frappe.get_roles(frappe.session.user)
-    is_manager = 'Sales Manager' in user_roles or 'System Manager' in user_roles
+    ctx = get_user_context()
+    if ctx['is_admin'] or ctx['is_manager']:
+        return {'can_create': True, 'is_manager': True, 'rep_setting': True}
     rep_can_create = frappe.db.get_default('beat_plan_rep_can_create')
     if rep_can_create is None:
         rep_can_create = '1'
     return {
-        'can_create': is_manager or rep_can_create == '1',
-        'is_manager': is_manager,
+        'can_create': rep_can_create == '1',
+        'is_manager': False,
         'rep_setting': rep_can_create == '1',
     }
 
 
 @frappe.whitelist()
 def set_rep_creation_permission(allow):
+    require_role('SFA Admin', 'SFA Manager')
     frappe.db.set_default('beat_plan_rep_can_create', '1' if allow else '0')
     frappe.db.commit()
     return {'success': True}
@@ -109,7 +122,7 @@ def set_rep_creation_permission(allow):
 
 @frappe.whitelist()
 def add_beat(beat_plan, beat_name, days, area_name=None, area_notes=None):
-    """Add a new beat (named route) to a beat plan by inserting child doc directly."""
+    require_role('SFA Admin', 'SFA Manager')
     if isinstance(days, str):
         days = json.loads(days)
 
@@ -121,13 +134,13 @@ def add_beat(beat_plan, beat_name, days, area_name=None, area_notes=None):
         'beat_name': beat_name,
         'area_name': area_name or '',
         'area_notes': area_notes or '',
-        'monday': 1 if 'monday' in days else 0,
-        'tuesday': 1 if 'tuesday' in days else 0,
+        'monday':    1 if 'monday'    in days else 0,
+        'tuesday':   1 if 'tuesday'   in days else 0,
         'wednesday': 1 if 'wednesday' in days else 0,
-        'thursday': 1 if 'thursday' in days else 0,
-        'friday': 1 if 'friday' in days else 0,
-        'saturday': 1 if 'saturday' in days else 0,
-        'sunday': 1 if 'sunday' in days else 0,
+        'thursday':  1 if 'thursday'  in days else 0,
+        'friday':    1 if 'friday'    in days else 0,
+        'saturday':  1 if 'saturday'  in days else 0,
+        'sunday':    1 if 'sunday'    in days else 0,
     })
     beat.insert(ignore_permissions=True)
     frappe.db.commit()
@@ -136,10 +149,16 @@ def add_beat(beat_plan, beat_name, days, area_name=None, area_notes=None):
 
 @frappe.whitelist()
 def add_customer_to_beat(beat_name, customer):
-    """Add customer to a specific beat row."""
+    """Reps can add customers to beats (discovery). Managers can always add."""
+    ctx = get_user_context()
     beat_doc = frappe.get_doc('SFA Beat Plan Beat', beat_name)
 
-    # Check if already exists
+    # Reps can only add to their own beat plan
+    if ctx['is_rep']:
+        plan = frappe.db.get_value('SFA Beat Plan', beat_doc.parent, 'sales_person')
+        if plan != ctx['sales_person']:
+            frappe.throw('You can only add customers to your own beat plan.', frappe.PermissionError)
+
     for c in beat_doc.customers:
         if c.customer == customer:
             frappe.throw(f'{customer} is already in this beat')
@@ -155,13 +174,11 @@ def add_customer_to_beat(beat_name, customer):
     beat_doc.flags.ignore_version = True
     beat_doc.save(ignore_permissions=False)
 
-    # Increment discovery count on parent beat plan
     parent = beat_doc.parent
     if parent:
         current = frappe.db.get_value('SFA Beat Plan', parent, 'custom_discovery_count') or 0
         frappe.db.set_value('SFA Beat Plan', parent, 'custom_discovery_count', current + 1)
 
-    # Link customer to beat plan
     frappe.db.set_value('Customer', customer, {
         'custom_active_beat_plan': beat_doc.parent,
         'custom_beat_territory': frappe.db.get_value('SFA Beat Plan', beat_doc.parent, 'territory'),
@@ -172,6 +189,7 @@ def add_customer_to_beat(beat_name, customer):
 
 @frappe.whitelist()
 def remove_customer_from_beat(beat_name, customer):
+    require_role('SFA Admin', 'SFA Manager')
     beat_doc = frappe.get_doc('SFA Beat Plan Beat', beat_name)
     beat_doc.customers = [c for c in beat_doc.customers if c.customer != customer]
     for i, c in enumerate(beat_doc.customers, 1):
@@ -184,6 +202,7 @@ def remove_customer_from_beat(beat_name, customer):
 
 @frappe.whitelist()
 def reorder_beat_customers(beat_name, customer_order):
+    require_role('SFA Admin', 'SFA Manager')
     if isinstance(customer_order, str):
         customer_order = json.loads(customer_order)
     beat_doc = frappe.get_doc('SFA Beat Plan Beat', beat_name)
@@ -200,12 +219,14 @@ def reorder_beat_customers(beat_name, customer_order):
 
 @frappe.whitelist()
 def get_todays_beats(sales_person=None):
-    """Returns beats scheduled for today for a given rep."""
+    ctx = get_user_context()
     today = getdate(nowdate())
-    day_field = today.strftime('%A').lower()  # e.g. 'monday'
+    day_field = today.strftime('%A').lower()
 
-    filters = {'status': 'Active'}
-    if sales_person:
+    filters = {'status': 'Active', day_field: 1}
+    if ctx['is_rep']:
+        filters['sales_person'] = ctx['sales_person']
+    elif sales_person:
         filters['sales_person'] = sales_person
 
     plans = frappe.get_all('SFA Beat Plan', filters=filters,
@@ -218,15 +239,7 @@ def get_todays_beats(sales_person=None):
         et = plan.get('custom_effective_to')
         if ef and getdate(ef) > today: continue
         if et and getdate(et) < today: continue
-
-        # Get beats for today
-        beats = frappe.get_all('SFA Beat Plan Beat',
-            filters={'parent': plan['name'], 'parentfield': 'custom_beats',
-                     day_field: 1},
-            fields=['name', 'beat_name', 'area_name'])
-
-        if beats:
-            plan['todays_beats'] = beats
-            result.append(plan)
-
+        plan['customer_count'] = frappe.db.count('SFA Beat Plan Beat Customer',
+            {'parent': plan['name']})
+        result.append(plan)
     return result

@@ -1,286 +1,213 @@
 import frappe
-from frappe.utils import nowdate, add_days, getdate, get_first_day, get_last_day
+from frappe.utils import nowdate, add_days, getdate
+from sfa_core.api.auth import get_user_context
 
 
 @frappe.whitelist()
-def get_dashboard_data(period="today"):
+def get_dashboard_data(period='week'):
+    ctx = get_user_context()
     today = getdate(nowdate())
 
-    if period == "today":
-        date_from = today
-        date_to = today
-    elif period == "week":
+    if period == 'today':
+        date_from = date_to = today
+    elif period == 'week':
         date_from = getdate(add_days(today, -6))
         date_to = today
-    elif period == "month":
+    elif period == 'month':
+        from frappe.utils import get_first_day
         date_from = get_first_day(today)
         date_to = today
-    else:
-        date_from = today
-        date_to = today
-
-    df = str(date_from)
-    dt = str(date_to)
-
-    # Active visits (in progress right now)
-    active_visits = frappe.db.count("SFA Visit", {
-        "status": "In Progress",
-        "visit_date": ["between", [df, dt]],
-    })
-
-    # Completed visits
-    completed_visits = frappe.db.count("SFA Visit", {
-        "status": "Completed",
-        "visit_date": ["between", [df, dt]],
-    })
-
-    # Total visits planned
-    total_visits = frappe.db.count("SFA Visit", {
-        "visit_date": ["between", [df, dt]],
-        "status": ["not in", ["Cancelled"]],
-    })
-
-    # Orders
-    order_stats = frappe.db.sql("""
-        SELECT COUNT(*) as cnt, IFNULL(SUM(grand_total), 0) as revenue
-        FROM `tabSales Order`
-        WHERE transaction_date BETWEEN %s AND %s
-        AND docstatus = 1
-    """, (df, dt), as_dict=True)
-
-    orders_count = order_stats[0].cnt if order_stats else 0
-    revenue = order_stats[0].revenue if order_stats else 0
-
-    # Payments collected
-    payment_stats = frappe.db.sql("""
-        SELECT IFNULL(SUM(amount), 0) as total
-        FROM `tabSFA Payment`
-        WHERE payment_date BETWEEN %s AND %s
-        AND status IN ('Submitted', 'Reconciled')
-    """, (df, dt), as_dict=True)
-
-    payments = payment_stats[0].total if payment_stats else 0
-
-    # Beat plan compliance — completed / total planned
-    beat_total = frappe.db.count("SFA Visit", {
-        "visit_date": ["between", [df, dt]],
-        "beat_plan": ["!=", ""],
-        "status": ["not in", ["Cancelled"]],
-    })
-    beat_completed = frappe.db.count("SFA Visit", {
-        "visit_date": ["between", [df, dt]],
-        "beat_plan": ["!=", ""],
-        "status": "Completed",
-    })
-    compliance = round((beat_completed / beat_total * 100) if beat_total else 0)
-
-    # New customers this period
-    new_customers = frappe.db.count("Customer", {
-        "creation": ["between", [df + " 00:00:00", dt + " 23:59:59"]],
-    })
-
-    # Forms submitted
-    forms_submitted = frappe.db.count("SFA Form Response", {
-        "response_date": ["between", [df + " 00:00:00", dt + " 23:59:59"]],
-    })
-
-    # Active reps today
-    active_reps = frappe.db.sql("""
-        SELECT COUNT(DISTINCT sales_person) as cnt
-        FROM `tabSFA Visit`
-        WHERE visit_date BETWEEN %s AND %s
-        AND status != 'Cancelled'
-    """, (df, dt), as_dict=True)
-    active_reps_count = active_reps[0].cnt if active_reps else 0
-
-    return {
-        "active_visits": active_visits,
-        "completed_visits": completed_visits,
-        "total_visits": total_visits,
-        "orders_count": orders_count,
-        "revenue": float(revenue),
-        "payments_collected": float(payments),
-        "compliance_rate": compliance,
-        "new_customers": new_customers,
-        "forms_submitted": forms_submitted,
-        "active_reps": active_reps_count,
-        "date_from": df,
-        "date_to": dt,
-    }
-
-
-@frappe.whitelist()
-def get_leaderboard(period="today"):
-    today = getdate(nowdate())
-
-    if period == "today":
-        date_from = date_to = today
-    elif period == "week":
-        date_from, date_to = getdate(add_days(today, -6)), today
-    elif period == "month":
-        date_from, date_to = get_first_day(today), today
     else:
         date_from = date_to = today
 
     df, dt = str(date_from), str(date_to)
 
-    rows = frappe.db.sql("""
+    # Build territory/rep filter based on role
+    if ctx['is_rep']:
+        visit_filter = f"AND v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
+        cust_filter  = f"AND c.custom_sfa_rep = {frappe.db.escape(ctx['sales_person'])}"
+    elif ctx['is_manager'] and ctx['territory']:
+        visit_filter = f"AND c2.territory = {frappe.db.escape(ctx['territory'])}"
+        cust_filter  = f"AND c.territory = {frappe.db.escape(ctx['territory'])}"
+    else:
+        visit_filter = ''
+        cust_filter  = ''
+
+    # Visits
+    visits = frappe.db.sql(f"""
+        SELECT COUNT(*) as total,
+               SUM(CASE WHEN v.status='Completed' THEN 1 ELSE 0 END) as completed
+        FROM `tabSFA Visit` v
+        LEFT JOIN `tabCustomer` c2 ON c2.name = v.customer
+        WHERE v.visit_date BETWEEN %s AND %s
+          AND v.status != 'Cancelled'
+          {visit_filter}
+    """, (df, dt), as_dict=True)[0]
+
+    # Revenue
+    revenue = frappe.db.sql(f"""
+        SELECT IFNULL(SUM(o.grand_total), 0) as total
+        FROM `tabSales Order` o
+        INNER JOIN `tabCustomer` c ON c.name = o.customer
+        WHERE DATE(o.transaction_date) BETWEEN %s AND %s
+          AND o.docstatus = 1
+          {cust_filter}
+    """, (df, dt), as_dict=True)[0].total or 0
+
+    # Active customers
+    active_customers = frappe.db.sql(f"""
+        SELECT COUNT(DISTINCT v.customer) as cnt
+        FROM `tabSFA Visit` v
+        LEFT JOIN `tabCustomer` c2 ON c2.name = v.customer
+        WHERE v.visit_date BETWEEN %s AND %s
+          AND v.status = 'Completed'
+          {visit_filter}
+    """, (df, dt), as_dict=True)[0].cnt or 0
+
+    # Total customers in scope
+    total_customers = frappe.db.sql(f"""
+        SELECT COUNT(*) as cnt FROM `tabCustomer` c
+        WHERE c.disabled = 0 {cust_filter}
+    """, as_dict=True)[0].cnt or 0
+
+    compliance = round((visits.completed / visits.total * 100) if visits.total else 0)
+
+    return {
+        'visits': {'total': visits.total, 'completed': visits.completed, 'compliance': compliance},
+        'revenue': float(revenue),
+        'active_customers': active_customers,
+        'total_customers': total_customers,
+        'period': period,
+        'date_from': df,
+        'date_to': dt,
+    }
+
+
+@frappe.whitelist()
+def get_leaderboard(period='week'):
+    ctx = get_user_context()
+    today = getdate(nowdate())
+
+    if period == 'today':
+        date_from = date_to = today
+    elif period == 'week':
+        date_from = getdate(add_days(today, -6))
+        date_to = today
+    else:
+        from frappe.utils import get_first_day
+        date_from = get_first_day(today)
+        date_to = today
+
+    df, dt = str(date_from), str(date_to)
+
+    # Managers see their territory; reps see only their own
+    if ctx['is_rep']:
+        territory_join = ''
+        having = f"HAVING v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
+    elif ctx['is_manager'] and ctx['territory']:
+        territory_join = f"INNER JOIN `tabCustomer` tc ON tc.name = v.customer AND tc.territory = {frappe.db.escape(ctx['territory'])}"
+        having = ''
+    else:
+        territory_join = ''
+        having = ''
+
+    return frappe.db.sql(f"""
         SELECT
             v.sales_person,
             COUNT(v.name) as visits,
-            SUM(CASE WHEN v.status = 'Completed' THEN 1 ELSE 0 END) as completed,
-            IFNULL(SUM(o.grand_total), 0) as revenue,
-            IFNULL(SUM(p.amount), 0) as collections,
-            COUNT(DISTINCT v.customer) as customers_visited
+            SUM(CASE WHEN v.status='Completed' THEN 1 ELSE 0 END) as completed,
+            COUNT(DISTINCT v.customer) as customers,
+            IFNULL(SUM(o.grand_total), 0) as revenue
         FROM `tabSFA Visit` v
+        {territory_join}
         LEFT JOIN `tabSales Order` o
             ON o.customer = v.customer
             AND DATE(o.transaction_date) BETWEEN %s AND %s
             AND o.docstatus = 1
-        LEFT JOIN `tabSFA Payment` p
-            ON p.sales_person = v.sales_person
-            AND p.payment_date BETWEEN %s AND %s
-            AND p.status IN ('Submitted', 'Reconciled')
         WHERE v.visit_date BETWEEN %s AND %s
           AND v.status != 'Cancelled'
-          AND v.sales_person IS NOT NULL
-          AND v.sales_person != ''
         GROUP BY v.sales_person
-        ORDER BY completed DESC, revenue DESC
+        {having}
+        ORDER BY completed DESC
         LIMIT 20
-    """, (df, dt, df, dt, df, dt), as_dict=True)
-
-    return rows
+    """, (df, dt, df, dt), as_dict=True)
 
 
 @frappe.whitelist()
 def get_recent_visits(limit=10):
-    return frappe.db.sql("""
-        SELECT
-            v.name, v.customer, v.sales_person, v.visit_date,
-            v.status, v.check_in_time, v.visit_purpose,
-            v.duration_minutes,
-            c.custom_location_area, c.custom_location_city
-        FROM `tabSFA Visit` v
-        LEFT JOIN `tabCustomer` c ON c.name = v.customer
-        ORDER BY v.modified DESC
-        LIMIT %s
-    """, (limit,), as_dict=True)
-
-
-@frappe.whitelist()
-def get_visit_trend(days=7):
-    """Daily visit counts for the last N days."""
-    today = getdate(nowdate())
-    rows = []
-    for i in range(days - 1, -1, -1):
-        d = str(getdate(add_days(today, -i)))
-        total = frappe.db.count("SFA Visit", {
-            "visit_date": d,
-            "status": ["not in", ["Cancelled"]],
-        })
-        completed = frappe.db.count("SFA Visit", {
-            "visit_date": d,
-            "status": "Completed",
-        })
-        rows.append({"date": d, "total": total, "completed": completed})
-    return rows
-
-
-@frappe.whitelist()
-def get_overdue_customers(limit=10):
-    """Customers whose next visit is overdue."""
-    today = str(getdate(nowdate()))
-    return frappe.get_all("Customer",
-        filters={
-            "custom_next_visit_due": ["<", today],
-            "disabled": 0,
-        },
-        fields=[
-            "name", "customer_name", "territory", "custom_sfa_rep",
-            "custom_last_visit_date", "custom_next_visit_due",
-            "custom_location_area", "custom_location_city",
-        ],
-        order_by="custom_next_visit_due asc",
-        limit=limit,
+    ctx = get_user_context()
+    filters = {'status': ['!=', 'Cancelled']}
+    if ctx['is_rep']:
+        filters['sales_person'] = ctx['sales_person']
+    return frappe.get_all('SFA Visit',
+        filters=filters,
+        fields=['name', 'customer', 'sales_person',
+                'visit_date', 'status', 'visit_purpose'],
+        order_by='visit_date desc',
+        limit=int(limit),
     )
 
 
 @frappe.whitelist()
+def get_overdue_customers(limit=10):
+    ctx = get_user_context()
+    filters = {
+        'disabled': 0,
+        'custom_next_visit_due': ['<', str(getdate(nowdate()))],
+    }
+    if ctx['is_rep']:
+        filters['custom_sfa_rep'] = ctx['sales_person']
+    elif ctx['is_manager'] and ctx['territory']:
+        filters['territory'] = ctx['territory']
+
+    return frappe.get_all('Customer',
+        filters=filters,
+        fields=['name', 'customer_name', 'custom_sfa_rep', 'territory',
+                'custom_last_visit_date', 'custom_next_visit_due'],
+        order_by='custom_next_visit_due asc',
+        limit=int(limit),
+    )
+
+
+@frappe.whitelist()
+def get_visit_trend(days=7):
+    ctx = get_user_context()
+    today = getdate(nowdate())
+    date_from = str(getdate(add_days(today, -int(days) + 1)))
+
+    if ctx['is_rep']:
+        extra = f"AND v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
+    elif ctx['is_manager'] and ctx['territory']:
+        extra = f"AND c.territory = {frappe.db.escape(ctx['territory'])}"
+    else:
+        extra = ''
+
+    return frappe.db.sql(f"""
+        SELECT DATE(v.visit_date) as date,
+               COUNT(*) as total,
+               SUM(CASE WHEN v.status='Completed' THEN 1 ELSE 0 END) as completed
+        FROM `tabSFA Visit` v
+        LEFT JOIN `tabCustomer` c ON c.name = v.customer
+        WHERE v.visit_date >= %s
+          AND v.status != 'Cancelled'
+          {extra}
+        GROUP BY DATE(v.visit_date)
+        ORDER BY date asc
+    """, (date_from,), as_dict=True)
+
+
+@frappe.whitelist()
 def get_live_reps():
-    """
-    Returns current location + status of all reps for the live map.
-    """
-    from datetime import datetime, timedelta
-    from frappe.utils import now_datetime
-
-    today = nowdate()
-    now = now_datetime()
-    active_threshold = now - timedelta(hours=8)
-
-    reps = frappe.db.sql("""
-        SELECT
-            sp.name, sp.custom_territory, sp.custom_mobile_no,
-            sp.custom_last_seen, sp.custom_last_latitude,
-            sp.custom_last_longitude, sp.custom_sfa_active
-        FROM `tabSales Person` sp
-        WHERE sp.is_group = 0
-          AND sp.enabled = 1
-    """, as_dict=True)
-
-    result = []
-    for rep in reps:
-        # Latest GPS point today
-        latest = frappe.db.sql("""
-            SELECT latitude, longitude, timestamp, speed, battery_level, visit
-            FROM `tabSFA GPS Track Point`
-            WHERE sales_person = %s
-              AND DATE(timestamp) = %s
-              AND latitude IS NOT NULL AND latitude != 0
-            ORDER BY timestamp DESC LIMIT 1
-        """, (rep.name, today), as_dict=True)
-
-        if latest:
-            lat, lng = latest[0].latitude, latest[0].longitude
-            last_seen = latest[0].timestamp
-            speed = latest[0].speed or 0
-        elif rep.custom_last_latitude and rep.custom_last_longitude:
-            lat, lng = rep.custom_last_latitude, rep.custom_last_longitude
-            last_seen = rep.custom_last_seen
-            speed = 0
-        else:
-            continue  # no location at all, skip
-
-        visits_today = frappe.db.count('SFA Visit', {
-            'sales_person': rep.name, 'visit_date': today,
-            'status': ['not in', ['Cancelled']],
-        })
-        completed_today = frappe.db.count('SFA Visit', {
-            'sales_person': rep.name, 'visit_date': today, 'status': 'Completed',
-        })
-        active_visit = frappe.db.get_value('SFA Visit',
-            {'sales_person': rep.name, 'status': 'In Progress', 'visit_date': today},
-            ['name', 'customer', 'check_in_time'], as_dict=True
-        )
-
-        if active_visit:
-            status = 'visiting'
-        elif last_seen and frappe.utils.get_datetime(last_seen) > active_threshold:
-            status = 'active'
-        else:
-            status = 'inactive'
-
-        result.append({
-            'name': rep.name,
-            'territory': rep.custom_territory,
-            'latitude': float(lat),
-            'longitude': float(lng),
-            'last_seen': str(last_seen) if last_seen else None,
-            'speed': float(speed or 0),
-            'status': status,
-            'visits_today': visits_today,
-            'completed_today': completed_today,
-            'active_visit': active_visit,
-        })
-
-    return result
+    ctx = get_user_context()
+    filters = {'custom_sfa_active': 1}
+    if ctx['is_manager'] and ctx['territory']:
+        filters['custom_territory'] = ctx['territory']
+    # Reps don't see the live map (frontend hides it, but guard here too)
+    if ctx['is_rep']:
+        return []
+    return frappe.get_all('Sales Person',
+        filters=filters,
+        fields=['name', 'sales_person_name', 'custom_territory',
+                'custom_last_seen', 'custom_last_latitude', 'custom_last_longitude'],
+        limit=100,
+    )

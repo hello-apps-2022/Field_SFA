@@ -46,19 +46,19 @@
         <NavLink :item="{ label: 'Payments', to: '/payments', icon: 'credit-card' }" :collapsed="collapsed" />
 
         <NavSection label="Intelligence" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Form Templates', to: '/form-templates', icon: 'file-text' }" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Gamification', to: '/gamification', icon: 'award' }" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Reports', to: '/reports', icon: 'bar-chart-2' }" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Territory', to: '/territory-dashboard', icon: 'map-pin' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('form-templates')" :item="{ label: 'Form Templates', to: '/form-templates', icon: 'file-text' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('gamification')" :item="{ label: 'Gamification', to: '/gamification', icon: 'award' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('reports')" :item="{ label: 'Reports', to: '/reports', icon: 'bar-chart-2' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('territory-dashboard')" :item="{ label: 'Territory', to: '/territory-dashboard', icon: 'map-pin' }" :collapsed="collapsed" />
 
         <NavSection label="Maps" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Rep Activity', to: '/rep-activity-map', icon: 'activity' }" :collapsed="collapsed" />
-        <NavLink :item="{ label: 'Customer Map', to: '/customer-map', icon: 'globe' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('rep-activity-map')" :item="{ label: 'Rep Activity', to: '/rep-activity-map', icon: 'activity' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('customer-map')" :item="{ label: 'Customer Map', to: '/customer-map', icon: 'globe' }" :collapsed="collapsed" />
       </nav>
 
       <!-- Bottom -->
       <div class="shrink-0 border-t border-gray-100 py-2 px-1.5 space-y-0.5">
-        <NavLink :item="{ label: 'Settings', to: '/settings', icon: 'settings' }" :collapsed="collapsed" />
+        <NavLink v-if="auth.canAccess('settings')" :item="{ label: 'Settings', to: '/settings', icon: 'settings' }" :collapsed="collapsed" />
         <a
           href="/app" target="_blank"
           class="flex h-8 w-full items-center rounded-md px-2 text-gray-500 hover:bg-gray-200 hover:text-gray-800"
@@ -87,8 +87,11 @@ import { ref } from 'vue'
 import NavLink from './NavLink.vue'
 import NavSection from './NavSection.vue'
 import TopBar from './TopBar.vue'
+import { auth as _auth } from '@/utils/auth'
 
 const collapsed = ref(false)
+const auth = _auth  // plain object — properties read from window.frappe_boot on each access
+// expose auth to template
 </script>
 
 <style scoped>

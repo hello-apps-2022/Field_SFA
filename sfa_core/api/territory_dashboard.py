@@ -1,9 +1,15 @@
 import frappe
 from frappe.utils import nowdate, getdate, add_days, get_first_day, get_last_day
+from sfa_core.api.auth import get_user_context, require_role
 
 
 @frappe.whitelist()
 def get_territory_dashboard(territory, period='week'):
+    require_role('SFA Admin', 'SFA Manager')
+    ctx = get_user_context()
+    # Managers can only view their own territory
+    if ctx['is_manager'] and not ctx['is_admin'] and ctx['territory'] and territory != ctx['territory']:
+        frappe.throw('You can only view your own territory.', frappe.PermissionError)
     today = getdate(nowdate())
 
     if period == 'today':

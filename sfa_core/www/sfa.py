@@ -22,12 +22,32 @@ def get_context_for_dev():
     return get_boot()
 
 
+@frappe.whitelist()
+def get_csrf_token():
+    token = frappe.sessions.get_csrf_token()
+    frappe.db.commit()
+    return token
+
+
 def get_boot():
     user = frappe.session.user
+    csrf_token = frappe.sessions.get_csrf_token()
+    frappe.db.commit()
+
+    # SFA role context
+    try:
+        from sfa_core.api.auth import get_user_context
+        sfa_ctx = get_user_context()
+    except Exception:
+        sfa_ctx = {
+            'role': None, 'is_admin': False, 'is_manager': False,
+            'is_rep': False, 'sales_person': None, 'territory': None,
+        }
+
     return frappe._dict({
         "frappe_version": frappe.__version__,
         "site_name": frappe.local.site,
-        "csrf_token": frappe.sessions.get_csrf_token(),
+        "csrf_token": csrf_token,
         "sysdefaults": frappe.defaults.get_defaults(),
         "user": {
             "name": user,
@@ -39,4 +59,5 @@ def get_boot():
             "system": get_system_timezone(),
             "user": frappe.db.get_value("User", user, "time_zone") or get_system_timezone(),
         },
+        "sfa": sfa_ctx,
     })

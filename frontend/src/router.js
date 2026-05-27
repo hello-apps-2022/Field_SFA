@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { auth } from '@/utils/auth'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
@@ -34,6 +35,17 @@ const routes = [
 const router = createRouter({
   history: createWebHistory('/sfa'),
   routes,
+})
+
+router.beforeEach((to, from, next) => {
+  // Extract page name from path
+  const page = to.path.replace('/', '') || 'dashboard'
+  if (!auth.canAccess(page)) {
+    // Redirect to dashboard if no access
+    next('/')
+  } else {
+    next()
+  }
 })
 
 export default router
