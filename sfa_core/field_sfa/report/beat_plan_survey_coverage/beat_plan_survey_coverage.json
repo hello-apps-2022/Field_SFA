@@ -1,45 +1,24 @@
 {
-  "add_total_row": 0,
-  "columns": [],
-  "creation": "2026-05-27 00:00:00.000000",
-  "disabled": 0,
-  "doctype": "Report",
-  "filters": [
-    {
-      "fieldname": "from_date",
-      "fieldtype": "Date",
-      "label": "From Date",
-      "reqd": 1,
-      "default": "eval:frappe.datetime.add_months(frappe.datetime.get_today(), -1)"
-    },
-    {
-      "fieldname": "to_date",
-      "fieldtype": "Date",
-      "label": "To Date",
-      "reqd": 1,
-      "default": "eval:frappe.datetime.get_today()"
-    },
-    {
-      "fieldname": "territory",
-      "fieldtype": "Link",
-      "label": "Territory",
-      "options": "Territory"
-    },
-    {
-      "fieldname": "sales_person",
-      "fieldtype": "Link",
-      "label": "Sales Person",
-      "options": "Sales Person"
-    }
-  ],
-  "is_standard": "Yes",
-  "module": "Field SFA",
-  "name": "Beat Plan Survey Coverage",
-  "ref_doctype": "SFA Form Response",
-  "report_name": "Beat Plan Survey Coverage",
-  "report_type": "Script Report",
-  "roles": [
-    {"role": "SFA Manager"},
-    {"role": "SFA Supervisor"}
-  ]
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-05-27 10:05:32.231948",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-05-27 10:05:32.231948",
+ "modified_by": "Administrator",
+ "module": "Field SFA",
+ "name": "Beat Plan Survey Coverage",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "SFA Form Response",
+ "report_name": "Beat Plan Survey Coverage",
+ "report_type": "Script Report",
+ "roles": [],
+ "timeout": 0
 }
