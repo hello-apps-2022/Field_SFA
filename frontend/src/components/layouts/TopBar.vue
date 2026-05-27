@@ -12,7 +12,7 @@
         @keydown.enter="search"
         @input="onInput"
         @focus="showResults = true"
-        @blur="window.setTimeout(() => showResults = false, 150)"
+        @blur="onSearchBlur"
       />
 
       <!-- Search results dropdown -->
@@ -54,7 +54,7 @@
       <button
         class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
         @click="notifOpen = !notifOpen"
-        @blur="window.setTimeout(() => notifOpen = false, 150)"
+        @blur="onNotifBlur"
       >
         <FeatherIcon name="bell" class="h-4 w-4" />
       </button>
@@ -79,7 +79,7 @@
       <button
         class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors"
         @click="profileMenu = !profileMenu"
-        @blur="window.setTimeout(() => profileMenu = false, 150)"
+        @blur="onProfileBlur"
       >
         <div class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700">
           {{ userInitials }}
@@ -142,6 +142,10 @@ const searching = ref(false)
 const results = ref([])
 const profileMenu = ref(false)
 const notifOpen = ref(false)
+
+function onSearchBlur() { window.setTimeout(() => { showResults.value = false }, 150) }
+function onNotifBlur() { window.setTimeout(() => { notifOpen.value = false }, 150) }
+function onProfileBlur() { window.setTimeout(() => { profileMenu.value = false }, 150) }
 
 let searchTimeout = null
 
