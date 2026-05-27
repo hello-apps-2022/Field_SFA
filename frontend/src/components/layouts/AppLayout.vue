@@ -49,6 +49,7 @@
         <NavLink :item="{ label: 'Form Templates', to: '/form-templates', icon: 'file-text' }" :collapsed="collapsed" />
         <NavLink :item="{ label: 'Gamification', to: '/gamification', icon: 'award' }" :collapsed="collapsed" />
         <NavLink :item="{ label: 'Reports', to: '/reports', icon: 'bar-chart-2' }" :collapsed="collapsed" />
+        <NavLink :item="{ label: 'Territory', to: '/territory-dashboard', icon: 'map-pin' }" :collapsed="collapsed" />
 
         <NavSection label="Maps" :collapsed="collapsed" />
         <NavLink :item="{ label: 'Rep Activity', to: '/rep-activity-map', icon: 'activity' }" :collapsed="collapsed" />
