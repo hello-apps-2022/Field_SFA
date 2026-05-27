@@ -119,6 +119,12 @@
       "is_query_report": 0
     },
     {
+      "label": "SFA Form Question",
+      "link_to": "SFA Form Question",
+      "link_type": "DocType",
+      "type": "Link"
+    },
+    {
       "type": "Card Break",
       "label": "Gamification",
       "is_query_report": 0
@@ -176,6 +182,42 @@
       "link_type": "Report",
       "link_to": "leaderboard",
       "is_query_report": 1
+    },
+    {
+      "label": "Form Completion Rate",
+      "link_to": "Form Completion Rate",
+      "link_type": "Report",
+      "type": "Link"
+    },
+    {
+      "label": "Response By Question",
+      "link_to": "Response By Question",
+      "link_type": "Report",
+      "type": "Link"
+    },
+    {
+      "label": "Outlet Feedback Summary",
+      "link_to": "Outlet Feedback Summary",
+      "link_type": "Report",
+      "type": "Link"
+    },
+    {
+      "label": "Rep Survey Activity",
+      "link_to": "Rep Survey Activity",
+      "link_type": "Report",
+      "type": "Link"
+    },
+    {
+      "label": "Option Distribution",
+      "link_to": "Option Distribution",
+      "link_type": "Report",
+      "type": "Link"
+    },
+    {
+      "label": "Beat Plan Survey Coverage",
+      "link_to": "Beat Plan Survey Coverage",
+      "link_type": "Report",
+      "type": "Link"
     },
     {
       "type": "Card Break",

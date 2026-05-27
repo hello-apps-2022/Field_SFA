@@ -1,0 +1,61 @@
+{
+  "actions": [],
+  "istable": 1,
+  "autoname": "hash",
+  "creation": "2026-05-27 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "question_name",
+    "question_title",
+    "question_type",
+    "col_break_1",
+    "answer_value",
+    "answer_text"
+  ],
+  "fields": [
+    {
+      "fieldname": "question_name",
+      "label": "Question Name",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "question_title",
+      "label": "Question Title",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "question_type",
+      "label": "Question Type",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "col_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "answer_value",
+      "label": "Answer Value",
+      "fieldtype": "Data",
+      "description": "For short answers, scores, option selections",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "answer_text",
+      "label": "Answer Text (Long)",
+      "fieldtype": "Long Text",
+      "description": "For comments, multi-line text, JSON arrays (multi-select)"
+    }
+  ],
+  "links": [],
+  "modified": "2026-05-27 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Field SFA",
+  "name": "SFA Response Item",
+  "owner": "Administrator"
+}

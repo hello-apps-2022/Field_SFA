@@ -26,20 +26,20 @@
     </div>
 
     <div class="creator-meta">
-      <div class="meta-field">
-        <label>Template Name</label>
+      <div class="meta-field meta-field--wide">
+        <label>Template Name *</label>
         <input v-model="templateName" type="text" placeholder="e.g., Outlet Audit Form" />
       </div>
       <div class="meta-field">
         <label>Category</label>
         <select v-model="templateCategory">
           <option value="">Select Category</option>
-          <option value="audit">Outlet Audit</option>
-          <option value="survey">Market Survey</option>
-          <option value="competitor">Competitor Check</option>
-          <option value="merchandising">Merchandising</option>
-          <option value="feedback">Customer Feedback</option>
-          <option value="custom">Custom</option>
+          <option value="Outlet Audit">Outlet Audit</option>
+          <option value="Market Survey">Market Survey</option>
+          <option value="Competitor Check">Competitor Check</option>
+          <option value="Merchandising">Merchandising</option>
+          <option value="Customer Feedback">Customer Feedback</option>
+          <option value="Custom">Custom</option>
         </select>
       </div>
       <div class="meta-field">
@@ -50,6 +50,12 @@
           <option value="manual">Manual Assignment</option>
           <option value="scheduled">Scheduled</option>
         </select>
+      </div>
+      <div class="meta-field meta-field--checkbox">
+        <label class="checkbox-label">
+          <input v-model="isMandatory" type="checkbox" />
+          <span>Mandatory</span>
+        </label>
       </div>
       <div class="meta-field meta-field--checkbox">
         <label class="checkbox-label">
@@ -81,7 +87,6 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Model } from 'survey-core';
 import { SurveyCreatorModel } from 'survey-creator-core';
 
-// Import mobile renderer mappings (for reference, not for Creator registration)
 import { mobileRenderers } from './customQuestions';
 
 const props = defineProps({
@@ -99,116 +104,107 @@ const templateName = ref('');
 const templateCategory = ref('');
 const templateTrigger = ref('visit_close');
 const isActive = ref(true);
+const isMandatory = ref(false);
 const isEditing = ref(false);
 const saving = ref(false);
 const showPreview = ref(false);
 
-// SurveyJS Creator options - uses ALL standard question types
-// No custom types registered - SurveyJS Creator has them all built-in
 const creatorOptions = {
-    showLogicTab: true,
-    showTranslationTab: true,
-    showJSONEditorTab: true,
-    showTestSurveyTab: false,
-    isAutoSave: false,
-    showThemeTab: false,
-    allowChangeThemeInPreview: false,
-    showPagesInTestSurveyTab: true,
-    showSimulatorInTestSurveyTab: false,
-    showInvisibleElementsInPreview: true,
-    showToolbox: true,
-    showSidebar: true,
-    allowEditSurveyTitle: false,
-    allowEditSurveyDescription: false,
-    // No custom questionTypes specified - uses all SurveyJS defaults
+  showLogicTab: true,
+  showTranslationTab: false,
+  showJSONEditorTab: true,
+  showTestSurveyTab: false,
+  isAutoSave: false,
+  showThemeTab: false,
+  showToolbox: true,
+  showSidebar: true,
+  allowEditSurveyTitle: false,
+  allowEditSurveyDescription: false,
 };
 
 onMounted(() => {
-    const creatorModel = new SurveyCreatorModel(creatorOptions);
+  const creatorModel = new SurveyCreatorModel(creatorOptions);
 
-    // Load existing template if editing
-    if (props.initialData) {
-        isEditing.value = true;
-        templateName.value = props.initialData.template_name || '';
-        templateCategory.value = props.initialData.category || '';
-        templateTrigger.value = props.initialData.trigger_point || 'visit_close';
-        isActive.value = props.initialData.is_active !== 0;
+  if (props.initialData) {
+    isEditing.value = true;
+    templateName.value = props.initialData.template_name || '';
+    templateCategory.value = props.initialData.category || '';
+    templateTrigger.value = props.initialData.trigger_point || 'visit_close';
+    isActive.value = props.initialData.is_active !== 0;
+    isMandatory.value = props.initialData.is_mandatory === 1;
 
-        if (props.initialData.survey_json) {
-            try {
-                const json = typeof props.initialData.survey_json === 'string' 
-                    ? JSON.parse(props.initialData.survey_json) 
-                    : props.initialData.survey_json;
-                creatorModel.JSON = json;
-            } catch (e) {
-                console.error('Failed to parse survey JSON', e);
-            }
-        }
+    if (props.initialData.survey_json) {
+      try {
+        const json = typeof props.initialData.survey_json === 'string'
+          ? JSON.parse(props.initialData.survey_json)
+          : props.initialData.survey_json;
+        creatorModel.JSON = json;
+      } catch (e) {
+        console.error('Failed to parse survey JSON', e);
+      }
     }
+  }
 
-    creatorModel.render(creatorElement.value);
-    creator.value = creatorModel;
+  creatorModel.render(creatorElement.value);
+  creator.value = creatorModel;
 });
 
 onBeforeUnmount(() => {
-    if (creator.value) {
-        creator.value.dispose();
-    }
+  if (creator.value) {
+    creator.value.dispose();
+  }
 });
 
 function previewForm() {
-    if (!creator.value) return;
-    const json = creator.value.JSON;
-    const survey = new Model(json);
-    showPreview.value = true;
-    nextTick(() => {
-        if (previewElement.value) {
-            survey.render(previewElement.value);
-        }
-    });
+  if (!creator.value) return;
+  const json = creator.value.JSON;
+  const survey = new Model(json);
+  showPreview.value = true;
+  nextTick(() => {
+    if (previewElement.value) {
+      survey.render(previewElement.value);
+    }
+  });
 }
 
 async function saveForm() {
-    if (!creator.value) return;
-    if (!templateName.value.trim()) {
-        frappe.show_alert({ message: 'Please enter a template name', indicator: 'red' });
-        return;
+  if (!creator.value) return;
+  if (!templateName.value.trim()) {
+    frappe.show_alert({ message: 'Please enter a template name', indicator: 'red' });
+    return;
+  }
+
+  saving.value = true;
+  try {
+    const surveyJson = JSON.stringify(creator.value.JSON);
+    const currentVersion = isEditing.value ? (props.initialData?.version || 1) : 1;
+
+    const doc = {
+      doctype: 'SFA Form Template',
+      template_name: templateName.value.trim(),
+      category: templateCategory.value,
+      trigger_point: templateTrigger.value,
+      is_active: isActive.value ? 1 : 0,
+      is_mandatory: isMandatory.value ? 1 : 0,
+      survey_json: surveyJson,
+      version: isEditing.value ? currentVersion + 1 : 1,
+    };
+
+    if (isEditing.value && props.templateId) {
+      doc.name = props.templateId;
+      await frappe.call({ method: 'frappe.client.save', args: { doc } });
+    } else {
+      await frappe.call({ method: 'frappe.client.insert', args: { doc } });
     }
 
-    saving.value = true;
-    try {
-        const surveyJson = JSON.stringify(creator.value.JSON);
-        const doc = {
-            doctype: 'SFA Form Template',
-            template_name: templateName.value,
-            category: templateCategory.value,
-            trigger_point: templateTrigger.value,
-            is_active: isActive.value ? 1 : 0,
-            survey_json: surveyJson,
-            version: isEditing.value ? (props.initialData.version || 1) + 1 : 1
-        };
-
-        if (isEditing.value && props.templateId) {
-            doc.name = props.templateId;
-            await frappe.call({
-                method: 'frappe.client.save',
-                args: { doc }
-            });
-        } else {
-            await frappe.call({
-                method: 'frappe.client.insert',
-                args: { doc }
-            });
-        }
-
-        frappe.show_alert({ message: 'Form template saved successfully', indicator: 'green' });
-        emit('save');
-    } catch (err) {
-        console.error('Save failed', err);
-        frappe.show_alert({ message: 'Failed to save template', indicator: 'red' });
-    } finally {
-        saving.value = false;
-    }
+    frappe.show_alert({ message: 'Form template saved successfully', indicator: 'green' });
+    emit('save');
+  } catch (err) {
+    console.error('Save failed', err);
+    frappe.show_alert({ message: 'Failed to save template: ' + (err.message || err), indicator: 'red' });
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -249,12 +245,18 @@ async function saveForm() {
   background: white;
   border-bottom: 1px solid #e2e6e9;
   align-items: flex-end;
+  flex-wrap: wrap;
 }
 .meta-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 140px;
+}
+.meta-field--wide {
+  flex: 2;
+  min-width: 220px;
 }
 .meta-field label {
   font-size: 11px;
@@ -279,6 +281,7 @@ async function saveForm() {
 .meta-field--checkbox {
   flex: 0;
   padding-bottom: 6px;
+  min-width: auto;
 }
 .checkbox-label {
   display: flex;
@@ -286,6 +289,7 @@ async function saveForm() {
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .creator-body {
   flex: 1;
@@ -294,14 +298,9 @@ async function saveForm() {
 .survey-creator {
   height: 100%;
 }
-
-/* Preview Modal */
 .preview-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
@@ -335,7 +334,6 @@ async function saveForm() {
   overflow-y: auto;
   padding: 24px;
 }
-
 .spinner {
   animation: spin 1s linear infinite;
 }
@@ -345,7 +343,6 @@ async function saveForm() {
 }
 </style>
 
-<!-- Global styles for SurveyJS overrides -->
 <style>
 .survey-creator-theme .svc-creator__banner {
   display: none !important;

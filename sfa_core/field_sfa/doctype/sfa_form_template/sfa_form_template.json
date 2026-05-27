@@ -2,29 +2,44 @@
   "actions": [],
   "allow_rename": 1,
   "autoname": "hash",
-  "creation": "2026-05-25 19:47:00.000000",
+  "creation": "2026-05-27 00:00:00.000000",
   "doctype": "DocType",
-  "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
     "template_name",
+    "category",
     "description",
-    "survey_json",
+    "col_break_1",
     "is_active",
     "is_mandatory",
+    "trigger_point",
+    "section_break_scope",
     "applicable_to",
     "customer_group",
     "territory",
+    "section_break_meta",
     "version",
     "created_by",
-    "created_on"
+    "created_on",
+    "section_break_json",
+    "survey_json"
   ],
   "fields": [
     {
       "fieldname": "template_name",
       "label": "Template Name",
       "fieldtype": "Data",
-      "reqd": 1
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "category",
+      "label": "Category",
+      "fieldtype": "Select",
+      "options": "Outlet Audit\nMarket Survey\nCompetitor Check\nMerchandising\nCustomer Feedback\nCustom",
+      "in_list_view": 1,
+      "in_standard_filter": 1
     },
     {
       "fieldname": "description",
@@ -32,24 +47,35 @@
       "fieldtype": "Small Text"
     },
     {
-      "fieldname": "survey_json",
-      "label": "Survey JSON",
-      "fieldtype": "JSON",
-      "reqd": 1,
-      "description": "SurveyJS Creator JSON definition"
+      "fieldname": "col_break_1",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "is_active",
       "label": "Is Active",
       "fieldtype": "Check",
-      "default": 1
+      "default": 1,
+      "in_list_view": 1
     },
     {
       "fieldname": "is_mandatory",
       "label": "Is Mandatory",
       "fieldtype": "Check",
       "default": 0,
-      "description": "Must be completed before visit close"
+      "description": "Must be completed before visit can be closed"
+    },
+    {
+      "fieldname": "trigger_point",
+      "label": "Trigger",
+      "fieldtype": "Select",
+      "options": "visit_close\nvisit_optional\nmanual\nscheduled",
+      "default": "visit_close",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "section_break_scope",
+      "label": "Scope",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "applicable_to",
@@ -63,14 +89,19 @@
       "label": "Customer Group",
       "fieldtype": "Link",
       "options": "Customer Group",
-      "depends_on": "eval:doc.applicable_to=='Customer Group'"
+      "depends_on": "eval:doc.applicable_to == 'Customer Group'"
     },
     {
       "fieldname": "territory",
       "label": "Territory",
       "fieldtype": "Link",
       "options": "Territory",
-      "depends_on": "eval:doc.applicable_to=='Territory'"
+      "depends_on": "eval:doc.applicable_to == 'Territory'"
+    },
+    {
+      "fieldname": "section_break_meta",
+      "label": "Meta",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "version",
@@ -84,45 +115,56 @@
       "label": "Created By",
       "fieldtype": "Link",
       "options": "User",
-      "default": "__user",
       "read_only": 1
     },
     {
       "fieldname": "created_on",
       "label": "Created On",
       "fieldtype": "Datetime",
-      "default": "Now",
       "read_only": 1
+    },
+    {
+      "fieldname": "section_break_json",
+      "label": "Survey Definition",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "survey_json",
+      "label": "Survey JSON",
+      "fieldtype": "JSON",
+      "description": "SurveyJS Creator JSON — managed via the Form Templates page, do not edit manually"
     }
   ],
-  "index_web_pages_for_search": 1,
   "links": [],
-  "modified": "2026-05-25 19:47:00.000000",
+  "modified": "2026-05-27 00:00:00.000000",
   "modified_by": "Administrator",
   "module": "Field SFA",
   "name": "SFA Form Template",
-  "naming_rule": "Random",
   "owner": "Administrator",
   "permissions": [
     {
-      "role": "SFA Manager",
-      "read": 1,
-      "write": 1,
       "create": 1,
-      "delete": 1
-    },
-    {
-      "role": "SFA Supervisor",
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
       "read": 1,
+      "report": 1,
+      "role": "SFA Manager",
+      "share": 1,
       "write": 1
     },
     {
-      "role": "SFA Rep",
-      "read": 1
+      "read": 1,
+      "role": "SFA Supervisor"
+    },
+    {
+      "read": 1,
+      "role": "SFA Rep"
     }
   ],
   "sort_field": "modified",
   "sort_order": "DESC",
-  "states": [],
+  "title_field": "template_name",
   "track_changes": 1
 }
