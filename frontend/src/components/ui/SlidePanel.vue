@@ -9,17 +9,25 @@
         class="fixed right-0 top-0 z-50 flex h-full flex-col bg-white shadow-2xl border-l border-gray-200"
         :style="{ width }"
       >
+        <!-- Header -->
         <div class="flex h-[52px] shrink-0 items-center justify-between border-b border-gray-100 px-5">
           <h2 class="text-sm font-semibold text-gray-900">{{ title }}</h2>
           <button class="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" @click="$emit('update:modelValue', false)">
             <FeatherIcon name="x" class="h-4 w-4" />
           </button>
         </div>
+
+        <!-- Body -->
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <slot />
         </div>
-        <div class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
-          <button class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50" @click="$emit('update:modelValue', false)">
+
+        <!-- Footer — hidden when saveLabel is empty (view-only panels) -->
+        <div v-if="saveLabel" class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-5 py-3">
+          <button
+            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50"
+            @click="$emit('update:modelValue', false)"
+          >
             Cancel
           </button>
           <button
@@ -31,20 +39,40 @@
             {{ saving ? 'Saving…' : saveLabel }}
           </button>
         </div>
+
+        <!-- View-only footer (close button only) -->
+        <div v-else class="flex shrink-0 items-center justify-end border-t border-gray-100 px-5 py-3">
+          <button
+            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50"
+            @click="$emit('update:modelValue', false)"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup>
-defineProps({
+import { onMounted, onUnmounted } from 'vue'
+
+const props = defineProps({
   modelValue: Boolean,
   title: { type: String, default: 'New Record' },
   saving: Boolean,
   saveLabel: { type: String, default: 'Save' },
   width: { type: String, default: '480px' },
 })
-defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save'])
+
+function onKeydown(e) {
+  if (e.key === 'Escape' && props.modelValue) {
+    emit('update:modelValue', false)
+  }
+}
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>

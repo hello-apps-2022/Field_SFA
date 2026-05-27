@@ -9,3 +9,14 @@
 /* Smooth page transitions */
 .page-enter-active, .page-leave-active { transition: opacity 0.15s ease; }
 .page-enter-from, .page-leave-to { opacity: 0; }
+/* Leaflet icon fix — prevents Tailwind img reset from distorting map tiles and markers */
+.leaflet-tile-container img,
+.leaflet-marker-pane img,
+.leaflet-shadow-pane img {
+  max-width: none !important;
+  width: auto !important;
+  height: auto !important;
+}
+.leaflet-container {
+  z-index: 0;
+}

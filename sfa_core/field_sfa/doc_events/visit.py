@@ -1,35 +1,70 @@
 import frappe
-from frappe import _
-from frappe.utils import now, time_diff_in_seconds, getdate
+from frappe.utils import now, getdate, add_days
+from frappe.utils import time_diff_in_seconds
+
 
 def validate(doc, method):
-    """Validate visit data"""
     if doc.check_in_time and doc.check_out_time:
-        if doc.check_out_time < doc.check_in_time:
-            frappe.throw(_("Check Out time cannot be before Check In time"))
+        doc.duration_minutes = int(
+            (time_diff_in_seconds(doc.check_out_time, doc.check_in_time) or 0) / 60
+        )
 
-        duration = (time_diff_in_seconds(doc.check_out_time, doc.check_in_time) or 0) / 60
-        doc.duration_minutes = int(duration)
-
-    # Validate geofence if customer has saved location
-    if doc.customer and doc.check_in_latitude:
-        from sfa_core.utils.geo import get_customer_location, calculate_distance
-        cust_loc = get_customer_location(doc.customer)
-        if cust_loc:
-            dist = calculate_distance(
-                doc.check_in_latitude, doc.check_in_longitude,
-                cust_loc["lat"], cust_loc["lng"]
-            )
-            doc.distance_from_customer = dist
-
-def on_submit(doc, method):
-    """Award points and update customer last visit"""
-    if doc.status == "Completed":
-        frappe.db.set_value("Customer", doc.customer, "custom_last_visit_date", getdate(doc.visit_date))
-
-        from sfa_core.utils.gamification import award_points
-        award_points(doc.sales_person, "Visit Complete", 10, "SFA Visit", doc.name)
 
 def on_update(doc, method):
-    """Auto-close check if needed"""
-    pass
+    if doc.status == "Completed" and doc.customer:
+        _update_customer_stats(doc.customer)
+
+
+def on_submit(doc, method):
+    if doc.customer:
+        _update_customer_stats(doc.customer)
+
+
+def _update_customer_stats(customer_name):
+    """Update last visit date, total orders, revenue on Customer record."""
+    try:
+        # Last completed visit date
+        last_visit = frappe.db.get_value(
+            "SFA Visit",
+            filters={"customer": customer_name, "status": "Completed"},
+            fieldname="visit_date",
+            order_by="visit_date desc",
+        )
+
+        # Total orders
+        order_stats = frappe.db.sql("""
+            SELECT COUNT(*) as cnt, IFNULL(SUM(grand_total), 0) as total
+            FROM `tabSales Order`
+            WHERE customer = %s AND docstatus = 1
+        """, customer_name, as_dict=True)
+
+        # Outstanding payments (submitted but not reconciled)
+        outstanding = frappe.db.sql("""
+            SELECT IFNULL(SUM(amount), 0) as total
+            FROM `tabSFA Payment`
+            WHERE customer = %s AND status = 'Draft' AND docstatus < 2
+        """, customer_name, as_dict=True)
+
+        update = {}
+        if last_visit:
+            update["custom_last_visit_date"] = last_visit
+
+        if order_stats:
+            update["custom_total_orders"] = order_stats[0].cnt
+            update["custom_total_revenue"] = order_stats[0].total
+
+        if outstanding:
+            update["custom_outstanding_payments"] = outstanding[0].total
+
+        # Compute next visit due
+        freq = frappe.db.get_value("Customer", customer_name, "custom_visit_frequency")
+        if last_visit and freq:
+            update["custom_next_visit_due"] = add_days(last_visit, int(freq))
+
+        if update:
+            frappe.db.set_value("Customer", customer_name, update)
+            frappe.db.commit()
+
+    except Exception as e:
+        frappe.log_error(f"Failed to update customer stats for {customer_name}: {e}",
+                         "SFA Visit Hook")

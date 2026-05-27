@@ -79,6 +79,7 @@ import Btn from '@/components/ui/Btn.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import MetricCard from '@/components/ui/MetricCard.vue'
 import dayjs from 'dayjs'
+import { formatCurrency } from '@/utils/currency'
 
 const period = ref('today')
 const loading = ref(false)
