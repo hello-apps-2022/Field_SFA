@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
 import FeatherIcon from './components/ui/FeatherIcon.vue'
+import { applyBrand } from './utils/brand'
 
 // Boot data is injected by sfa.py via Jinja into window.frappe_boot
 // In dev mode, fetch it from the API
@@ -31,6 +32,7 @@ async function init() {
   app.use(pinia)
   app.use(router)
   app.component('FeatherIcon', FeatherIcon)
+  applyBrand()
   app.mount('#app')
 }
 

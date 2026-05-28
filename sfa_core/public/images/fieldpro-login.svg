@@ -1,0 +1,16 @@
+<svg width="160" height="118" viewBox="0 0 160 118" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FieldPro — Know your field">
+  <g transform="translate(80,0)">
+    <g transform="translate(-28,0)">
+      <rect x="0" y="0" width="56" height="56" rx="14" fill="#DCE6F6"/>
+      <g transform="scale(0.56)">
+        <g transform="translate(28,28)">
+          <path d="M27 6 H14 a8 8 0 0 0 0 16 h16 a8 8 0 0 1 0 16 H17" stroke="#3A6BB0" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <circle cx="64" cy="34" r="5" fill="none" stroke="#fff" stroke-width="3.5"/>
+        <circle cx="36" cy="66" r="5" fill="none" stroke="#fff" stroke-width="3.5"/>
+      </g>
+    </g>
+    <text x="0" y="86" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="26" font-weight="600" fill="#1A1A2E">FieldPro</text>
+    <text x="0" y="107" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="400" fill="#5F5E5A">Know your field.</text>
+  </g>
+</svg>

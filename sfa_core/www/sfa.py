@@ -71,4 +71,25 @@ def get_boot():
             "user": frappe.db.get_value("User", user, "time_zone") or get_system_timezone(),
         },
         "sfa": sfa_ctx,
+        "brand": get_brand(),
     })
+
+
+def get_brand():
+    """White-label brand for the SPA: logo, name, tagline, theme colors."""
+    defaults = {
+        "product_name": "FieldPro",
+        "tenant_name": "",
+        "login_tagline": "Know your field.",
+        "logo_login": "/assets/sfa_core/images/fieldpro-logo.svg",
+        "logo_navbar": "/assets/sfa_core/images/fieldpro-mark.svg",
+        "favicon": "/assets/sfa_core/images/fieldpro-favicon.svg",
+        "primary_color": "#1A1A2E",
+        "accent_color": "#378ADD",
+        "support_email": "",
+    }
+    try:
+        bs = frappe.get_cached_doc("SFA Brand Settings")
+        return {k: (bs.get(k) or v) for k, v in defaults.items()}
+    except Exception:
+        return defaults

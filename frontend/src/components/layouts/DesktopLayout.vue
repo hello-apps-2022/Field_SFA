@@ -7,11 +7,12 @@
       :class="collapsed ? 'w-12' : 'w-[220px]'"
     >
       <!-- Logo row -->
-      <div class="flex h-11 shrink-0 items-center border-b border-outline-gray-2 px-2.5">
-        <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gray-900">
-          <span class="text-[11px] font-bold text-white">S</span>
+      <div class="flex h-16 shrink-0 items-center border-b border-outline-gray-2 px-2.5">
+        <img :src="brand.logo" :alt="brand.productName" :class="collapsed ? 'h-8 w-8' : 'h-10 w-10'" class="shrink-0 rounded-xl transition-all duration-200" />
+        <div v-show="!collapsed" class="ml-2.5 min-w-0">
+          <p class="truncate text-sm font-semibold text-gray-900 leading-tight">{{ brand.productName }}</p>
+          <p v-if="brand.tagline" class="truncate text-[11px] text-gray-400 leading-tight">{{ brand.tagline }}</p>
         </div>
-        <span v-show="!collapsed" class="ml-2 truncate text-sm font-semibold text-gray-900">Hema SFA</span>
         <button
           class="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
           @click="collapsed = !collapsed"
@@ -93,6 +94,7 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarLink from './SidebarLink.vue'
+import { brand } from '@/utils/brand'
 
 const collapsed = ref(false)
 const route = useRoute()

@@ -12,6 +12,15 @@ app_version = "0.0.1"
 after_install = "sfa_core.field_sfa.install.after_install.after_install"
 boot_session = "sfa_core.field_sfa.boot.boot_session"
 
+# Product brand default — overridden per-tenant via SFA Brand Settings
+app_logo_url = "/assets/sfa_core/images/fieldpro-mark.svg"
+
+# Scoped CSS to enlarge the navbar logo in Desk
+app_include_css = "/assets/sfa_core/css/sfa_desk.css"
+
+# Override the splash/loading logo (defaults to ERPNext 'E')
+update_website_context = "sfa_core.field_sfa.boot.update_website_context"
+
 # Redirect SFA users to the SFA app after login
 on_session_creation = "sfa_core.api.auth.on_session_creation"
 
@@ -58,6 +67,7 @@ scheduler_events = {
 
 fixtures = [
     {"doctype": "Role", "filters": [["role_name", "in", ["SFA Manager", "SFA Supervisor", "SFA Rep", "SFA Viewer"]]]},
+    {"doctype": "SFA Brand Settings"},
 ]
 
 # Redirect plain /login to /login?redirect-to=/sfa for SFA users

@@ -11,7 +11,41 @@ def after_install():
     setup_sfa_workspace()
     setup_custom_fields()
     frappe.db.commit()
+    seed_brand_defaults()
+    frappe.db.commit()
     frappe.msgprint(_("SFA Core installed successfully. Please run bench migrate if DocTypes are not visible."))
+
+
+PRODUCT_DEFAULTS = {
+    "product_name": "FieldPro",
+    "login_tagline": "Know your field.",
+    "primary_color": "#1A1A2E",
+    "accent_color": "#378ADD",
+    "logo_login": "/assets/sfa_core/images/fieldpro-logo.svg",
+    "logo_navbar": "/assets/sfa_core/images/fieldpro-mark.svg",
+    "favicon": "/assets/sfa_core/images/fieldpro-favicon.svg",
+}
+
+
+def seed_brand_defaults():
+    """Seed the PRODUCT (FieldPro) brand defaults if unset, then sync to Frappe.
+
+    Only fills blank fields, so a tenant's saved overrides (e.g. Hema's logo,
+    loaded via fixture) are never clobbered. Idempotent — safe on every run."""
+    bs = frappe.get_single("SFA Brand Settings")
+    changed = False
+    for key, val in PRODUCT_DEFAULTS.items():
+        if not bs.get(key):
+            bs.set(key, val)
+            changed = True
+    if changed:
+        bs.save(ignore_permissions=True)
+    else:
+        # Still mirror existing values into Frappe's brand slots.
+        from sfa_core.field_sfa.doctype.sfa_brand_settings.sfa_brand_settings import (
+            sync_brand_to_frappe,
+        )
+        sync_brand_to_frappe()
 
 
 def create_sfa_roles():

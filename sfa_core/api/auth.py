@@ -121,6 +121,32 @@ def get_session_context():
     return ctx
 
 
+def on_session_creation(login_manager=None):
+    """
+    Frappe on_session_creation hook — fires when a new session is created.
+
+    Sets a per-user redirect cache so SFA users land on /sfa after login.
+    This is a secondary mechanism; the primary /sfa redirect is the
+    login.html patch on login_handlers[200].
+
+    Must tolerate being called for Guest/Administrator and with or without a
+    login_manager (Frappe calls it as on_session_creation(login_manager=self)),
+    and must never raise — a failure here would break login/logout entirely.
+    """
+    try:
+        user = frappe.session.user
+        if not user or user in ('Administrator', 'Guest'):
+            return
+
+        roles = set(frappe.get_roles(user))
+        sfa_roles = {'SFA Admin', 'SFA Manager', 'SFA Rep'}
+        if sfa_roles.intersection(roles):
+            frappe.cache.hset("redirect_after_login", user, "/sfa")
+    except Exception:
+        # Never let session creation fail because of this hook.
+        pass
+
+
 def on_login(login_manager):
     """
     Frappe on_login hook — fires after successful authentication.

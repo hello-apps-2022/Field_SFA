@@ -7,13 +7,14 @@
       @mouseleave="hovering = false"
     >
       <!-- Brand -->
-      <div class="flex h-[52px] shrink-0 items-center border-b border-gray-100 px-3 gap-2 overflow-hidden">
-        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white">
-          <span class="text-[11px] font-bold">S</span>
-        </div>
+      <div class="flex h-16 shrink-0 items-center border-b border-gray-100 px-2.5 gap-2.5 overflow-hidden">
+        <img :src="brand.logo" :alt="brand.productName" :class="isExpanded ? 'h-10 w-10' : 'h-8 w-8'" class="shrink-0 rounded-xl transition-all duration-200" />
 
         <Transition name="fade-left">
-          <span v-if="isExpanded" class="flex-1 truncate text-sm font-semibold text-gray-900 whitespace-nowrap">Hema SFA</span>
+          <div v-if="isExpanded" class="flex-1 min-w-0">
+            <p class="truncate text-sm font-semibold text-gray-900 leading-tight whitespace-nowrap">{{ brand.productName }}</p>
+            <p v-if="brand.tagline" class="truncate text-[11px] text-gray-400 leading-tight whitespace-nowrap">{{ brand.tagline }}</p>
+          </div>
         </Transition>
 
         <!-- Pin/unpin button — only show when expanded -->
@@ -107,6 +108,7 @@ import NavSection from './NavSection.vue'
 import NavGroup from './NavGroup.vue'
 import TopBar from './TopBar.vue'
 import { auth as _auth } from '@/utils/auth'
+import { brand } from '@/utils/brand'
 
 // collapsed = pinned state (persisted)
 // hovering = temporary hover expansion

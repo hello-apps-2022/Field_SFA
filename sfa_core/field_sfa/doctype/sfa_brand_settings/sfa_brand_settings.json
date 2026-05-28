@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "creation": "2026-05-28 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "product_section",
+  "product_name",
+  "login_tagline",
+  "tenant_section",
+  "tenant_name",
+  "support_email",
+  "assets_section",
+  "logo_login",
+  "logo_navbar",
+  "column_break_assets",
+  "favicon",
+  "theme_section",
+  "primary_color",
+  "column_break_theme",
+  "accent_color"
+ ],
+ "fields": [
+  {
+   "fieldname": "product_section",
+   "fieldtype": "Section Break",
+   "label": "Product"
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Data",
+   "label": "Product Name",
+   "default": "FieldPro",
+   "description": "The product brand shown when no tenant override applies. Rarely changed."
+  },
+  {
+   "fieldname": "login_tagline",
+   "fieldtype": "Data",
+   "label": "Login Tagline",
+   "default": "Know your field."
+  },
+  {
+   "fieldname": "tenant_section",
+   "fieldtype": "Section Break",
+   "label": "Tenant"
+  },
+  {
+   "fieldname": "tenant_name",
+   "fieldtype": "Data",
+   "label": "Tenant Name",
+   "description": "The deploying organisation, e.g. Hema Beverages. Shown as 'Deployed for ...'."
+  },
+  {
+   "fieldname": "support_email",
+   "fieldtype": "Data",
+   "label": "Support Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "assets_section",
+   "fieldtype": "Section Break",
+   "label": "Brand Assets"
+  },
+  {
+   "fieldname": "logo_login",
+   "fieldtype": "Attach Image",
+   "label": "Login / Full Logo",
+   "description": "Horizontal or stacked logo used on the login page and as the app logo."
+  },
+  {
+   "fieldname": "logo_navbar",
+   "fieldtype": "Attach Image",
+   "label": "Navbar / Compact Mark",
+   "description": "Compact square mark used in the navbar and SPA sidebar."
+  },
+  {
+   "fieldname": "column_break_assets",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "favicon",
+   "fieldtype": "Attach Image",
+   "label": "Favicon",
+   "description": "Square icon-only mark, no wordmark/tagline. Renders at 16-32px."
+  },
+  {
+   "fieldname": "theme_section",
+   "fieldtype": "Section Break",
+   "label": "Theme"
+  },
+  {
+   "fieldname": "primary_color",
+   "fieldtype": "Color",
+   "label": "Primary Color",
+   "default": "#1A1A2E"
+  },
+  {
+   "fieldname": "column_break_theme",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "accent_color",
+   "fieldtype": "Color",
+   "label": "Accent Color",
+   "default": "#378ADD"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Field SFA",
+ "name": "SFA Brand Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "SFA Manager",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

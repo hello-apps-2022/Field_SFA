@@ -52,15 +52,37 @@
 
 {% block head_include %}
 {{ include_style('login.bundle.css') }}
+<style>
+  .sfa-brand-head {
+    text-align: center;
+  }
+  .sfa-brand-head .sfa-logo {
+    width: auto !important;
+    height: 96px !important;
+    max-height: 96px !important;
+    display: block;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .sfa-tenant {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: #9ca3af;
+  }
+  .sfa-tenant strong {
+    color: #4b5563;
+    font-weight: 600;
+  }
+</style>
 {% endblock %}
 
 {% macro logo_section(title=null) %}
-<div class="page-card-head">
-	<img class="app-logo" src="{{ logo }}">
+<div class="page-card-head sfa-brand-head">
+	<img class="app-logo sfa-logo" src="{{ (sfa_brand and sfa_brand.login_logo) or logo }}">
 	{% if title %}
 	<h4>{{ _(title)}}</h4>
 	{% else %}
-	<h4>{{ _('Login to {0}').format(app_name or _("Frappe")) }}</h4>
+	<h4>{{ _('Login to {0}').format((sfa_brand and sfa_brand.product_name) or app_name or _("Frappe")) }}</h4>
 	{% endif %}
 </div>
 {% endmacro %}
@@ -133,6 +155,9 @@
 				{%- endif -%}
 			</form>
 		</div>
+		{% if sfa_brand and sfa_brand.tenant_name %}
+		<p class="sfa-tenant text-center">{{ _('Deployed for') }} <strong>{{ sfa_brand.tenant_name }}</strong></p>
+		{% endif %}
 		{%- if not disable_signup and not disable_user_pass_login -%}
 		<div class="text-center sign-up-message">
 			{{ _("Don't have an account?") }}

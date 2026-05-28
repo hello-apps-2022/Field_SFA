@@ -1,0 +1,6 @@
+.navbar-brand .app-logo,
+.navbar .app-logo {
+  height: 28px;
+  max-height: 28px;
+  border-radius: 6px;
+}

@@ -1,1 +1,2 @@
 sfa_core.patches.v1_0.remove_old_response_child_tables
+sfa_core.patches.v1_0.seed_brand_defaults
