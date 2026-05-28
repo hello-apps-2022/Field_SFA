@@ -15,7 +15,7 @@ export default defineConfig({
     '__VUE_PROD_DEVTOOLS__': false,
   },
   build: {
-    outDir: path.resolve(__dirname, '../public/sfa'),
+    outDir: path.resolve(__dirname, '../sfa_core/public/sfa'),
     emptyOutDir: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'index.html'),
