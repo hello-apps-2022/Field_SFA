@@ -15,6 +15,10 @@ const routes = [
 
   { path: '/orders', name: 'Orders', component: () => import('@/pages/Orders.vue') },
   { path: '/payments', name: 'Payments', component: () => import('@/pages/Payments.vue') },
+  { path: '/expenses', name: 'Expenses', component: () => import('@/pages/expenses/Expenses.vue') },
+  { path: '/leave', name: 'Leave', component: () => import('@/pages/leave/Leave.vue') },
+  { path: "/approvals/expenses", name: "ExpenseApprovals", component: () => import("@/pages/approvals/ExpenseApprovals.vue") },
+  { path: "/approvals/leave", name: "LeaveApprovals", component: () => import("@/pages/approvals/LeaveApprovals.vue") },
 
   { path: '/form-templates', name: 'FormTemplates', component: () => import('@/pages/forms/FormTemplates.vue') },
   { path: '/form-templates/new', name: 'NewFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue') },

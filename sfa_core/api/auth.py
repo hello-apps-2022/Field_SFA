@@ -28,7 +28,7 @@ def get_current_sales_person():
     sp = frappe.db.get_value('Sales Person',
         {'custom_user_id': user},
         ['name', 'sales_person_name', 'custom_territory',
-         'custom_mobile_no', 'custom_sfa_active'],
+         'custom_mobile_no', 'custom_sfa_active', 'custom_employee'],
         as_dict=True
     )
     return sp
@@ -50,6 +50,7 @@ def get_user_context():
             'is_rep': False,
             'sales_person': None,
             'sales_person_name': None,
+            'employee': None,
             'territory': None,
             'user': user,
         }
@@ -69,6 +70,7 @@ def get_user_context():
         'is_rep': role == 'SFA Rep',
         'sales_person': sp.name if sp else None,
         'sales_person_name': sp.sales_person_name if sp else None,
+        'employee': (sp.custom_employee if sp else None),
         'territory': territory,
         'user': user,
     }

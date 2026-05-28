@@ -57,6 +57,10 @@ doc_events = {
         "validate": "sfa_core.field_sfa.doc_events.amendment.validate",
         "on_update": "sfa_core.field_sfa.doc_events.amendment.on_update",
     },
+    "Sales Person": {
+        "after_insert": "sfa_core.field_sfa.doc_events.sales_person.provision_employee",
+        "on_update": "sfa_core.field_sfa.doc_events.sales_person.sync_employee",
+    },
 }
 
 scheduler_events = {

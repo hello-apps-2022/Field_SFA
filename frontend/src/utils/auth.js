@@ -13,6 +13,7 @@ export const auth = {
   get isManager()   { return getBoot().is_manager || false },
   get isRep()       { return getBoot().is_rep || false },
   get salesPerson() { return getBoot().sales_person },
+  get employee()    { return getBoot().employee },
   get territory()   { return getBoot().territory },
 
   canAccess(page) {
@@ -24,6 +25,10 @@ export const auth = {
       'beat-plans':          true,
       'orders':              true,
       'payments':            true,
+      'expenses':            true,
+      'leave':               true,
+      'approvals/expenses':  r.isAdmin || r.isManager,
+      'approvals/leave':     r.isAdmin || r.isManager,
       'form-templates':      r.isAdmin || r.isManager,
       'gamification':        r.isAdmin || r.isManager,
       'reports':             r.isAdmin || r.isManager,

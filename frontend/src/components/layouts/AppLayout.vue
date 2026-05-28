@@ -42,6 +42,35 @@
         <NavLink :item="{ label: 'Orders', to: '/orders', icon: 'shopping-cart' }" :collapsed="!isExpanded" />
         <NavLink :item="{ label: 'Payments', to: '/payments', icon: 'credit-card' }" :collapsed="!isExpanded" />
 
+        <NavSection label="Workforce" :collapsed="!isExpanded" />
+        <NavLink :item="{ label: 'Expenses', to: '/expenses', icon: 'receipt' }" :collapsed="!isExpanded" />
+        <NavLink :item="{ label: 'Leave', to: '/leave', icon: 'calendar' }" :collapsed="!isExpanded" />
+
+        <!-- Approvals submenu (managers/admins only) -->
+        <NavGroup
+          v-if="auth.isManager || auth.isAdmin"
+          label="Approvals"
+          icon="check-square"
+          :sidebar-collapsed="!isExpanded"
+          :paths="['/approvals/expenses', '/approvals/leave']"
+          :item-count="2"
+        >
+          <template #preview>
+            <router-link to="/approvals/expenses"
+              class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+              <FeatherIcon name="receipt" class="h-3.5 w-3.5 text-gray-400" />
+              Expense Approvals
+            </router-link>
+            <router-link to="/approvals/leave"
+              class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+              <FeatherIcon name="calendar" class="h-3.5 w-3.5 text-gray-400" />
+              Leave Approvals
+            </router-link>
+          </template>
+          <NavLink :item="{ label: 'Expense Approvals', to: '/approvals/expenses', icon: 'receipt' }" :collapsed="!isExpanded" />
+          <NavLink :item="{ label: 'Leave Approvals', to: '/approvals/leave', icon: 'calendar' }" :collapsed="!isExpanded" />
+        </NavGroup>
+
         <NavSection label="Intelligence" :collapsed="!isExpanded" />
         <NavLink v-if="auth.canAccess('form-templates')" :item="{ label: 'Form Templates', to: '/form-templates', icon: 'file-text' }" :collapsed="!isExpanded" />
         <NavLink v-if="auth.canAccess('gamification')" :item="{ label: 'Gamification', to: '/gamification', icon: 'award' }" :collapsed="!isExpanded" />
