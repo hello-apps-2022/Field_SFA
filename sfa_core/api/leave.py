@@ -44,7 +44,13 @@ def get_leave_applications(start=0, page_length=50, status=None,
     if status:
         filters["workflow_state"] = status
     if from_date and to_date:
-        filters["from_date"] = ["between", [getdate(from_date), getdate(to_date)]]
+        # Range-overlap match: include any leave whose date range INTERSECTS
+        # the filter window, not just leaves whose start date falls inside.
+        # E.g. a leave May 30 -> Jun 7 should appear in a "May" filter even
+        # though its start is on the last day of the window.
+        # Overlap condition: leave.from_date <= filter.to AND leave.to_date >= filter.from
+        filters["from_date"] = ["<=", getdate(to_date)]
+        filters["to_date"] = [">=", getdate(from_date)]
 
     fields = ["name", "employee", "employee_name", "leave_type",
               "from_date", "to_date", "total_leave_days",
@@ -179,19 +185,43 @@ def action_leave(name, action, reason=None):
 
 @frappe.whitelist()
 def get_leave_balance():
-    """Per-type allocated-minus-taken for the current rep, current year."""
+    """
+    Per-type *effective remaining* balance — what the rep can still plan with.
+
+    hrms's get_leave_balance_on returns the as-of-today ledger balance; future-
+    dated approved leaves aren't deducted until the leave actually starts. For
+    a planning UI that's confusing (a rep with 14 Sick Leave who's already
+    locked Aug 10-13 still sees 14, but they only have 10 left to plan).
+
+    We subtract days from approved, future-dated leaves so the strip reads as
+    "how much you can still take" instead of "what's on the ledger today".
+    """
     ctx = get_hr_context()
     if not ctx.employee:
         return {"balances": []}
     from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
     types = frappe.get_all("Leave Type", fields=["name"])
     today = frappe.utils.today()
+
+    # Future-dated approved leaves not yet deducted from hrms's ledger.
+    # docstatus=1 + status='Approved' + from_date > today.
+    future_approved = frappe.db.sql("""
+        select leave_type, sum(total_leave_days) as days
+        from `tabLeave Application`
+        where employee = %(emp)s and docstatus = 1 and status = 'Approved'
+          and from_date > %(today)s
+        group by leave_type
+    """, {"emp": ctx.employee, "today": today}, as_dict=1)
+    future_days = {r.leave_type: float(r.days or 0) for r in future_approved}
+
     balances = []
     for t in types:
         try:
             bal = get_leave_balance_on(ctx.employee, t.name, today)
         except Exception:
             bal = None
+        if bal is not None:
+            bal = float(bal) - future_days.get(t.name, 0.0)
         balances.append({"leave_type": t.name, "balance": bal})
     return {"balances": balances}
 

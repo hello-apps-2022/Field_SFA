@@ -261,7 +261,14 @@ const showRejectForm = ref(false)
 const rejectReason = ref('')
 const rejectError = ref('')
 
-const isNew = computed(() => !props.leaveName)
+// True ONLY when we're authoring a brand-new leave and haven't saved it yet.
+// Both conditions must hold:
+//   - The parent didn't pass an existing record's name (props.leaveName empty)
+//   - We haven't created one locally either (leave.value still null)
+// After the first successful apply_leave, leave.value is populated even though
+// props.leaveName is still empty (parent doesn't sync), so isNew flips false
+// and subsequent saves correctly go through update_leave_draft.
+const isNew = computed(() => !props.leaveName && !leave.value?.name)
 
 const form = reactive({
   leave_type: '',
@@ -489,6 +496,11 @@ function validateForm() {
 }
 
 async function saveDraft() {
+  // Re-entrancy guard: SlidePanel's save button isn't guaranteed to debounce
+  // a rapid double-click; without this we've seen apply_leave fire twice
+  // and the second call hit hrms's overlap validator against the just-saved
+  // first record. Bail immediately if we're mid-save.
+  if (saving.value) return
   if (!validateForm()) return
   saving.value = true
   try {
@@ -526,6 +538,7 @@ async function saveDraft() {
 }
 
 async function submitForApproval() {
+  if (saving.value) return
   if (!leave.value) return
   saving.value = true
   try {
@@ -544,6 +557,7 @@ async function submitForApproval() {
 }
 
 async function onApprove() {
+  if (acting.value) return
   if (!leave.value) return
   const action = 'approve'
   acting.value = true
@@ -559,6 +573,7 @@ async function onApprove() {
 }
 
 async function onReject() {
+  if (acting.value) return
   if (!leave.value) return
   const reason = (rejectReason.value || '').trim()
   if (!reason) {

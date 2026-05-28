@@ -18,7 +18,7 @@
         <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
       </select>
 
-      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_year" @change="applyFilters" />
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
         Clear

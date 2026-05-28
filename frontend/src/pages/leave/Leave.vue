@@ -18,7 +18,7 @@
         <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
       </select>
 
-      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_year" forward-looking @change="applyFilters" />
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
         Clear
@@ -31,7 +31,7 @@
       <span class="text-gray-400 text-xs uppercase tracking-wide">Balance</span>
       <span v-for="b in balances" :key="b.leave_type">
         <strong class="text-gray-900">{{ b.balance ?? '—' }}</strong>
-        <span class="text-gray-400">{{ b.leave_type }}</span>
+        <span class="text-gray-400 ml-1">{{ b.leave_type }}</span>
       </span>
     </div>
 

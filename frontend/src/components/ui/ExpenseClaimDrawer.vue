@@ -413,6 +413,10 @@ function enterEditMode() {
 }
 
 async function saveDraft() {
+  // Re-entrancy guard: prevents rapid double-click from firing the create
+  // call twice. Without this, the first request creates the claim; the
+  // second can hit a unique constraint or race in cost-center stamping.
+  if (saving.value) return false
   editError.value = ''
   const valid = draft.expenses.filter(e => e.expense_type && e.amount > 0)
   if (!valid.length) { editError.value = 'Add at least one line with a type and amount.'; return false }
@@ -470,6 +474,7 @@ function onFooterCancel() {
 
 // ── Action handlers ─────────────────────────────────────────────
 async function submitFromReview() {
+  if (acting.value) return
   if (!claim.value) return
   acting.value = true
   try {
@@ -484,6 +489,7 @@ async function submitFromReview() {
 }
 
 async function onSubmit() {
+  if (acting.value) return
   if (!claim.value) return
   acting.value = true
   try {
@@ -499,6 +505,7 @@ async function onSubmit() {
 }
 
 async function onApprove() {
+  if (acting.value) return
   if (!claim.value) return
   const action = 'approve'
   acting.value = true
@@ -514,6 +521,7 @@ async function onApprove() {
 }
 
 async function onReject() {
+  if (acting.value) return
   if (!claim.value) return
   rejectError.value = ''
   if (!rejectReason.value.trim()) { rejectError.value = 'Please enter a reason.'; return }

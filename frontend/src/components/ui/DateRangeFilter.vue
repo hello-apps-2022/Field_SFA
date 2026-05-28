@@ -38,12 +38,25 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import dayjs from 'dayjs'
+import quarterOfYear from 'dayjs/plugin/quarterOfYear'
+
+// dayjs has no built-in concept of quarters; without this plugin
+// startOf('quarter') silently returns the start of TODAY, and
+// add(N, 'quarter') is a no-op. Both This Quarter and Last Quarter
+// would then collapse to "today → today". Extending fixes both.
+dayjs.extend(quarterOfYear)
 
 const props = defineProps({
   from: { type: String, default: '' },
   to: { type: String, default: '' },
   defaultPreset: { type: String, default: '' },
   allowAllTime: { type: Boolean, default: true },
+  // "This X" presets (this_week / this_month / this_quarter / this_year)
+  // default to start-of-period → today (i.e. "to-date"), which suits
+  // backward-looking lists like Orders or Payments. For lists that span
+  // future dates (HR leaves, beat schedules, planned visits), pass
+  // forward-looking="true" so they cover the FULL period instead.
+  forwardLooking: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:from', 'update:to', 'change'])
 
@@ -52,24 +65,41 @@ const menuOpen = ref(false)
 const preset = ref(props.defaultPreset || (props.allowAllTime ? '' : 'this_month'))
 const error = ref('')
 
+// "This X" range end: today for backward-looking lists, end-of-period
+// for forward-looking ones. Implementation note: we wrap in a getter so
+// the prop is re-read each call (otherwise the closure captures the
+// initial value).
+function thisEnd(unit) {
+  return props.forwardLooking ? endOf(unit) : today()
+}
+
 const PRESETS = {
   '':            { label: 'All time',     range: () => [null, null] },
   today:         { label: 'Today',        range: () => [d(0), d(0)] },
   yesterday:     { label: 'Yesterday',    range: () => [d(-1), d(-1)] },
-  this_week:     { label: 'This Week',    range: () => [startOf('week'), today()] },
-  last_week:     { label: 'Last Week',    range: () => [startOf('week', -1), endOf('week', -1)] },
-  this_month:    { label: 'This Month',   range: () => [startOf('month'), today()] },
-  last_month:    { label: 'Last Month',   range: () => [startOf('month', -1), endOf('month', -1)] },
-  this_quarter:  { label: 'This Quarter', range: () => [startOf('quarter'), today()] },
-  last_quarter:  { label: 'Last Quarter', range: () => [startOf('quarter', -1), endOf('quarter', -1)] },
-  this_year:     { label: 'This Year',    range: () => [startOf('year'), today()] },
+  this_week:     { label: 'This Week',    range: () => [startOf('week'), thisEnd('week')] },
+  last_week:     { label: 'Last Week',    range: () => [startOf('week', -1, 'week'), endOf('week', -1, 'week')] },
+  this_month:    { label: 'This Month',   range: () => [startOf('month'), thisEnd('month')] },
+  last_month:    { label: 'Last Month',   range: () => [startOf('month', -1, 'month'), endOf('month', -1, 'month')] },
+  this_quarter:  { label: 'This Quarter', range: () => [startOf('quarter'), thisEnd('quarter')] },
+  last_quarter:  { label: 'Last Quarter', range: () => [startOf('quarter', -1, 'quarter'), endOf('quarter', -1, 'quarter')] },
+  this_year:     { label: 'This Year',    range: () => [startOf('year'), thisEnd('year')] },
   custom:        { label: 'Custom Range…', range: () => [props.from || null, props.to || null] },
 }
 
 function d(offset) { return dayjs().add(offset, 'day').format('YYYY-MM-DD') }
 function today() { return dayjs().format('YYYY-MM-DD') }
-function startOf(unit, offset = 0) { return dayjs().add(offset, unit).startOf(unit).format('YYYY-MM-DD') }
-function endOf(unit, offset = 0) { return dayjs().add(offset, unit).endOf(unit).format('YYYY-MM-DD') }
+// IMPORTANT: original code did `dayjs().add(offset, unit).startOf(unit)` which
+// passed the unit as both the add-unit and the startOf-unit. Fine for offset=0,
+// but for "last week", calling startOf with the OUTER unit was correct only
+// because add unit == startOf unit. Keep that pattern but make it explicit so
+// the call signature reads cleanly.
+function startOf(unit, offset = 0, addUnit = unit) {
+  return dayjs().add(offset, addUnit).startOf(unit).format('YYYY-MM-DD')
+}
+function endOf(unit, offset = 0, addUnit = unit) {
+  return dayjs().add(offset, addUnit).endOf(unit).format('YYYY-MM-DD')
+}
 
 const presetOptions = computed(() =>
   Object.entries(PRESETS)

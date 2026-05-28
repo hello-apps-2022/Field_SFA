@@ -10,7 +10,7 @@
 
     <!-- Filters -->
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-100 bg-white px-4 py-2.5">
-      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="" forward-looking @change="applyFilters" />
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">Clear</button>
       <button @click="load" class="ml-auto h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
         <FeatherIcon name="refresh-cw" class="inline h-3 w-3 mr-1" /> Refresh
