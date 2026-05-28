@@ -17,6 +17,16 @@
 
     <!-- VIEW MODE ───────────────────────────────────────────────── -->
     <div v-else-if="mode === 'view' && claim" class="space-y-4">
+      <!-- "Awaiting your action" banner — shown when opened from an approval queue
+           and the viewer can actually act on this row -->
+      <div v-if="context === 'queue' && canAct" class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-2">
+        <FeatherIcon name="check-square" class="h-4 w-4 text-amber-700 shrink-0" />
+        <p class="text-xs text-amber-800">
+          <span class="font-medium">Awaiting your review</span>
+          <span class="text-amber-600"> — approve to advance or reject with a reason.</span>
+        </p>
+      </div>
+
       <!-- Status + name -->
       <div class="flex items-center justify-between">
         <div>
@@ -114,7 +124,7 @@
             >
               <FeatherIcon v-if="acting" name="loader" class="h-4 w-4 animate-spin" />
               <FeatherIcon v-else name="check" class="h-4 w-4" />
-              Approve {{ tierLabel }}
+              Approve
             </button>
             <button
               @click="showRejectForm = true"
@@ -264,6 +274,9 @@ const props = defineProps({
   // Mode the parent wants us to OPEN in. We may transition internally afterwards.
   // 'view' for existing claims; 'edit' for new claims (claimName=='')
   initialMode: { type: String, default: 'view' },
+  // Caller context — 'queue' shows an "awaiting action" banner for approvers,
+  // 'list' (default) shows the plain detail view. Used by ExpenseApprovals.vue.
+  context: { type: String, default: 'list' },
 })
 const emit = defineEmits(['update:modelValue', 'changed'])
 
@@ -281,8 +294,7 @@ const rejectError = ref('')
 
 const statusColors = {
   'Draft': 'bg-gray-100 text-gray-600',
-  'Pending Manager Approval': 'bg-yellow-50 text-yellow-700',
-  'Pending Finance Approval': 'bg-blue-50 text-blue-700',
+  'Pending Approval': 'bg-yellow-50 text-yellow-700',
   'Approved': 'bg-green-50 text-green-700',
   'Rejected': 'bg-red-50 text-red-600',
 }
@@ -308,16 +320,9 @@ const canSubmit = computed(() =>
 )
 const canAct = computed(() => {
   if (!claim.value || isOwn.value) return false
-  const s = claim.value.workflow_state
-  if (s === 'Pending Manager Approval') return auth.isAdmin || auth.isManager
-  if (s === 'Pending Finance Approval') return auth.isAdmin
-  return false
-})
-const tierLabel = computed(() => {
-  if (!claim.value) return ''
-  if (claim.value.workflow_state === 'Pending Manager Approval') return '(Manager)'
-  if (claim.value.workflow_state === 'Pending Finance Approval') return '(Finance)'
-  return ''
+  // Single-tier: any manager or admin can act on a Pending Approval claim
+  return claim.value.workflow_state === 'Pending Approval' &&
+         (auth.isAdmin || auth.isManager)
 })
 
 // ── SlidePanel footer config (mode-dependent) ────────────────────
@@ -495,7 +500,7 @@ async function onSubmit() {
 
 async function onApprove() {
   if (!claim.value) return
-  const action = claim.value.workflow_state === 'Pending Finance Approval' ? 'finance_approve' : 'manager_approve'
+  const action = 'approve'
   acting.value = true
   try {
     await call('sfa_core.api.expenses.action_expense_claim', { name: claim.value.name, action })
@@ -512,7 +517,7 @@ async function onReject() {
   if (!claim.value) return
   rejectError.value = ''
   if (!rejectReason.value.trim()) { rejectError.value = 'Please enter a reason.'; return }
-  const action = claim.value.workflow_state === 'Pending Finance Approval' ? 'finance_reject' : 'manager_reject'
+  const action = 'reject'
   acting.value = true
   try {
     await call('sfa_core.api.expenses.action_expense_claim', {

@@ -7,7 +7,7 @@ Endpoints:
   get_leave_applications(start, page_length, status, from_date, to_date, territory)
   get_leave_application(name)
   apply_leave(payload)                  -> Draft
-  submit_leave(name)                    -> Pending Manager Approval
+  submit_leave(name)                    -> Pending Approval
   action_leave(name, action)            -> workflow transition
   get_leave_balance()                   -> per-type balance for current rep
   get_leave_meta()                      -> types, statuses
@@ -21,10 +21,8 @@ from sfa_core.api.hr_common import (
 )
 
 WORKFLOW_ACTIONS = {
-    "manager_approve": "Manager Approve",
-    "manager_reject": "Manager Reject",
-    "finance_approve": "Finance Approve",
-    "finance_reject": "Finance Reject",
+    "approve": "Approve",
+    "reject": "Reject",
 }
 
 
@@ -156,24 +154,21 @@ def action_leave(name, action, reason=None):
     if doc.employee == ctx.employee and not ctx.is_admin:
         frappe.throw("You cannot approve or reject your own leave.",
                      frappe.PermissionError)
-    if action.startswith("finance_") and not ctx.is_admin:
-        frappe.throw("Only finance (SFA Admin) can take the second-tier action.",
-                     frappe.PermissionError)
-    if action.startswith("manager_") and not (ctx.is_manager or ctx.is_admin):
-        frappe.throw("Only a manager can take the first-tier action.",
+    if not (ctx.is_manager or ctx.is_admin):
+        frappe.throw("Only a manager or admin can approve or reject leave requests.",
                      frappe.PermissionError)
     wf_action = WORKFLOW_ACTIONS.get(action)
     if not wf_action:
         frappe.throw(f"Unknown action {action!r}.")
 
-    is_reject = action.endswith("_reject")
+    is_reject = (action == "reject")
     if is_reject:
         reason_clean = (reason or "").strip()
         if not reason_clean:
             frappe.throw("A reason is required when rejecting a leave request.")
         doc.custom_rejection_reason = reason_clean
         doc.save(ignore_permissions=True)
-    elif action.endswith("_approve") and doc.get("custom_rejection_reason"):
+    elif action == "approve" and doc.get("custom_rejection_reason"):
         doc.custom_rejection_reason = ""
         doc.save(ignore_permissions=True)
 
@@ -206,8 +201,7 @@ def get_leave_meta():
     types = frappe.get_all("Leave Type", fields=["name"], order_by="name")
     return {
         "leave_types": [t.name for t in types],
-        "statuses": ["Draft", "Pending Manager Approval", "Pending Finance Approval",
-                     "Approved", "Rejected"],
+        "statuses": ["Draft", "Pending Approval", "Approved", "Rejected"],
     }
 
 

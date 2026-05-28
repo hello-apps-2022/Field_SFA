@@ -47,7 +47,7 @@
             <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Claimed</th>
             <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sanctioned</th>
             <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Status</th>
-            <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Actions</th>
+            <th class="px-5 py-2.5 w-8"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -66,17 +66,8 @@
             <td class="px-5 py-3">
               <StatusBadge :status="c.workflow_state" :color-map="statusColors" />
             </td>
-            <td class="px-5 py-3 text-right whitespace-nowrap" @click.stop>
-              <template v-if="canManagerAct(c)">
-                <button @click="act(c, 'manager_approve')" class="text-xs font-medium text-green-700 hover:underline">Approve</button>
-                <button @click="act(c, 'manager_reject')" class="ml-3 text-xs font-medium text-red-600 hover:underline">Reject</button>
-              </template>
-              <template v-else-if="canFinanceAct(c)">
-                <button @click="act(c, 'finance_approve')" class="text-xs font-medium text-green-700 hover:underline">Approve</button>
-                <button @click="act(c, 'finance_reject')" class="ml-3 text-xs font-medium text-red-600 hover:underline">Reject</button>
-              </template>
-              <button v-else-if="c.workflow_state === 'Draft' && isOwn(c)" @click="submitClaim(c)" class="text-xs font-medium text-gray-700 hover:underline">Submit</button>
-              <span v-else class="text-xs text-gray-300">—</span>
+            <td class="px-3 py-3 text-right text-gray-300">
+              <FeatherIcon name="chevron-right" class="h-4 w-4" />
             </td>
           </tr>
         </tbody>
@@ -187,11 +178,10 @@ const drawerOpen = ref(false)
 const drawerClaim = ref('')
 const drawerMode = ref('view')
 
-const statuses = ['Draft', 'Pending Manager Approval', 'Pending Finance Approval', 'Approved', 'Rejected']
+const statuses = ['Draft', 'Pending Approval', 'Approved', 'Rejected']
 const statusColors = {
   'Draft': 'bg-gray-100 text-gray-600',
-  'Pending Manager Approval': 'bg-yellow-50 text-yellow-700',
-  'Pending Finance Approval': 'bg-blue-50 text-blue-700',
+  'Pending Approval': 'bg-yellow-50 text-yellow-700',
   'Approved': 'bg-green-50 text-green-700',
   'Rejected': 'bg-red-50 text-red-600',
 }
@@ -210,10 +200,6 @@ const draft = reactive({
 
 const fmt = (v) => formatCurrency(v || 0)
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
-
-const isOwn = (c) => auth.employee && c.employee === auth.employee
-const canManagerAct = (c) => c.workflow_state === 'Pending Manager Approval' && (auth.isManager || auth.isAdmin) && !isOwn(c)
-const canFinanceAct = (c) => c.workflow_state === 'Pending Finance Approval' && auth.isAdmin && !isOwn(c)
 
 async function load() {
   loading.value = true
@@ -280,15 +266,6 @@ async function saveDraft() {
   } finally {
     saving.value = false
   }
-}
-
-async function submitClaim(c) {
-  await call('sfa_core.api.expenses.submit_expense_claim', { name: c.name })
-  load()
-}
-async function act(c, action) {
-  await call('sfa_core.api.expenses.action_expense_claim', { name: c.name, action })
-  load()
 }
 
 onMounted(() => { loadMeta(); load() })

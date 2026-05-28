@@ -8,7 +8,7 @@ Endpoints:
   get_expense_claims(start, page_length, status, from_date, to_date, territory)
   get_expense_claim(name)
   create_expense_claim(payload)            -> Draft
-  submit_expense_claim(name)               -> Pending Manager Approval
+  submit_expense_claim(name)               -> Pending Approval
   action_expense_claim(name, action)       -> workflow transition (approve/reject)
   get_expense_claim_meta()                 -> types, statuses for the form
 """
@@ -24,10 +24,8 @@ COMPANY = "Hema Beverages Limited"
 DEFAULT_COST_CENTER = "Main - HBL"
 
 WORKFLOW_ACTIONS = {
-    "manager_approve": "Manager Approve",
-    "manager_reject": "Manager Reject",
-    "finance_approve": "Finance Approve",
-    "finance_reject": "Finance Reject",
+    "approve": "Approve",
+    "reject": "Reject",
 }
 
 
@@ -205,24 +203,23 @@ def submit_expense_claim(name):
 @frappe.whitelist()
 def action_expense_claim(name, action, reason=None):
     """
-    action: one of manager_approve/manager_reject/finance_approve/finance_reject
-    reason: required for *_reject actions; stored on custom_rejection_reason so
-            the rep can see why and act on it.
+    action: 'approve' or 'reject' (single-tier workflow).
+    reason: required for reject; stored on custom_rejection_reason so the rep
+            can see why and act on it.
     """
     ctx = get_hr_context()
     doc = frappe.get_doc("Expense Claim", name)
     assert_can_act_on(ctx, doc.employee)
-    # Block self-approval at any tier, even for dual-role users.
+    # Block self-approval: a manager who files a claim can't be the one to
+    # approve/reject it. Admin can act on anyone's claim including their own
+    # only if there's literally no other approver — kept here as a defense
+    # against accidental misuse.
     if doc.employee == ctx.employee and not ctx.is_admin:
         frappe.throw("You cannot approve or reject your own claim.",
                      frappe.PermissionError)
-    # Explicit tier guard so the rejection message is clean (defense in depth
-    # over the workflow's own allowed-role check).
-    if action.startswith("finance_") and not ctx.is_admin:
-        frappe.throw("Only finance (SFA Admin) can take the second-tier action.",
-                     frappe.PermissionError)
-    if action.startswith("manager_") and not (ctx.is_manager or ctx.is_admin):
-        frappe.throw("Only a manager can take the first-tier action.",
+    # Single-tier guard: anyone with manager OR admin role can approve.
+    if not (ctx.is_manager or ctx.is_admin):
+        frappe.throw("Only a manager or admin can approve or reject claims.",
                      frappe.PermissionError)
     wf_action = WORKFLOW_ACTIONS.get(action)
     if not wf_action:
@@ -230,7 +227,7 @@ def action_expense_claim(name, action, reason=None):
 
     # Rejection accountability — every reject must come with a reason so the rep
     # has something actionable, and the approver leaves a paper trail.
-    is_reject = action.endswith("_reject")
+    is_reject = (action == "reject")
     if is_reject:
         reason_clean = (reason or "").strip()
         if not reason_clean:
@@ -240,7 +237,7 @@ def action_expense_claim(name, action, reason=None):
         # update_field/update_value handles the status field, but our custom
         # field needs an explicit save.
         doc.save(ignore_permissions=True)
-    elif action.endswith("_approve") and doc.get("custom_rejection_reason"):
+    elif action == "approve" and doc.get("custom_rejection_reason"):
         # If a previously-rejected claim is being re-routed (e.g. resubmitted
         # after a fix), clear the stale reason so it doesn't confuse readers.
         doc.custom_rejection_reason = ""
@@ -256,8 +253,7 @@ def get_expense_claim_meta():
     types = frappe.get_all("Expense Claim Type", fields=["name"], order_by="name")
     return {
         "expense_types": [t.name for t in types],
-        "statuses": ["Draft", "Pending Manager Approval", "Pending Finance Approval",
-                     "Approved", "Rejected"],
+        "statuses": ["Draft", "Pending Approval", "Approved", "Rejected"],
         # Stage 4 — populated from the Select field's options so the UI dropdown
         # stays in sync with the doctype definition (single source of truth).
         "activity_types": _get_activity_type_options(),

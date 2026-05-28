@@ -25,7 +25,8 @@
       </button>
     </div>
 
-    <!-- Balance strip -->
+    <!-- Balance strip — visible only to reps (managers/admins viewing others'
+         leaves don't need their own balance polluting the header). -->
     <div v-if="balances.length" class="flex shrink-0 items-center gap-6 border-b border-gray-100 bg-gray-50 px-5 py-2 text-sm">
       <span class="text-gray-400 text-xs uppercase tracking-wide">Balance</span>
       <span v-for="b in balances" :key="b.leave_type">
@@ -49,11 +50,11 @@
             <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">To</th>
             <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Days</th>
             <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Status</th>
-            <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Actions</th>
+            <th class="px-5 py-2.5 w-8"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
-          <tr v-for="l in items" :key="l.name" class="hover:bg-gray-50 transition-colors">
+          <tr v-for="l in items" :key="l.name" @click="openDrawer(l.name)" class="hover:bg-gray-50 transition-colors cursor-pointer">
             <td class="px-5 py-3 font-medium text-gray-900">{{ l.employee_name || l.employee }}</td>
             <td class="px-5 py-3 text-gray-500">{{ l.leave_type }}</td>
             <td class="px-5 py-3 text-gray-500">{{ formatDate(l.from_date) }}</td>
@@ -62,17 +63,8 @@
             <td class="px-5 py-3">
               <StatusBadge :status="l.workflow_state" :color-map="statusColors" />
             </td>
-            <td class="px-5 py-3 text-right whitespace-nowrap">
-              <template v-if="canManagerAct(l)">
-                <button @click="act(l, 'manager_approve')" class="text-xs font-medium text-green-700 hover:underline">Approve</button>
-                <button @click="act(l, 'manager_reject')" class="ml-3 text-xs font-medium text-red-600 hover:underline">Reject</button>
-              </template>
-              <template v-else-if="canFinanceAct(l)">
-                <button @click="act(l, 'finance_approve')" class="text-xs font-medium text-green-700 hover:underline">Approve</button>
-                <button @click="act(l, 'finance_reject')" class="ml-3 text-xs font-medium text-red-600 hover:underline">Reject</button>
-              </template>
-              <button v-else-if="l.workflow_state === 'Draft' && isOwn(l)" @click="submitLeave(l)" class="text-xs font-medium text-gray-700 hover:underline">Submit</button>
-              <span v-else class="text-xs text-gray-300">—</span>
+            <td class="px-3 py-3 text-right text-gray-300">
+              <FeatherIcon name="chevron-right" class="h-4 w-4" />
             </td>
           </tr>
         </tbody>
@@ -90,59 +82,26 @@
       <Pagination :page="page" :page-size="pageSize" :total="total" :loading="loading" @update:page="onPage" />
     </div>
 
-    <!-- Create modal -->
-    <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="showCreate=false">
-      <div class="w-full max-w-md rounded-lg bg-white shadow-xl">
-        <div class="flex h-[52px] items-center border-b border-gray-100 px-5">
-          <h2 class="text-sm font-semibold text-gray-900">Apply for Leave</h2>
-          <div class="flex-1" />
-          <button @click="showCreate=false" class="text-gray-400 hover:text-gray-600"><FeatherIcon name="x" class="h-4 w-4" /></button>
-        </div>
-
-        <div class="p-5 space-y-3">
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-500">Leave Type</label>
-            <select v-model="draft.leave_type" class="h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
-              <option value="" disabled>Select…</option>
-              <option v-for="t in leaveTypes" :key="t" :value="t">{{ t }}</option>
-            </select>
-          </div>
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="mb-1 block text-xs font-medium text-gray-500">From</label>
-              <input type="date" v-model="draft.from_date" class="h-8 w-full rounded-md border border-gray-200 px-2 text-sm focus:border-gray-400 focus:outline-none" />
-            </div>
-            <div class="flex-1">
-              <label class="mb-1 block text-xs font-medium text-gray-500">To</label>
-              <input type="date" v-model="draft.to_date" class="h-8 w-full rounded-md border border-gray-200 px-2 text-sm focus:border-gray-400 focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-500">Reason</label>
-            <textarea v-model="draft.reason" rows="2" class="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"></textarea>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
-          <span v-if="createError" class="mr-auto text-xs text-red-600">{{ createError }}</span>
-          <button @click="showCreate=false" class="h-8 rounded-md px-3 text-xs text-gray-500 hover:bg-gray-50">Cancel</button>
-          <button @click="saveDraft" :disabled="saving" class="h-8 rounded-md bg-gray-900 px-4 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-50">
-            {{ saving ? 'Saving…' : 'Save Draft' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Drawer — handles create/view/edit/review/approve/reject end-to-end -->
+    <LeaveClaimDrawer
+      v-model="drawerOpen"
+      :leave-name="drawerLeave"
+      :initial-mode="drawerMode"
+      @changed="onDrawerChanged"
+    />
 
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
 import { auth } from '@/utils/auth'
+import FeatherIcon from '@/components/ui/FeatherIcon.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import LeaveClaimDrawer from '@/components/ui/LeaveClaimDrawer.vue'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -156,26 +115,20 @@ const statusFilter = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
 
-const statuses = ['Draft', 'Pending Manager Approval', 'Pending Finance Approval', 'Approved', 'Rejected']
+const statuses = ['Draft', 'Pending Approval', 'Approved', 'Rejected']
 const statusColors = {
   'Draft': 'bg-gray-100 text-gray-600',
-  'Pending Manager Approval': 'bg-yellow-50 text-yellow-700',
-  'Pending Finance Approval': 'bg-blue-50 text-blue-700',
+  'Pending Approval': 'bg-yellow-50 text-yellow-700',
   'Approved': 'bg-green-50 text-green-700',
   'Rejected': 'bg-red-50 text-red-600',
 }
 
-const leaveTypes = ref([])
-const showCreate = ref(false)
-const saving = ref(false)
-const createError = ref('')
-const draft = reactive({ leave_type: '', from_date: '', to_date: '', reason: '' })
+// Drawer state
+const drawerOpen = ref(false)
+const drawerLeave = ref('')
+const drawerMode = ref('view')
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
-
-const isOwn = (l) => auth.employee && l.employee === auth.employee
-const canManagerAct = (l) => l.workflow_state === 'Pending Manager Approval' && (auth.isManager || auth.isAdmin) && !isOwn(l)
-const canFinanceAct = (l) => l.workflow_state === 'Pending Finance Approval' && auth.isAdmin && !isOwn(l)
 
 async function load() {
   loading.value = true
@@ -194,9 +147,10 @@ async function load() {
   }
 }
 
-async function loadMeta() {
-  const res = await call('sfa_core.api.leave.get_leave_meta')
-  leaveTypes.value = res.message.leave_types || []
+async function loadBalances() {
+  // Only reps need their own balance shown. Admins/managers typically don't,
+  // and the API returns [] when there's no linked employee anyway.
+  if (!auth.employee) return
   try {
     const bal = await call('sfa_core.api.leave.get_leave_balance')
     balances.value = bal.message.balances || []
@@ -208,41 +162,23 @@ function clearFilters() { statusFilter.value = ''; dateFrom.value = ''; dateTo.v
 function onPage(p) { page.value = p; load() }
 
 function openCreate() {
-  draft.leave_type = ''
-  draft.from_date = dayjs().format('YYYY-MM-DD')
-  draft.to_date = dayjs().format('YYYY-MM-DD')
-  draft.reason = ''
-  createError.value = ''
-  showCreate.value = true
+  drawerLeave.value = ''
+  drawerMode.value = 'edit'
+  drawerOpen.value = true
 }
 
-async function saveDraft() {
-  createError.value = ''
-  if (!draft.leave_type) { createError.value = 'Select a leave type.'; return }
-  if (!draft.from_date || !draft.to_date) { createError.value = 'Select both dates.'; return }
-  if (draft.to_date < draft.from_date) { createError.value = 'To date is before From date.'; return }
-  saving.value = true
-  try {
-    await call('sfa_core.api.leave.apply_leave', { payload: JSON.stringify({
-      leave_type: draft.leave_type, from_date: draft.from_date, to_date: draft.to_date, reason: draft.reason,
-    }) })
-    showCreate.value = false
-    load()
-  } catch (e) {
-    createError.value = e.message || 'Could not save leave request.'
-  } finally {
-    saving.value = false
-  }
+function openDrawer(name) {
+  drawerLeave.value = name
+  drawerMode.value = 'view'
+  drawerOpen.value = true
 }
 
-async function submitLeave(l) {
-  await call('sfa_core.api.leave.submit_leave', { name: l.name })
+// Drawer emits 'changed' after save/submit/approve/reject — refresh the list
+// AND balances (an approved leave consumes balance).
+function onDrawerChanged() {
   load()
-}
-async function act(l, action) {
-  await call('sfa_core.api.leave.action_leave', { name: l.name, action })
-  load()
+  loadBalances()
 }
 
-onMounted(() => { loadMeta(); load() })
+onMounted(() => { load(); loadBalances() })
 </script>

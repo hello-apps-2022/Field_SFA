@@ -10,5 +10,7 @@ sfa_core.patches.v1_0.setup_hr_integration
 sfa_core.patches.v1_0.add_custom_employee_to_sales_person
 sfa_core.patches.v1_0.setup_hr_workflows
 sfa_core.patches.v1_0.backfill_employees
-sfa_core.patches.v1_0.add_activity_fields_to_expense_claim
-sfa_core.patches.v1_0.add_rejection_reason_fields
+sfa_core.patches.v1_0.collapse_to_single_tier_approval
+sfa_core.patches.v1_0.fix_leave_type_quotas
+sfa_core.patches.v1_0.seed_uganda_holiday_list
+sfa_core.patches.v1_0.allocate_leave_for_current_fy

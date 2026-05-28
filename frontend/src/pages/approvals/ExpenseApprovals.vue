@@ -10,11 +10,6 @@
 
     <!-- Filters -->
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-100 bg-white px-4 py-2.5">
-      <select v-if="isAdmin" v-model="tierFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
-        <option value="">All Pending Tiers</option>
-        <option value="Pending Manager Approval">Manager Tier</option>
-        <option value="Pending Finance Approval">Finance Tier</option>
-      </select>
       <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">Clear</button>
       <button @click="load" class="ml-auto h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
@@ -39,26 +34,25 @@
           <tr>
             <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Employee</th>
             <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Date</th>
+            <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Purpose</th>
             <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Claimed</th>
-            <th class="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Awaiting</th>
-            <th class="px-5 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Action</th>
+            <th class="px-5 py-2.5 w-8"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
-          <tr v-for="c in items" :key="c.name" class="hover:bg-gray-50 transition-colors">
+          <tr v-for="c in items" :key="c.name" @click="openDrawer(c.name)" class="hover:bg-gray-50 transition-colors cursor-pointer">
             <td class="px-5 py-3 font-medium text-gray-900">{{ c.employee_name || c.employee }}</td>
             <td class="px-5 py-3 text-gray-500">{{ formatDate(c.posting_date) }}</td>
-            <td class="px-5 py-3 text-right font-medium text-gray-900">{{ fmt(c.total_claimed_amount) }}</td>
             <td class="px-5 py-3">
-              <StatusBadge :status="c.workflow_state" :color-map="statusColors" />
-            </td>
-            <td class="px-5 py-3 text-right whitespace-nowrap">
-              <template v-if="canAct(c) && !isOwn(c)">
-                <button @click="act(c, approveAction(c))" class="text-xs font-medium text-green-700 hover:underline">Approve</button>
-                <button @click="act(c, rejectAction(c))" class="ml-3 text-xs font-medium text-red-600 hover:underline">Reject</button>
-              </template>
-              <span v-else-if="isOwn(c)" class="text-xs text-gray-300">Your claim</span>
+              <div v-if="c.custom_activity_type || c.custom_purpose" class="flex flex-col gap-0.5">
+                <span v-if="c.custom_activity_type" class="inline-flex w-fit items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">{{ c.custom_activity_type }}</span>
+                <span v-if="c.custom_purpose" class="text-xs text-gray-500 line-clamp-1 max-w-xs">{{ c.custom_purpose }}</span>
+              </div>
               <span v-else class="text-xs text-gray-300">—</span>
+            </td>
+            <td class="px-5 py-3 text-right font-medium text-gray-900">{{ fmt(c.total_claimed_amount) }}</td>
+            <td class="px-3 py-3 text-right text-gray-300">
+              <FeatherIcon name="chevron-right" class="h-4 w-4" />
             </td>
           </tr>
         </tbody>
@@ -74,17 +68,25 @@
     <div v-if="total > pageSize" class="shrink-0 border-t border-gray-100 bg-white px-5 py-2">
       <Pagination :page="page" :page-size="pageSize" :total="total" :loading="loading" @update:page="onPage" />
     </div>
+
+    <!-- Drawer (queue context — shows the 'awaiting your action' banner) -->
+    <ExpenseClaimDrawer
+      v-model="drawerOpen"
+      :claim-name="drawerClaim"
+      context="queue"
+      @changed="load"
+    />
+
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
-import { auth } from '@/utils/auth'
 import { formatCurrency } from '@/utils/currency'
-import StatusBadge from '@/components/ui/StatusBadge.vue'
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import ExpenseClaimDrawer from '@/components/ui/ExpenseClaimDrawer.vue'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -94,62 +96,41 @@ const totals = reactive({ claimed: 0, sanctioned: 0 })
 const page = ref(1)
 const pageSize = 50
 
-const isAdmin = auth.isAdmin
-const isManager = auth.isManager
-const tierFilter = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
 
-const statusColors = {
-  'Pending Manager Approval': 'bg-yellow-50 text-yellow-700',
-  'Pending Finance Approval': 'bg-blue-50 text-blue-700',
-}
+// Drawer state — clicking a row opens it; drawer handles approve/reject + reason flow
+const drawerOpen = ref(false)
+const drawerClaim = ref('')
 
 const fmt = (v) => formatCurrency(v || 0)
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
-const isOwn = (c) => auth.employee && c.employee === auth.employee
-
-// Which states this user can act on: admin = both tiers, manager = tier-1 only.
-function pendingStatesForUser() {
-  if (isAdmin) return ['Pending Manager Approval', 'Pending Finance Approval']
-  if (isManager) return ['Pending Manager Approval']
-  return []
-}
-const canAct = (c) => pendingStatesForUser().includes(c.workflow_state)
-const approveAction = (c) => c.workflow_state === 'Pending Finance Approval' ? 'finance_approve' : 'manager_approve'
-const rejectAction = (c) => c.workflow_state === 'Pending Finance Approval' ? 'finance_reject' : 'manager_reject'
 
 async function load() {
   loading.value = true
   try {
-    // If admin picked a specific tier, use it; else fetch each pending state this
-    // user can act on and merge. (Backend RBAC-scopes by territory regardless.)
-    const states = tierFilter.value ? [tierFilter.value] : pendingStatesForUser()
-    let all = [], t = 0, claimed = 0
-    for (const st of states) {
-      const res = await call('sfa_core.api.expenses.get_expense_claims', {
-        start: 0, page_length: 200, status: st,
-        from_date: dateFrom.value || undefined, to_date: dateTo.value || undefined,
-      })
-      all = all.concat(res.message.items || [])
-      t += res.message.total || 0
-      claimed += (res.message.totals && res.message.totals.claimed) || 0
-    }
-    items.value = all
-    total.value = t
-    totals.claimed = claimed
+    // Single-tier: just fetch claims in "Pending Approval". Both managers and
+    // admins see the same queue; the backend RBAC-scopes by territory for
+    // managers automatically.
+    const res = await call('sfa_core.api.expenses.get_expense_claims', {
+      start: 0, page_length: 200, status: 'Pending Approval',
+      from_date: dateFrom.value || undefined, to_date: dateTo.value || undefined,
+    })
+    items.value = res.message.items || []
+    total.value = res.message.total || 0
+    totals.claimed = (res.message.totals && res.message.totals.claimed) || 0
   } finally {
     loading.value = false
   }
 }
 
 function applyFilters() { page.value = 1; load() }
-function clearFilters() { tierFilter.value = ''; dateFrom.value = ''; dateTo.value = ''; applyFilters() }
+function clearFilters() { dateFrom.value = ''; dateTo.value = ''; applyFilters() }
 function onPage(p) { page.value = p; load() }
 
-async function act(c, action) {
-  await call('sfa_core.api.expenses.action_expense_claim', { name: c.name, action })
-  load()
+function openDrawer(name) {
+  drawerClaim.value = name
+  drawerOpen.value = true
 }
 
 onMounted(load)
