@@ -78,6 +78,22 @@
         <FormField v-model="form.territory" label="Territory" type="select" :options="allTerritories" />
         <FormField v-model="form.mobile_no" label="Mobile No" type="tel" />
         <FormField v-model="form.email_id" label="Email" type="email" />
+        <!-- GPS capture (new outlets only) -->
+        <div v-if="!editing" class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Outlet location</p>
+              <p class="text-xs text-gray-400">
+                <span v-if="form.latitude">Captured: {{ Number(form.latitude).toFixed(5) }}, {{ Number(form.longitude).toFixed(5) }}</span>
+                <span v-else-if="geoStatus">{{ geoStatus }}</span>
+                <span v-else>Capture GPS at the outlet for accurate mapping</span>
+              </p>
+            </div>
+            <Btn variant="ghost" size="sm" :disabled="geoLoading" @click="captureLocation">
+              <FeatherIcon name="map-pin" class="mr-1 h-3.5 w-3.5" />{{ geoLoading ? 'Locating…' : (form.latitude ? 'Re-capture' : 'Capture') }}
+            </Btn>
+          </div>
+        </div>
         <FormField v-model="form.customer_details" label="Notes" type="textarea" />
       </div>
     </SlidePanel>
@@ -88,6 +104,10 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
+import Btn from '@/components/ui/Btn.vue'
+import FeatherIcon from '@/components/ui/FeatherIcon.vue'
+import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import { useLinkedData } from '@/composables/useLinkedData'
 
 const { customerGroups, territories: allTerritories, loadCustomerGroups, loadTerritories } = useLinkedData()
@@ -105,7 +125,29 @@ const errors = reactive({})
 const form = reactive({
   customer_name: '', customer_group: '', territory: '',
   mobile_no: '', email_id: '', customer_details: '',
+  latitude: '', longitude: '',
 })
+
+const geoLoading = ref(false)
+const geoStatus = ref('')
+
+function captureLocation() {
+  if (!navigator.geolocation) { geoStatus.value = 'GPS not supported on this device'; return }
+  geoLoading.value = true
+  geoStatus.value = ''
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      form.latitude = pos.coords.latitude
+      form.longitude = pos.coords.longitude
+      geoLoading.value = false
+    },
+    (err) => {
+      geoLoading.value = false
+      geoStatus.value = err.code === 1 ? 'Location permission denied' : 'Could not get location'
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  )
+}
 
 const groups = computed(() => [...new Set(customers.value.map(c => c.customer_group).filter(Boolean))])
 const territories = computed(() => [...new Set(customers.value.map(c => c.territory).filter(Boolean))])
@@ -129,7 +171,8 @@ async function load() {
 
 function openNew() {
   editing.value = null
-  Object.assign(form, { customer_name: '', customer_group: '', territory: '', mobile_no: '', email_id: '', customer_details: '' })
+  Object.assign(form, { customer_name: '', customer_group: '', territory: '', mobile_no: '', email_id: '', customer_details: '', latitude: '', longitude: '' })
+  geoStatus.value = ''
   Object.keys(errors).forEach(k => delete errors[k])
   panelOpen.value = true
 }
@@ -145,19 +188,33 @@ async function save() {
   if (!form.customer_name.trim()) { errors.customer_name = 'Required'; return }
   saving.value = true
   try {
-    const doc = { doctype: 'Customer', customer_type: 'Company', ...form }
     if (editing.value) {
-      doc.name = editing.value
-      await frappe.call({ method: 'frappe.client.save', args: { doc } })
+      const doc = {
+        doctype: 'Customer', customer_type: 'Company', name: editing.value,
+        customer_name: form.customer_name, customer_group: form.customer_group || '',
+        territory: form.territory || '', mobile_no: form.mobile_no || '',
+        email_id: form.email_id || '', customer_details: form.customer_details || '',
+      }
+      await call('frappe.client.save', { doc })
+      successToast('Customer updated')
     } else {
-      await frappe.call({ method: 'frappe.client.insert', args: { doc } })
+      // New outlets go through create_customer (sets SFA fields, GPS, rep, dedup)
+      await call('sfa_core.api.customer.create_customer', {
+        customer_name: form.customer_name,
+        territory: form.territory,
+        mobile_no: form.mobile_no,
+        customer_group: form.customer_group,
+        latitude: form.latitude || null,
+        longitude: form.longitude || null,
+      })
+      successToast('Outlet created')
     }
-    frappe.show_alert({ message: editing.value ? 'Customer updated' : 'Customer created', indicator: 'green' })
     panelOpen.value = false
     load()
   } catch (e) {
-    frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' })
+    errorToast(e.message || 'Save failed')
   } finally { saving.value = false }
+}
 }
 
 const filtered = computed(() => {

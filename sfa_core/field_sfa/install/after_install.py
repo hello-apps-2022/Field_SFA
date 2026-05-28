@@ -11,6 +11,8 @@ def after_install():
     setup_sfa_workspace()
     setup_custom_fields()
     frappe.db.commit()
+    seed_customer_groups()
+    frappe.db.commit()
     seed_brand_defaults()
     frappe.db.commit()
     frappe.msgprint(_("SFA Core installed successfully. Please run bench migrate if DocTypes are not visible."))
@@ -322,6 +324,15 @@ def setup_custom_fields():
             "read_only": 1,
         },
         {
+            "dt": "Customer",
+            "fieldname": "custom_mobile_no",
+            "label": "Mobile No",
+            "fieldtype": "Data",
+            "options": "Phone",
+            "insert_after": "custom_last_visit_date",
+            "description": "Outlet contact phone (SFA).",
+        },
+        {
             "dt": "Sales Order",
             "fieldname": "custom_sfa_visit",
             "label": "Linked SFA Visit",
@@ -379,3 +390,41 @@ def setup_custom_fields():
             create_custom_field(dt, field)
         except Exception as e:
             frappe.log_error(f"SFA Core: Failed to create custom field {field.get('fieldname')}: {str(e)}")
+
+
+# Canonical SFA outlet-type taxonomy (leaf Customer Groups under the root).
+SFA_CUSTOMER_GROUPS = [
+    "Distributor",
+    "Dealer",
+    "Sub-Dealer",
+    "Wholesaler / Stockist",
+    "Retailer",
+    "Kiosk / Duka",
+    "Convenience Store",
+    "Supermarket",
+    "Bar / Club",
+    "Restaurant / Café",
+    "Hotel / Lodge",
+    "Petrol Forecourt",
+    "Hospital / Clinic",
+    "School / Campus",
+    "Government / NGO",
+]
+
+
+def seed_customer_groups():
+    """Create the SFA outlet-type Customer Groups as leaf nodes under the root.
+    Idempotent — skips any that already exist."""
+    root = frappe.db.get_value("Customer Group", {"is_group": 1, "parent_customer_group": ""}, "name") \
+        or "All Customer Groups"
+    for name in SFA_CUSTOMER_GROUPS:
+        if frappe.db.exists("Customer Group", name):
+            continue
+        try:
+            doc = frappe.new_doc("Customer Group")
+            doc.customer_group_name = name
+            doc.parent_customer_group = root
+            doc.is_group = 0
+            doc.insert(ignore_permissions=True)
+        except Exception as e:
+            frappe.log_error(f"SFA Core: failed to create Customer Group {name}: {e}")

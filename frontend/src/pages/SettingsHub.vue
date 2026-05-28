@@ -63,6 +63,14 @@ const sections = [
     title: 'Operations',
     items: [
       {
+        to: '/settings/import-outlets',
+        label: 'Import Outlets',
+        desc: 'Bulk-import outlets from a CSV. Download a template, upload, and review results.',
+        icon: 'upload',
+        iconBg: 'bg-blue-50',
+        iconColor: 'text-blue-600',
+      },
+      {
         to: '/settings/beat-plan-permissions',
         label: 'Beat Plan Permissions',
         desc: 'Control whether reps can create their own beat plans.',

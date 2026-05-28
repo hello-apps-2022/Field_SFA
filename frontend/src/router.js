@@ -28,6 +28,7 @@ const routes = [
   { path: '/settings', name: 'SettingsHub', component: () => import('@/pages/SettingsHub.vue') },
   { path: '/settings/team', name: 'SettingsTeam', component: () => import('@/pages/Settings.vue') },
   { path: '/settings/territories', name: 'SettingsTerritories', component: () => import('@/pages/SettingsTerritories.vue') },
+  { path: '/settings/import-outlets', name: 'SettingsImportOutlets', component: () => import('@/pages/SettingsImportOutlets.vue') },
   { path: '/settings/beat-plan-permissions', name: 'BeatPlanPermissions', component: () => import('@/pages/BeatPlans.vue') },
 
   // Maps
