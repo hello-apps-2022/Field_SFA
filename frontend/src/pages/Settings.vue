@@ -219,6 +219,21 @@
         </select>
       </div>
       <FormField v-model="editForm.mobile_no" label="Mobile Number" />
+
+      <!-- Export reports permission -->
+      <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <div>
+          <p class="text-sm font-medium text-gray-700">Can export reports</p>
+          <p class="text-xs text-gray-400">Allow this user to download report data (Excel/CSV). Admins can always export.</p>
+        </div>
+        <button type="button"
+          class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
+          :class="editForm.can_export_reports ? 'bg-gray-900' : 'bg-gray-200'"
+          @click="editForm.can_export_reports = !editForm.can_export_reports">
+          <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
+            :class="editForm.can_export_reports ? 'translate-x-4' : 'translate-x-0.5'" />
+        </button>
+      </div>
     </div>
   </SlidePanel>
 
@@ -380,6 +395,7 @@ const form = reactive({
 
 const editForm = reactive({
   first_name: '', last_name: '', role: '', territory: '', mobile_no: '', reports_to: '',
+  can_export_reports: false,
 })
 
 const managerOptions = computed(() =>
@@ -442,6 +458,7 @@ function openEdit(user) {
     territory: user.territory || '',
     mobile_no: user.mobile_no || '',
     reports_to: user.reports_to || '',
+    can_export_reports: !!user.can_export_reports,
   })
   editPanel.value = true
 }
@@ -489,6 +506,7 @@ async function saveEdit() {
       first_name: editForm.first_name,
       last_name: editForm.last_name,
       reports_to: editForm.reports_to || null,
+      can_export_reports: editForm.can_export_reports ? 1 : 0,
     })
     successToast('User updated')
     editPanel.value = false

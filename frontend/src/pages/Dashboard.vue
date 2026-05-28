@@ -84,7 +84,7 @@
               <p class="text-xs text-gray-400">Ranked by completed visits</p>
             </div>
           </div>
-          <div v-if="leaderboard.length" class="divide-y divide-gray-50">
+          <div v-if="leaderboard.length" class="max-h-[300px] overflow-y-auto divide-y divide-gray-50">
             <div v-for="(rep, i) in leaderboard" :key="rep.sales_person"
               class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
               @click="$router.push('/rep-activity-map')"
@@ -127,7 +127,7 @@
             </div>
             <router-link to="/visits" class="text-xs text-blue-500 hover:underline">View all →</router-link>
           </div>
-          <div v-if="recentVisits.length" class="divide-y divide-gray-50">
+          <div v-if="recentVisits.length" class="max-h-[300px] overflow-y-auto divide-y divide-gray-50">
             <div v-for="v in recentVisits" :key="v.name"
               class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
               @click="$router.push('/visits/'+v.name)"
@@ -166,7 +166,7 @@
               View map →
             </router-link>
           </div>
-          <div v-if="overdueCustomers.length" class="divide-y divide-gray-50">
+          <div v-if="overdueCustomers.length" class="max-h-[300px] overflow-y-auto divide-y divide-gray-50">
             <div v-for="c in overdueCustomers" :key="c.name"
               class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
               @click="$router.push('/customers/'+c.name)"
