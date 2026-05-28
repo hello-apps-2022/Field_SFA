@@ -35,12 +35,7 @@
         <option value="Cancelled">Cancelled</option>
       </select>
 
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs text-gray-400">From</span>
-        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, applyFilters)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
-        <span class="text-xs text-gray-400">to</span>
-        <input :value="dateTo" type="date" @change="setTo($event.target.value, applyFilters)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
-      </div>
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
         Clear
@@ -112,6 +107,7 @@ import { useLinkedData } from '@/composables/useLinkedData'
 import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import dayjs from 'dayjs'
 import CustomerSearchModal from '@/components/ui/CustomerSearchModal.vue'
@@ -189,6 +185,6 @@ const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 onMounted(async () => {
   await linked.loadSalesPersons()
   repOptions.value = linked.salesPersons.value
-  load()
+  // Initial load is triggered by DateRangeFilter emitting its default range on mount.
 })
 </script>

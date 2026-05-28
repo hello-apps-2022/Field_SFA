@@ -5,3 +5,4 @@ sfa_core.patches.v1_0.add_sfa_rep_field
 sfa_core.patches.v1_0.add_carton_qty_fields
 sfa_core.patches.v1_0.add_customer_mobile_field
 sfa_core.patches.v1_0.seed_customer_groups
+sfa_core.patches.v1_0.seed_gamification_defaults

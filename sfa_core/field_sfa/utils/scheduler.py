@@ -17,7 +17,7 @@ def five_minute_gps():
 
 def nightly_badge():
     """Check and award badges nightly"""
-    from sfa_core.utils.gamification import check_and_award_badges
+    from sfa_core.field_sfa.utils.gamification import check_and_award_badges
 
     reps = frappe.get_all("Sales Person", filters={"enabled": 1}, pluck="name")
     for rep in reps:

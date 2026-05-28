@@ -9,5 +9,5 @@ def validate(doc, method):
 def on_update(doc, method):
     """Apply approved amendment to beat plan"""
     if doc.status == "Approved":
-        from sfa_core.utils.beat_plan import apply_amendment
+        from sfa_core.field_sfa.utils.beat_plan import apply_amendment
         apply_amendment(doc)

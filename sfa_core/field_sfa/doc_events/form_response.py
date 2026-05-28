@@ -15,9 +15,10 @@ def on_submit(doc, method):
     1. Award gamification points to the sales rep
     2. Mark the visit's mandatory form as completed if applicable
     """
-    # Gamification points
-    from sfa_core.field_sfa.utils.gamification import award_points
-    award_points(doc.sales_person, "Form Submitted", 5, "SFA Form Response", doc.name)
+    # Gamification points (amount from SFA Points Config, with fallback)
+    from sfa_core.field_sfa.utils.gamification import award_points, get_config_points
+    form_pts, _mf = get_config_points("Form Submitted")
+    award_points(doc.sales_person, "Form Submitted", form_pts, "SFA Form Response", doc.name)
 
     # Mark visit mandatory form completed
     if doc.visit:

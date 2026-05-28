@@ -10,7 +10,7 @@
         <option value="">All Statuses</option>
         <option>Planned</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
       </select>
-      <input v-model="dateFilter" @change="applyFilters" type="date" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none" />
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" @change="applyFilters" />
       <div class="flex-1" />
       <span class="text-xs text-gray-400">{{ total }} visits</span>
       <button class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors" @click="load">
@@ -91,6 +91,7 @@ import { call } from '@/utils/frappe'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
 import dayjs from 'dayjs'
 
@@ -98,7 +99,8 @@ const { customers, salesPersons, beatPlans, loadCustomers, loadSalesPersons, loa
 
 const search = ref('')
 const statusFilter = ref('')
-const dateFilter = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
 const page = ref(1)
 const pageSize = 50
 const total = ref(0)
@@ -117,8 +119,8 @@ async function load(append = false) {
     const res = (await call('sfa_core.api.list.get_visits', {
       search: search.value || null,
       status: statusFilter.value || null,
-      date_from: dateFilter.value || null,
-      date_to: dateFilter.value || null,
+      date_from: dateFrom.value || null,
+      date_to: dateTo.value || null,
       start: (page.value - 1) * pageSize,
       page_length: pageSize,
     })).message || {}
@@ -175,5 +177,5 @@ const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 const formatTime = (t) => t ? dayjs(t).format('HH:mm') : '—'
 const statusClass = (s) => ({ 'In Progress': 'bg-green-50 text-green-700', 'Completed': 'bg-blue-50 text-blue-700', 'Planned': 'bg-gray-100 text-gray-600', 'Cancelled': 'bg-red-50 text-red-700' })[s] || 'bg-gray-100 text-gray-600'
 
-onMounted(() => { load(); loadCustomers(); loadSalesPersons(); loadBeatPlans() })
+onMounted(() => { loadCustomers(); loadSalesPersons(); loadBeatPlans() })
 </script>

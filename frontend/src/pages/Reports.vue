@@ -29,10 +29,8 @@
         <!-- Filters -->
         <div class="mb-4 rounded-xl border border-gray-200 bg-white p-4">
           <div class="flex flex-wrap items-end gap-3">
-            <FormField v-if="needs('from_date')" label="From" type="date" :model-value="dateFrom"
-              @update:model-value="(v) => setFrom(v)" class="w-40" />
-            <FormField v-if="needs('to_date')" label="To" type="date" :model-value="dateTo" :min="dateFrom"
-              @update:model-value="(v) => setTo(v)" class="w-40" />
+            <DateRangeFilter v-if="needs('from_date') || needs('to_date')"
+              v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" />
             <FormField v-if="needs('territory') && auth.isAdmin" label="Territory" type="select" v-model="filters.territory" :options="territoryOpts" placeholder="All territories" class="w-44" />
             <FormField v-if="needs('sales_person') && !auth.isRep" label="Sales Person" type="select" v-model="filters.sales_person" :options="repOpts" placeholder="All reps" class="w-44" />
             <FormField v-if="needs('form_template')" label="Form Template" type="select" v-model="filters.form_template" :options="formTemplateOpts" :placeholder="formTemplateOpts.length ? 'Select template…' : 'No templates yet'" class="w-48" />
@@ -87,6 +85,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import FormField from '@/components/ui/FormField.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import Btn from '@/components/ui/Btn.vue'
 import ReportChart from '@/components/ui/ReportChart.vue'
 import { call, getCsrfToken } from '@/utils/frappe'

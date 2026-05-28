@@ -14,5 +14,5 @@ def validate(doc, method):
 
 def on_submit(doc, method):
     """Award points for payment collection"""
-    from sfa_core.utils.gamification import award_points_for_payment
+    from sfa_core.field_sfa.utils.gamification import award_points_for_payment
     award_points_for_payment(doc)

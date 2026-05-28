@@ -2,6 +2,39 @@ import frappe
 from frappe import _
 from frappe.utils import now
 
+# Fallback point values used only when no active SFA Points Config row exists.
+DEFAULT_POINTS = {
+    "Visit Complete": 10,
+    "Order Placed": 20,          # per carton (multiplied by carton qty)
+    "Payment Collected": 15,     # per 100k collected
+    "Form Submitted": 5,
+    "Beat Plan Completed": 25,
+    "GPS Track Uploaded": 5,
+}
+
+
+def get_config_points(activity_type):
+    """Return (points, multiplier_field) from SFA Points Config, with fallback.
+
+    Reading is defensive: a missing/inactive config row must never break the
+    award flow — it falls back to DEFAULT_POINTS.
+    """
+    fallback = DEFAULT_POINTS.get(activity_type, 0)
+    try:
+        row = frappe.db.get_value(
+            "SFA Points Config",
+            {"activity_type": activity_type, "is_active": 1},
+            ["points", "multiplier_field"],
+            as_dict=True,
+        )
+    except Exception:
+        row = None
+    if not row:
+        return fallback, None
+    pts = row.points if row.points is not None else fallback
+    return pts, row.multiplier_field
+
+
 def award_points(sales_person, activity_type, base_points, reference_doctype=None, reference_name=None, multiplier=1):
     """Award points to a sales person"""
 
@@ -35,13 +68,14 @@ def award_points(sales_person, activity_type, base_points, reference_doctype=Non
 
 def award_points_for_order(sales_order):
     """Award points for order placement with SKU multipliers"""
+    per_carton, _mf = get_config_points("Order Placed")
     total_points = 0
     for item in sales_order.items:
         multiplier = frappe.db.get_value("SFA SKU Points Multiplier", 
             {"item": item.item_code, "is_active": 1}, "points_per_carton") or 1
 
         carton_qty = item.custom_carton_qty or item.qty
-        points = int(20 * carton_qty * multiplier)
+        points = int(per_carton * carton_qty * multiplier)
         total_points += points
 
     if total_points > 0:
@@ -50,8 +84,9 @@ def award_points_for_order(sales_order):
 
 def award_points_for_payment(payment):
     """Award points for payment collection"""
-    points = int(15 * (payment.amount / 100000))  # 15 points per 100k
-    award_points(payment.sales_person, "Payment Collected", max(points, 15), 
+    per_100k, _mf = get_config_points("Payment Collected")
+    points = int(per_100k * (payment.amount / 100000))  # configured points per 100k
+    award_points(payment.sales_person, "Payment Collected", max(points, per_100k), 
                  "SFA Payment", payment.name)
 
 def reverse_order_points(sales_order):

@@ -19,14 +19,7 @@
       </select>
 
       <!-- Date range -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs text-gray-400">From</span>
-        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, load)"
-          class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
-        <span class="text-xs text-gray-400">to</span>
-        <input :value="dateTo" type="date" :min="dateFrom" @change="setTo($event.target.value, load)"
-          class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
-      </div>
+      <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="today" @change="load" />
 
       <!-- Time range -->
       <div class="flex items-center gap-1.5">
@@ -168,6 +161,7 @@ import { ref, computed, onMounted, defineComponent, h } from 'vue'
 import { useDateRange } from '@/composables/useDateRange'
 import { call } from '@/utils/frappe'
 import Btn from '@/components/ui/Btn.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import dayjs from 'dayjs'
 import { getL, ensureLeafletCSS } from '@/utils/leaflet'

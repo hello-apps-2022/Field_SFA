@@ -65,8 +65,9 @@ def check_out_visit(visit, latitude, longitude, accuracy=None, notes=None):
     visit_doc.status = "Completed"
     visit_doc.save(ignore_permissions=True)
 
-    # Award points
-    from sfa_core.utils.gamification import award_points
-    award_points(visit_doc.sales_person, "Visit Complete", 10, "SFA Visit", visit)
+    # Award points (amount from SFA Points Config, with fallback)
+    from sfa_core.field_sfa.utils.gamification import award_points, get_config_points
+    visit_pts, _mf = get_config_points("Visit Complete")
+    award_points(visit_doc.sales_person, "Visit Complete", visit_pts, "SFA Visit", visit)
 
     return {"status": "success", "visit": visit}

@@ -15,6 +15,8 @@ def after_install():
     frappe.db.commit()
     seed_brand_defaults()
     frappe.db.commit()
+    seed_gamification_defaults()
+    frappe.db.commit()
     frappe.msgprint(_("SFA Core installed successfully. Please run bench migrate if DocTypes are not visible."))
 
 
@@ -428,3 +430,53 @@ def seed_customer_groups():
             doc.insert(ignore_permissions=True)
         except Exception as e:
             frappe.log_error(f"SFA Core: failed to create Customer Group {name}: {e}")
+
+
+# --- Gamification defaults ---------------------------------------------------
+
+# Default points per activity. Read by the award engine via SFA Points Config;
+# these rows make the system work out-of-the-box and are editable in-app.
+SFA_POINTS_CONFIG = [
+    {"activity_type": "Visit Complete",      "points": 10, "multiplier_field": "None",          "description": "Points per completed visit"},
+    {"activity_type": "Order Placed",        "points": 20, "multiplier_field": "Carton Qty",    "description": "Points per carton ordered (x SKU multiplier)"},
+    {"activity_type": "Payment Collected",   "points": 15, "multiplier_field": "Payment Amount", "description": "Points per UGX 100,000 collected"},
+    {"activity_type": "Form Submitted",      "points": 5,  "multiplier_field": "None",          "description": "Points per form submitted"},
+    {"activity_type": "Beat Plan Completed", "points": 25, "multiplier_field": "None",          "description": "Points for completing a full beat plan"},
+    {"activity_type": "GPS Track Uploaded",  "points": 5,  "multiplier_field": "None",          "description": "Points for uploading a GPS track"},
+]
+
+# Default badge set spanning the available criteria types.
+SFA_BADGES = [
+    {"badge_name": "First Steps",       "criteria_type": "Visit Count",      "threshold_value": 10,      "period_days": 0,  "points_bonus": 50,  "icon": "award",  "description": "Complete 10 visits"},
+    {"badge_name": "Road Warrior",      "criteria_type": "Visit Count",      "threshold_value": 100,     "period_days": 30, "points_bonus": 200, "icon": "truck",  "description": "100 visits in 30 days"},
+    {"badge_name": "Deal Maker",        "criteria_type": "Order Value",      "threshold_value": 5000000, "period_days": 30, "points_bonus": 300, "icon": "trending-up", "description": "UGX 5M in orders in 30 days"},
+    {"badge_name": "Closer",            "criteria_type": "Order Value",      "threshold_value": 20000000,"period_days": 30, "points_bonus": 750, "icon": "star",   "description": "UGX 20M in orders in 30 days"},
+    {"badge_name": "Cash Collector",    "criteria_type": "Payment Amount",   "threshold_value": 3000000, "period_days": 30, "points_bonus": 250, "icon": "dollar-sign", "description": "UGX 3M collected in 30 days"},
+    {"badge_name": "Century Club",      "criteria_type": "Points Threshold", "threshold_value": 1000,    "period_days": 0,  "points_bonus": 100, "icon": "zap",    "description": "Earn 1,000 lifetime points"},
+    {"badge_name": "Elite Performer",   "criteria_type": "Points Threshold", "threshold_value": 5000,    "period_days": 0,  "points_bonus": 500, "icon": "shield", "description": "Earn 5,000 lifetime points"},
+]
+
+
+def seed_gamification_defaults():
+    """Seed SFA Points Config rows and default Badges. Idempotent — skips existing."""
+    for cfg in SFA_POINTS_CONFIG:
+        if frappe.db.exists("SFA Points Config", cfg["activity_type"]):
+            continue
+        try:
+            doc = frappe.new_doc("SFA Points Config")
+            doc.update(cfg)
+            doc.is_active = 1
+            doc.insert(ignore_permissions=True)
+        except Exception as e:
+            frappe.log_error(f"SFA Core: failed to seed points config {cfg['activity_type']}: {e}")
+
+    for badge in SFA_BADGES:
+        if frappe.db.exists("SFA Badge", badge["badge_name"]):
+            continue
+        try:
+            doc = frappe.new_doc("SFA Badge")
+            doc.update(badge)
+            doc.is_active = 1
+            doc.insert(ignore_permissions=True)
+        except Exception as e:
+            frappe.log_error(f"SFA Core: failed to seed badge {badge['badge_name']}: {e}")

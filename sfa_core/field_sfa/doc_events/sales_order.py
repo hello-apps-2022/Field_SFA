@@ -18,11 +18,11 @@ def validate(doc, method):
 def on_submit(doc, method):
     """Award points for order placement"""
     if doc.custom_sfa_visit and doc.custom_sfa_rep:
-        from sfa_core.utils.gamification import award_points_for_order
+        from sfa_core.field_sfa.utils.gamification import award_points_for_order
         award_points_for_order(doc)
 
 def on_cancel(doc, method):
     """Reverse points on cancellation"""
     if doc.custom_sfa_visit:
-        from sfa_core.utils.gamification import reverse_order_points
+        from sfa_core.field_sfa.utils.gamification import reverse_order_points
         reverse_order_points(doc)

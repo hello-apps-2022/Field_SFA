@@ -13,30 +13,7 @@
         <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
       </select>
 
-      <!-- Period selector -->
-      <select v-model="period" @change="onPresetChange"
-        class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none">
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="week">This Week</option>
-        <option value="last_week">Last Week</option>
-        <option value="month">This Month</option>
-        <option value="last_month">Last Month</option>
-        <option value="quarter">This Quarter</option>
-        <option value="last_quarter">Last Quarter</option>
-        <option value="year">This Year</option>
-        <option value="custom">Custom Range…</option>
-      </select>
-
-      <!-- Custom date inputs -->
-      <template v-if="period === 'custom'">
-        <input :value="customFrom" type="date" @change="setCustomFrom($event.target.value)"
-          class="h-8 rounded-md border border-gray-200 px-2 text-sm focus:border-gray-400 focus:outline-none" />
-        <span class="text-xs text-gray-400">→</span>
-        <input :value="customTo" type="date" :min="customFrom" @change="setCustomTo($event.target.value, load)"
-          class="h-8 rounded-md border border-gray-200 px-2 text-sm focus:border-gray-400 focus:outline-none" />
-      </template>
-      <span v-if="customDateError" class="text-xs text-red-500">{{ customDateError }}</span>
+      <DateRangeFilter v-model:from="customFrom" v-model:to="customTo" default-preset="this_month" @change="load" />
 
       <Btn icon="refresh-cw" :class="loading ? '[&_svg]:animate-spin' : ''" size="sm" @click="load">Refresh</Btn>
     </div>
@@ -300,7 +277,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useDateRange } from '@/composables/useDateRange'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import { useRouter } from 'vue-router'
 import { call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
@@ -309,21 +286,20 @@ import dayjs from 'dayjs'
 
 const router = useRouter()
 const territory = ref('')
-const period = ref('month')
-const { dateFrom: customFrom, dateTo: customTo, dateError: customDateError, setFrom: setCustomFrom, setTo: setCustomTo } = useDateRange(0)
+const customFrom = ref('')
+const customTo = ref('')
 const territories = ref([])
 const data = ref(null)
 const loading = ref(false)
 
-const periodLabels = {
-  today: 'Today', yesterday: 'Yesterday',
-  week: 'This Week', last_week: 'Last Week',
-  month: 'This Month', last_month: 'Last Month',
-  quarter: 'This Quarter', last_quarter: 'Last Quarter',
-  year: 'This Year', custom: 'Custom Range',
-}
-
-const periodLabel = computed(() => periodLabels[period.value] || 'This Month')
+const periodLabel = computed(() => {
+  if (customFrom.value && customTo.value) {
+    if (customFrom.value === customTo.value) return dayjs(customFrom.value).format('D MMM YYYY')
+    return `${dayjs(customFrom.value).format('D MMM')} – ${dayjs(customTo.value).format('D MMM YYYY')}`
+  }
+  if (customFrom.value) return `From ${dayjs(customFrom.value).format('D MMM YYYY')}`
+  return 'All time'
+})
 
 async function loadTerritories() {
   try {
@@ -336,19 +312,13 @@ async function load() {
   if (!territory.value) return
   loading.value = true
   try {
-    const args = { territory: territory.value, period: period.value }
-    if (period.value === 'custom' && customFrom.value && customTo.value) {
-      args.date_from = customFrom.value
-      args.date_to = customTo.value
-    }
+    const args = { territory: territory.value }
+    if (customFrom.value) args.date_from = customFrom.value
+    if (customTo.value) args.date_to = customTo.value
     const res = await call('sfa_core.api.territory_dashboard.get_territory_dashboard', args)
     data.value = res.message
   } catch (e) { console.error(e) }
   finally { loading.value = false }
-}
-
-function onPresetChange() {
-  if (period.value !== 'custom') load()
 }
 
 function goToRepMap(salesPerson) {
