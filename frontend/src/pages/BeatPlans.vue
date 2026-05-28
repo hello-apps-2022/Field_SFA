@@ -123,7 +123,7 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <FormField v-model="form.effective_from" label="Effective From" type="date" />
-          <FormField v-model="form.effective_to" label="Effective To" type="date" help="Blank = ongoing" />
+          <FormField v-model="form.effective_to" label="Effective To" type="date" help="Blank = ongoing" :min="form.effective_from" />
         </div>
       </div>
 

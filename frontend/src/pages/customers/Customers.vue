@@ -39,7 +39,9 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          <tr v-for="c in filtered" :key="c.name" class="hover:bg-gray-50 transition-colors group">
+          <tr v-for="c in filtered" :key="c.name"
+            class="hover:bg-gray-50 transition-colors group cursor-pointer"
+            @click="router.push('/customers/' + encodeURIComponent(c.name))">
             <td class="px-4 py-3">
               <p class="font-medium text-gray-900">{{ c.customer_name }}</p>
               <p class="text-xs text-gray-400">{{ c.name }}</p>
@@ -54,7 +56,7 @@
               </span>
             </td>
             <td class="px-4 py-3">
-              <button class="opacity-0 group-hover:opacity-100 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 transition-all" @click="openEdit(c)">
+              <button class="opacity-0 group-hover:opacity-100 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 transition-all" @click.stop="openEdit(c)">
                 Edit
               </button>
             </td>
@@ -86,11 +88,14 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { call } from '@/utils/frappe'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
 
 const { customerGroups, territories: allTerritories, loadCustomerGroups, loadTerritories } = useLinkedData()
+const router = useRouter()
 
 const search = ref('')
 const groupFilter = ref('')
@@ -113,10 +118,7 @@ const territories = computed(() => [...new Set(customers.value.map(c => c.territ
 async function load() {
   loading.value = true
   try {
-    const res = await frappe.call({
-      method: 'sfa_core.api.list.get_customers',
-      args: { limit: 500 }
-    })
+    const res = await call('sfa_core.api.list.get_customers', { limit: 500 })
     customers.value = res.message || []
   } catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -143,9 +145,9 @@ async function save() {
     const doc = { doctype: 'Customer', customer_type: 'Company', ...form }
     if (editing.value) {
       doc.name = editing.value
-      await frappe.call({ method: 'frappe.client.save', args: { doc } })
+      await call('frappe.client.save', { doc })
     } else {
-      await frappe.call({ method: 'frappe.client.insert', args: { doc } })
+      await call('frappe.client.insert', { doc })
     }
     frappe.show_alert({ message: editing.value ? 'Customer updated' : 'Customer created', indicator: 'green' })
     panelOpen.value = false

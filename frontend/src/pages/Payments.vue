@@ -42,9 +42,9 @@
 
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-gray-400">From</span>
-        <input v-model="dateFrom" type="date" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, load)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
         <span class="text-xs text-gray-400">to</span>
-        <input v-model="dateTo" type="date" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateTo" type="date" @change="setTo($event.target.value, load)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
       </div>
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
@@ -128,6 +128,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useDateRange } from '@/composables/useDateRange'
 import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -141,8 +142,7 @@ const search = ref('')
 const repFilter = ref('')
 const modeFilter = ref('')
 const statusFilter = ref('')
-const dateFrom = ref(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
-const dateTo = ref(dayjs().format('YYYY-MM-DD'))
+const { dateFrom, dateTo, dateError, setFrom, setTo, reset: resetDates } = useDateRange(30)
 
 const repOptions = computed(() => [...new Set(payments.value.map(p => p.sales_person).filter(Boolean))].sort())
 
@@ -188,8 +188,7 @@ function clearFilters() {
   repFilter.value = ''
   modeFilter.value = ''
   statusFilter.value = ''
-  dateFrom.value = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
-  dateTo.value = dayjs().format('YYYY-MM-DD')
+  resetDates()
   load()
 }
 

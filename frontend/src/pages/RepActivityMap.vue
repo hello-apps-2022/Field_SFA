@@ -21,10 +21,10 @@
       <!-- Date range -->
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-gray-400">From</span>
-        <input v-model="dateFrom" type="date" @change="load"
+        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, load)"
           class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
         <span class="text-xs text-gray-400">to</span>
-        <input v-model="dateTo" type="date" @change="load"
+        <input :value="dateTo" type="date" :min="dateFrom" @change="setTo($event.target.value, load)"
           class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
       </div>
 
@@ -165,6 +165,7 @@
 
 <script setup>
 import { ref, computed, onMounted, defineComponent, h } from 'vue'
+import { useDateRange } from '@/composables/useDateRange'
 import { call } from '@/utils/frappe'
 import Btn from '@/components/ui/Btn.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -200,8 +201,7 @@ const VisitCard = defineComponent({
 
 // State
 const selectedRep = ref('')
-const dateFrom = ref(dayjs().format('YYYY-MM-DD'))
-const dateTo = ref(dayjs().format('YYYY-MM-DD'))
+const { dateFrom, dateTo, dateError, setFrom, setTo } = useDateRange(0)
 const timeFrom = ref('00:00')
 const timeTo = ref('23:59')
 const focusDay = ref('')
@@ -227,6 +227,7 @@ const activePreset = ref('Today')
 function applyPreset(p) {
   dateFrom.value = p.df()
   dateTo.value = p.dt()
+  if (dayjs(dateTo.value).isBefore(dayjs(dateFrom.value))) dateTo.value = dateFrom.value
   timeFrom.value = p.tf
   timeTo.value = p.tt
   activePreset.value = p.label

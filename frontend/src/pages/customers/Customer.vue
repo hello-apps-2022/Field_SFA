@@ -421,7 +421,7 @@
         {{ doc?.customer_name }}
       </div>
       <FormField v-model="orderForm.transaction_date" label="Order Date" type="date" required />
-      <FormField v-model="orderForm.delivery_date" label="Delivery Date" type="date" />
+      <FormField v-model="orderForm.delivery_date" label="Delivery Date" type="date" :min="orderForm.transaction_date" />
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="text-xs font-medium text-gray-600">Items <span class="text-red-500">*</span></label>

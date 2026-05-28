@@ -10,13 +10,23 @@ from sfa_core.api.auth import get_user_context
 def _apply_role_filters(filters, ctx, rep_field='custom_sfa_rep', territory_field='territory'):
     """Apply role-based row filters to any query."""
     if ctx['is_admin']:
-        return filters  # no restriction
+        return filters  # admin sees everything, no filter
+
+    # Also let Administrator user through with no filter
+    if frappe.session.user == 'Administrator':
+        return filters
+
     if ctx['is_manager'] and ctx['territory']:
         filters[territory_field] = ctx['territory']
     elif ctx['is_rep']:
         if ctx['sales_person']:
             filters[rep_field] = ctx['sales_person']
         else:
+            filters['name'] = '__no_access__'
+    elif not ctx['role']:
+        # User has no SFA role — check if they're a system admin
+        from frappe.utils.user import SystemManager
+        if not frappe.db.get_value('Has Role', {'parent': frappe.session.user, 'role': 'System Manager'}):
             filters['name'] = '__no_access__'
     return filters
 

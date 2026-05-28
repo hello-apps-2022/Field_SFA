@@ -81,6 +81,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { call } from '@/utils/frappe'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
@@ -103,7 +104,7 @@ const form = reactive({ customer: '', sales_person: '', beat_plan: '', visit_dat
 async function load() {
   loading.value = true
   try {
-    const res = await frappe.call({ method: 'sfa_core.api.list.get_visits', args: { limit: 200 } })
+    const res = await call('sfa_core.api.list.get_visits', { limit: 200 })
     visits.value = res.message || []
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
@@ -131,8 +132,8 @@ async function save() {
   saving.value = true
   try {
     const doc = { doctype: 'SFA Visit', ...form }
-    if (editing.value) { doc.name = editing.value; await frappe.call({ method: 'frappe.client.save', args: { doc } }) }
-    else { await frappe.call({ method: 'frappe.client.insert', args: { doc } }) }
+    if (editing.value) { doc.name = editing.value; await call('frappe.client.save', { doc }) }
+    else { await call('frappe.client.insert', { doc }) }
     frappe.show_alert({ message: editing.value ? 'Visit updated' : 'Visit created', indicator: 'green' })
     panelOpen.value = false
     load()

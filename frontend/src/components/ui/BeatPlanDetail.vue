@@ -264,7 +264,7 @@
       </div>
       <div class="grid grid-cols-2 gap-3">
         <FormField v-model="editForm.effective_from" label="Effective From" type="date" />
-        <FormField v-model="editForm.effective_to" label="Effective To" type="date" help="Blank = ongoing" />
+        <FormField v-model="editForm.effective_to" label="Effective To" type="date" help="Blank = ongoing" :min="editForm.effective_from" />
       </div>
     </div>
   </SlidePanel>

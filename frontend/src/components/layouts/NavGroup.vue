@@ -92,7 +92,10 @@ watch(() => route.path, (path) => {
 </script>
 
 <style scoped>
-.preview-enter-active { transition: opacity 0.15s ease, transform 0.15s ease; }
-.preview-leave-active { transition: opacity 0.1s ease, transform 0.1s ease; }
-.preview-enter-from, .preview-leave-to { opacity: 0; transform: translateX(-4px); }
+.preview-enter-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition-delay: 0.1s;
+}
+.preview-leave-active { transition: opacity 0.08s ease; }
+.preview-enter-from, .preview-leave-to { opacity: 0; transform: translateX(-6px); }
 </style>

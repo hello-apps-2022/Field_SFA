@@ -4,24 +4,56 @@ from sfa_core.api.auth import get_user_context, require_role
 
 
 @frappe.whitelist()
-def get_territory_dashboard(territory, period='week'):
+def get_territory_dashboard(territory, period='month', date_from=None, date_to=None):
     require_role('SFA Admin', 'SFA Manager')
     ctx = get_user_context()
-    # Managers can only view their own territory
     if ctx['is_manager'] and not ctx['is_admin'] and ctx['territory'] and territory != ctx['territory']:
         frappe.throw('You can only view your own territory.', frappe.PermissionError)
+
     today = getdate(nowdate())
 
-    if period == 'today':
+    # Custom date range overrides period
+    if date_from and date_to:
+        date_from = getdate(date_from)
+        date_to = getdate(date_to)
+    elif period == 'today':
         date_from = date_to = today
+    elif period == 'yesterday':
+        date_from = date_to = getdate(add_days(today, -1))
     elif period == 'week':
         date_from = getdate(add_days(today, -6))
         date_to = today
+    elif period == 'last_week':
+        date_to = getdate(add_days(today, -((today.weekday() + 1) % 7 + 1)))
+        date_from = getdate(add_days(date_to, -6))
     elif period == 'month':
         date_from = get_first_day(today)
         date_to = today
+    elif period == 'last_month':
+        last = get_first_day(add_days(get_first_day(today), -1))
+        date_from = last
+        date_to = get_last_day(last)
+    elif period == 'quarter':
+        q_month = ((today.month - 1) // 3) * 3 + 1
+        import datetime
+        date_from = getdate(datetime.date(today.year, q_month, 1))
+        date_to = today
+    elif period == 'last_quarter':
+        import datetime
+        q_month = ((today.month - 1) // 3) * 3 + 1
+        if q_month == 1:
+            date_from = getdate(datetime.date(today.year - 1, 10, 1))
+            date_to = getdate(datetime.date(today.year - 1, 12, 31))
+        else:
+            date_from = getdate(datetime.date(today.year, q_month - 3, 1))
+            date_to = getdate(add_days(datetime.date(today.year, q_month, 1), -1))
+    elif period == 'year':
+        import datetime
+        date_from = getdate(datetime.date(today.year, 1, 1))
+        date_to = today
     else:
-        date_from = date_to = today
+        date_from = get_first_day(today)
+        date_to = today
 
     df, dt = str(date_from), str(date_to)
 

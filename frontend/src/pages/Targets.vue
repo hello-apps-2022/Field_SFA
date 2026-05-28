@@ -44,12 +44,13 @@
       <!-- Custom date inputs — shown when custom is selected or preset applied -->
       <template v-if="datePreset === 'custom' || dateFrom || dateTo">
         <div class="flex items-center gap-1.5">
-          <input v-model="dateFrom" type="date"
+          <input :value="dateFrom" type="date" @change="setDateFrom($event.target.value)"
             class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
           <span class="text-xs text-gray-400">→</span>
-          <input v-model="dateTo" type="date"
+          <input :value="dateTo" type="date" :min="dateFrom" @change="setDateTo($event.target.value)"
             class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:border-gray-400 focus:outline-none" />
         </div>
+        <span v-if="dateError" class="text-xs text-red-500">{{ dateError }}</span>
         <button v-if="dateFrom || dateTo"
           class="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-500 hover:bg-gray-50"
           @click="clearDates">
@@ -216,6 +217,7 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
+import { useDateRange } from '@/composables/useDateRange'
 import { call } from '@/utils/frappe'
 import { auth } from '@/utils/auth'
 import { successToast, errorToast } from '@/utils/toast'
@@ -233,8 +235,7 @@ const territories = ref([])
 const statusFilter = ref('Active')
 const territoryFilter = ref('')
 const datePreset = ref('')
-const dateFrom = ref('')
-const dateTo = ref('')
+const { dateFrom, dateTo, dateError, setFrom: setDateFrom, setTo: setDateTo } = useDateRange(0)
 
 const presetLabels = {
   this_month: 'This Month',

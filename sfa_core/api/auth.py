@@ -39,11 +39,29 @@ def get_user_context():
     Full context for the current user.
     Returns role, sales_person, territory.
     """
+    user = frappe.session.user
+
+    # Administrator always gets full admin access
+    if user == 'Administrator':
+        return {
+            'role': 'SFA Admin',
+            'is_admin': True,
+            'is_manager': True,
+            'is_rep': False,
+            'sales_person': None,
+            'sales_person_name': None,
+            'territory': None,
+            'user': user,
+        }
+
     role = get_user_role()
     sp = get_current_sales_person()
     territory = sp.custom_territory if sp else None
 
-    # Admins can see all territories; managers see their own
+    # Also treat System Manager as admin
+    if not role and 'System Manager' in frappe.get_roles(user):
+        role = 'SFA Admin'
+
     return {
         'role': role,
         'is_admin': role == 'SFA Admin',
@@ -52,7 +70,7 @@ def get_user_context():
         'sales_person': sp.name if sp else None,
         'sales_person_name': sp.sales_person_name if sp else None,
         'territory': territory,
-        'user': frappe.session.user,
+        'user': user,
     }
 
 
@@ -103,33 +121,47 @@ def get_session_context():
     return ctx
 
 
-
 def on_login(login_manager):
-    pass  # deprecated, kept for safety
-
-
-def on_session_creation(login_manager):
-    user = login_manager.user if hasattr(login_manager, 'user') else frappe.session.user
+    """
+    Frappe on_login hook — fires after successful authentication.
+    Redirects SFA users to /sfa instead of /app.
+    """
+    user = login_manager.user
     if not user or user in ('Administrator', 'Guest'):
         return
+
     roles = frappe.get_roles(user)
-    if {'SFA Admin', 'SFA Manager', 'SFA Rep'}.intersection(set(roles)):
-        frappe.cache.hset("redirect_after_login", user, "/sfa")
+    sfa_roles = {'SFA Admin', 'SFA Manager', 'SFA Rep'}
+
+    if sfa_roles.intersection(set(roles)):
+        # Set the redirect target for this session
+        frappe.local.response["home_page"] = "/sfa"
 
 
 def redirect_sfa_users():
+    """
+    before_request hook — intercepts /app requests from SFA-only users
+    and redirects them to /sfa instead.
+    """
     try:
-        if not hasattr(frappe.local, 'request') or not frappe.local.request:
+        if not frappe.local.request:
             return
+
         path = frappe.local.request.path
         if path != '/app' and not path.startswith('/app/'):
             return
+
         user = frappe.session.user
         if not user or user in ('Administrator', 'Guest'):
             return
+
         roles = set(frappe.get_roles(user))
-        if {'SFA Admin', 'SFA Manager', 'SFA Rep'}.intersection(roles) and not {'System Manager', 'Administrator'}.intersection(roles):
-            raise frappe.Redirect('/sfa')
+        sfa_roles = {'SFA Admin', 'SFA Manager', 'SFA Rep'}
+        desk_roles = {'System Manager', 'Administrator'}
+
+        if sfa_roles.intersection(roles) and not desk_roles.intersection(roles):
+            frappe.local.flags.redirect_location = '/sfa'
+            raise frappe.Redirect
     except frappe.Redirect:
         raise
     except Exception:
