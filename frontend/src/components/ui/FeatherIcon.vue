@@ -40,6 +40,7 @@ const icons = {
   'search': '<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>',
   'refresh-cw': '<polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>',
   'chevron-right': '<polyline points="9 18 15 12 9 6"></polyline>',
+  'chevron-left': '<polyline points="15 18 9 12 15 6"></polyline>',
   'chevrons-left': '<polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline>',
   'chevrons-right': '<polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline>',
   'chevron-down': '<polyline points="6 9 12 15 18 9"></polyline>',

@@ -35,7 +35,8 @@ def _apply_role_filters(filters, ctx, rep_field='custom_sfa_rep', territory_fiel
 
 @frappe.whitelist()
 def get_customers(search=None, territory=None, customer_group=None,
-                  outlet_tier=None, rep=None, visit_status=None, limit=200):
+                  outlet_tier=None, rep=None, visit_status=None,
+                  start=0, page_length=50):
     ctx = get_user_context()
     filters = {'disabled': 0}
     _apply_role_filters(filters, ctx, rep_field='custom_sfa_rep', territory_field='territory')
@@ -55,8 +56,26 @@ def get_customers(search=None, territory=None, customer_group=None,
     elif visit_status == 'never':
         filters['custom_last_visit_date'] = ['is', 'not set']
 
+    # Text search as a DB-level OR filter so it spans the whole dataset.
+    or_filters = None
+    if search:
+        like = f"%{search}%"
+        or_filters = [
+            ['customer_name', 'like', like],
+            ['custom_location_area', 'like', like],
+            ['custom_location_city', 'like', like],
+        ]
+
+    start = int(start)
+    page_length = int(page_length)
+
+    total = frappe.db.count('Customer', filters=filters) if not or_filters else len(
+        frappe.get_all('Customer', filters=filters, or_filters=or_filters, fields=['name'])
+    )
+
     customers = frappe.get_all('Customer',
         filters=filters,
+        or_filters=or_filters,
         fields=[
             'name', 'customer_name', 'customer_group', 'territory',
             'custom_sfa_rep', 'custom_sfa_status', 'custom_outlet_tier',
@@ -66,38 +85,33 @@ def get_customers(search=None, territory=None, customer_group=None,
             'custom_outstanding_payments', 'custom_active_beat_plan',
         ],
         order_by='customer_name asc',
-        limit=int(limit),
+        start=start,
+        page_length=page_length,
     )
 
-    # Apply text search client-side friendly — filter after fetch
-    if search:
-        q = search.lower()
-        customers = [c for c in customers if
-            q in (c.customer_name or '').lower() or
-            q in (c.custom_location_area or '').lower() or
-            q in (c.custom_location_city or '').lower()]
-
-    return customers
+    return {'items': customers, 'total': total}
 
 
 # ── Visits ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_visits(search=None, rep=None, status=None, date_from=None,
-               date_to=None, customer=None, limit=200):
+               date_to=None, customer=None, start=0, page_length=50):
     ctx = get_user_context()
     filters = {}
 
-    # Role-based: reps see own visits, managers see territory visits
+    # Role-based scoping
     if ctx['is_rep']:
-        if ctx['sales_person']:
-            filters['sales_person'] = ctx['sales_person']
-        else:
-            return []
+        if not ctx['sales_person']:
+            return {'items': [], 'total': 0}
+        filters['sales_person'] = ctx['sales_person']
     elif ctx['is_manager'] and ctx['territory']:
-        # Join through customer for territory — use SQL
-        return _get_visits_for_territory(ctx['territory'], rep, status,
-                                         date_from, date_to, customer, search, limit)
+        # Scope to visits whose customer is in the manager's territory.
+        terr_customers = frappe.get_all('Customer',
+            filters={'territory': ctx['territory']}, pluck='name')
+        if not terr_customers:
+            return {'items': [], 'total': 0}
+        filters['customer'] = ['in', terr_customers]
 
     # Additional filters
     if rep and ctx['is_admin']:
@@ -113,59 +127,37 @@ def get_visits(search=None, rep=None, status=None, date_from=None,
     if customer:
         filters['customer'] = customer
 
-    visits = frappe.get_all('SFA Visit',
-        filters=filters,
-        fields=['name', 'customer', 'sales_person', 'visit_date',
-                'status', 'visit_purpose', 'duration_minutes', 'beat_plan'],
-        order_by='visit_date desc',
-        limit=int(limit),
+    or_filters = None
+    if search:
+        like = f"%{search}%"
+        or_filters = [['customer', 'like', like], ['sales_person', 'like', like]]
+
+    start = int(start)
+    page_length = int(page_length)
+
+    total = frappe.db.count('SFA Visit', filters=filters) if not or_filters else len(
+        frappe.get_all('SFA Visit', filters=filters, or_filters=or_filters, fields=['name'])
     )
 
-    if search:
-        q = search.lower()
-        visits = [v for v in visits if q in (v.customer or '').lower() or
-                  q in (v.sales_person or '').lower()]
+    visits = frappe.get_all('SFA Visit',
+        filters=filters,
+        or_filters=or_filters,
+        fields=['name', 'customer', 'sales_person', 'visit_date',
+                'status', 'visit_purpose', 'duration_minutes', 'beat_plan',
+                'check_in_time'],
+        order_by='visit_date desc',
+        start=start,
+        page_length=page_length,
+    )
 
-    return visits
-
-
-def _get_visits_for_territory(territory, rep, status, date_from, date_to,
-                               customer, search, limit):
-    conditions = ["c.territory = %s"]
-    values = [territory]
-    if rep:
-        conditions.append("v.sales_person = %s"); values.append(rep)
-    if status:
-        conditions.append("v.status = %s"); values.append(status)
-    if date_from and date_to:
-        conditions.append("v.visit_date BETWEEN %s AND %s")
-        values += [date_from, date_to]
-    if customer:
-        conditions.append("v.customer = %s"); values.append(customer)
-
-    where = " AND ".join(conditions)
-    visits = frappe.db.sql(f"""
-        SELECT v.name, v.customer, v.sales_person, v.visit_date,
-               v.status, v.visit_purpose, v.duration_minutes, v.beat_plan
-        FROM `tabSFA Visit` v
-        INNER JOIN `tabCustomer` c ON c.name = v.customer
-        WHERE {where}
-        ORDER BY v.visit_date DESC
-        LIMIT %s
-    """, values + [int(limit)], as_dict=True)
-
-    if search:
-        q = search.lower()
-        visits = [v for v in visits if q in (v.customer or '').lower() or
-                  q in (v.sales_person or '').lower()]
-    return visits
+    return {'items': visits, 'total': total}
 
 
 # ── Orders ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_orders(search=None, rep=None, status=None, date_from=None,
-               date_to=None, customer=None, limit=100):
+               date_to=None, customer=None, start=0, page_length=50):
     ctx = get_user_context()
 
     conditions = ["o.docstatus = 1"]
@@ -173,7 +165,7 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
 
     if ctx['is_rep']:
         if not ctx['sales_person']:
-            return []
+            return {'items': [], 'total': 0}
         conditions.append("c.custom_sfa_rep = %s")
         values.append(ctx['sales_person'])
     elif ctx['is_manager'] and ctx['territory']:
@@ -190,8 +182,25 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
         values += [date_from, date_to]
     if customer:
         conditions.append("o.customer = %s"); values.append(customer)
+    if search:
+        conditions.append("o.customer LIKE %s"); values.append(f"%{search}%")
 
     where = " AND ".join(conditions)
+
+    total = frappe.db.sql(f"""
+        SELECT COUNT(*) FROM `tabSales Order` o
+        INNER JOIN `tabCustomer` c ON c.name = o.customer
+        WHERE {where}
+    """, values)[0][0]
+
+    # Aggregate totals across ALL matching orders (not just this page).
+    agg = frappe.db.sql(f"""
+        SELECT COALESCE(SUM(o.grand_total), 0), COALESCE(SUM(o.total_qty), 0)
+        FROM `tabSales Order` o
+        INNER JOIN `tabCustomer` c ON c.name = o.customer
+        WHERE {where}
+    """, values)[0]
+
     orders = frappe.db.sql(f"""
         SELECT o.name, o.customer, o.transaction_date, o.grand_total,
                o.status, o.total_qty, c.custom_sfa_rep as sales_person,
@@ -200,33 +209,33 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
         INNER JOIN `tabCustomer` c ON c.name = o.customer
         WHERE {where}
         ORDER BY o.transaction_date DESC
-        LIMIT %s
-    """, values + [int(limit)], as_dict=True)
+        LIMIT %s OFFSET %s
+    """, values + [int(page_length), int(start)], as_dict=True)
 
-    if search:
-        q = search.lower()
-        orders = [o for o in orders if q in (o.customer or '').lower()]
-
-    return orders
+    return {'items': orders, 'total': total,
+            'sum_revenue': float(agg[0]), 'sum_qty': float(agg[1])}
 
 
 # ── Payments ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_payments(search=None, rep=None, status=None, date_from=None,
-                 date_to=None, customer=None, payment_mode=None, limit=100):
+                 date_to=None, customer=None, payment_mode=None,
+                 start=0, page_length=50):
     ctx = get_user_context()
     filters = {}
 
     if ctx['is_rep']:
         if not ctx['sales_person']:
-            return []
+            return {'items': [], 'total': 0}
         filters['sales_person'] = ctx['sales_person']
     elif ctx['is_manager'] and ctx['territory']:
-        # Payments don't have territory — join through customer
-        return _get_payments_for_territory(ctx['territory'], rep, status,
-                                           date_from, date_to, customer,
-                                           payment_mode, search, limit)
+        # Payments have no territory field — scope via customer in territory.
+        terr_customers = frappe.get_all('Customer',
+            filters={'territory': ctx['territory']}, pluck='name')
+        if not terr_customers:
+            return {'items': [], 'total': 0}
+        filters['customer'] = ['in', terr_customers]
 
     if rep and ctx['is_admin']:
         filters['sales_person'] = rep
@@ -239,49 +248,40 @@ def get_payments(search=None, rep=None, status=None, date_from=None,
     if payment_mode:
         filters['custom_payment_mode'] = payment_mode
 
+    or_filters = None
+    if search:
+        or_filters = [['customer', 'like', f"%{search}%"]]
+
+    start = int(start)
+    page_length = int(page_length)
+
+    total = frappe.db.count('SFA Payment', filters=filters) if not or_filters else len(
+        frappe.get_all('SFA Payment', filters=filters, or_filters=or_filters, fields=['name'])
+    )
+
     payments = frappe.get_all('SFA Payment',
         filters=filters,
+        or_filters=or_filters,
         fields=['name', 'customer', 'payment_date', 'amount', 'payment_type',
                 'status', 'sales_person', 'reference_no', 'custom_payment_mode'],
         order_by='payment_date desc',
-        limit=int(limit),
+        start=start,
+        page_length=page_length,
     )
 
-    if search:
-        q = search.lower()
-        payments = [p for p in payments if q in (p.customer or '').lower()]
+    # Aggregate across ALL matching payments (not just this page). Cartons are
+    # explicitly tagged; everything else (Cash, or untagged) counts as cash.
+    agg = frappe.get_all('SFA Payment', filters=filters, or_filters=or_filters,
+                         fields=['COALESCE(SUM(amount), 0) as total'])
+    sum_amount = float(agg[0].total) if agg else 0.0
 
-    return payments
+    carton_filters = dict(filters)
+    carton_filters['custom_payment_mode'] = 'Cartons'
+    carton_agg = frappe.get_all('SFA Payment', filters=carton_filters, or_filters=or_filters,
+                                fields=['COALESCE(SUM(amount), 0) as total'])
+    sum_carton = float(carton_agg[0].total) if carton_agg else 0.0
+    carton_count = frappe.db.count('SFA Payment', filters=carton_filters)
+    sum_cash = sum_amount - sum_carton
 
-
-def _get_payments_for_territory(territory, rep, status, date_from, date_to,
-                                customer, payment_mode, search, limit):
-    conditions = ["c.territory = %s"]
-    values = [territory]
-    if rep:
-        conditions.append("p.sales_person = %s"); values.append(rep)
-    if status:
-        conditions.append("p.status = %s"); values.append(status)
-    if date_from and date_to:
-        conditions.append("p.payment_date BETWEEN %s AND %s")
-        values += [date_from, date_to]
-    if customer:
-        conditions.append("p.customer = %s"); values.append(customer)
-    if payment_mode:
-        conditions.append("p.custom_payment_mode = %s"); values.append(payment_mode)
-
-    where = " AND ".join(conditions)
-    payments = frappe.db.sql(f"""
-        SELECT p.name, p.customer, p.payment_date, p.amount, p.payment_type,
-               p.status, p.sales_person, p.reference_no, p.custom_payment_mode
-        FROM `tabSFA Payment` p
-        INNER JOIN `tabCustomer` c ON c.name = p.customer
-        WHERE {where}
-        ORDER BY p.payment_date DESC
-        LIMIT %s
-    """, values + [int(limit)], as_dict=True)
-
-    if search:
-        q = search.lower()
-        payments = [p for p in payments if q in (p.customer or '').lower()]
-    return payments
+    return {'items': payments, 'total': total, 'sum_amount': sum_amount,
+            'sum_cash': sum_cash, 'carton_count': carton_count}

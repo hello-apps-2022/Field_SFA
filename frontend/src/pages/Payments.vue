@@ -5,7 +5,7 @@
     <div class="flex h-[52px] shrink-0 items-center border-b border-gray-100 bg-white px-5 gap-3">
       <h1 class="text-sm font-semibold text-gray-900">Payments</h1>
       <div class="flex-1" />
-      <span class="text-xs text-gray-400">{{ filtered.length }} payments</span>
+      <span class="text-xs text-gray-400">{{ total }} payments</span>
       <button @click="searchModal=true" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-gray-900 px-3 text-xs font-medium text-white hover:bg-gray-700">
         <FeatherIcon name="plus" class="h-3.5 w-3.5" /> Record Payment
       </button>
@@ -17,22 +17,22 @@
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-100 bg-white px-4 py-2.5">
       <div class="relative">
         <FeatherIcon name="search" class="absolute left-2.5 top-2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-        <input v-model="search" placeholder="Customer, ref…"
+        <input v-model="search" @input="onSearchInput" placeholder="Customer, ref…"
           class="h-8 w-44 rounded-md border border-gray-200 bg-white pl-8 pr-3 text-sm focus:border-gray-400 focus:outline-none" />
       </div>
 
-      <select v-model="repFilter" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
+      <select v-model="repFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
         <option value="">All Reps</option>
         <option v-for="r in repOptions" :key="r">{{ r }}</option>
       </select>
 
-      <select v-model="modeFilter" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
+      <select v-model="modeFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
         <option value="">All Modes</option>
         <option value="Cash">Cash</option>
         <option value="Cartons">Cartons</option>
       </select>
 
-      <select v-model="statusFilter" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
+      <select v-model="statusFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
         <option value="">All Statuses</option>
         <option value="Draft">Draft</option>
         <option value="Submitted">Submitted</option>
@@ -42,9 +42,9 @@
 
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-gray-400">From</span>
-        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, load)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, applyFilters)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
         <span class="text-xs text-gray-400">to</span>
-        <input :value="dateTo" type="date" @change="setTo($event.target.value, load)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateTo" type="date" @change="setTo($event.target.value, applyFilters)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
       </div>
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
@@ -53,8 +53,8 @@
     </div>
 
     <!-- Summary strip -->
-    <div v-if="filtered.length" class="flex shrink-0 items-center gap-6 border-b border-gray-100 bg-gray-50 px-5 py-2 text-sm">
-      <span><strong class="text-gray-900">{{ filtered.length }}</strong> <span class="text-gray-400">payments</span></span>
+    <div v-if="total" class="flex shrink-0 items-center gap-6 border-b border-gray-100 bg-gray-50 px-5 py-2 text-sm">
+      <span><strong class="text-gray-900">{{ total }}</strong> <span class="text-gray-400">payments</span></span>
       <span><strong class="text-gray-900">{{ fmt(totalCash) }}</strong> <span class="text-gray-400">cash collected</span></span>
       <span v-if="totalCartonPayments"><strong class="text-gray-900">{{ totalCartonPayments }}</strong> <span class="text-gray-400">carton payments</span></span>
       <span><strong class="text-gray-900">{{ fmt(totalAll) }}</strong> <span class="text-gray-400">total value</span></span>
@@ -123,15 +123,23 @@
         <p class="text-xs mt-1">Try adjusting your filters</p>
       </div>
     </div>
+
+    <!-- Pagination footer -->
+    <div v-if="total" class="shrink-0 border-t border-gray-100 bg-white px-5">
+      <Pagination :page="page" :page-size="pageSize" :total="total" :loading="loading"
+        @update:page="goToPage" @load-more="loadMore" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDateRange } from '@/composables/useDateRange'
+import { useLinkedData } from '@/composables/useLinkedData'
 import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import dayjs from 'dayjs'
 import CustomerSearchModal from '@/components/ui/CustomerSearchModal.vue'
 
@@ -144,44 +152,54 @@ const modeFilter = ref('')
 const statusFilter = ref('')
 const { dateFrom, dateTo, dateError, setFrom, setTo, reset: resetDates } = useDateRange(30)
 
-const repOptions = computed(() => [...new Set(payments.value.map(p => p.sales_person).filter(Boolean))].sort())
+// Pagination + server-side totals
+const page = ref(1)
+const pageSize = 50
+const total = ref(0)
+const sumCash = ref(0)
+const sumAll = ref(0)
+const cartonCount = ref(0)
 
-const filtered = computed(() => {
-  let l = payments.value
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    l = l.filter(p =>
-      p.customer?.toLowerCase().includes(q) ||
-      p.reference_no?.toLowerCase().includes(q) ||
-      p.name?.toLowerCase().includes(q)
-    )
-  }
-  if (repFilter.value) l = l.filter(p => p.sales_person === repFilter.value)
-  if (modeFilter.value) l = l.filter(p => (p.custom_payment_mode || 'Cash') === modeFilter.value)
-  if (statusFilter.value) l = l.filter(p => p.status === statusFilter.value)
-  return l
-})
+const repOptions = ref([])
+const linked = useLinkedData()
 
-const cashPayments = computed(() => filtered.value.filter(p => (p.custom_payment_mode || 'Cash') === 'Cash'))
-const cartonPayments = computed(() => filtered.value.filter(p => p.custom_payment_mode === 'Cartons'))
-const totalCash = computed(() => cashPayments.value.reduce((s, p) => s + (p.amount || 0), 0))
-const totalCartonValue = computed(() => cartonPayments.value.reduce((s, p) => s + (p.custom_carton_total || p.amount || 0), 0))
-const totalCartonPayments = computed(() => cartonPayments.value.length)
-const totalAll = computed(() => totalCash.value + totalCartonValue.value)
+const filtered = computed(() => payments.value)
+const totalCash = computed(() => sumCash.value)
+const totalCartonPayments = computed(() => cartonCount.value)
+const totalAll = computed(() => sumAll.value)
 
-async function load() {
+let searchTimer = null
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { page.value = 1; load() }, 350)
+}
+
+async function load(append = false) {
   loading.value = true
   try {
-    payments.value = (await call('sfa_core.api.list.get_payments', {
+    const res = (await call('sfa_core.api.list.get_payments', {
+      search: search.value || null,
+      rep: repFilter.value || null,
       status: statusFilter.value || null,
       date_from: dateFrom.value || null,
       date_to: dateTo.value || null,
       payment_mode: modeFilter.value || null,
-      limit: 200,
-    })).message || []
+      start: (page.value - 1) * pageSize,
+      page_length: pageSize,
+    })).message || {}
+    const items = res.items || []
+    payments.value = append ? [...payments.value, ...items] : items
+    total.value = res.total || 0
+    sumAll.value = res.sum_amount || 0
+    sumCash.value = res.sum_cash || 0
+    cartonCount.value = res.carton_count || 0
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
+
+function goToPage(p) { page.value = p; load(false) }
+function loadMore() { page.value += 1; load(true) }
+function applyFilters() { page.value = 1; load(false) }
 
 function clearFilters() {
   search.value = ''
@@ -189,11 +207,16 @@ function clearFilters() {
   modeFilter.value = ''
   statusFilter.value = ''
   resetDates()
+  page.value = 1
   load()
 }
 
 const fmt = (v) => formatCurrency(v || 0)
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 
-onMounted(load)
+onMounted(async () => {
+  await linked.loadSalesPersons()
+  repOptions.value = linked.salesPersons.value
+  load()
+})
 </script>

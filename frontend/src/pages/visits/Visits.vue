@@ -3,16 +3,16 @@
     <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2.5">
       <div class="relative">
         <FeatherIcon name="search" class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
-        <input v-model="search" type="text" placeholder="Search visits..."
+        <input v-model="search" @input="onSearchInput" type="text" placeholder="Search visits..."
           class="h-9 rounded-md border border-gray-200 bg-white pl-8 pr-3 text-sm focus:border-gray-400 focus:outline-none w-56" />
       </div>
-      <select v-model="statusFilter" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+      <select v-model="statusFilter" @change="applyFilters" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
         <option value="">All Statuses</option>
         <option>Planned</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
       </select>
-      <input v-model="dateFilter" type="date" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none" />
+      <input v-model="dateFilter" @change="applyFilters" type="date" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none" />
       <div class="flex-1" />
-      <span class="text-xs text-gray-400">{{ filtered.length }} visits</span>
+      <span class="text-xs text-gray-400">{{ total }} visits</span>
       <button class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors" @click="load">
         <FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
         Refresh
@@ -65,6 +65,12 @@
       </div>
     </div>
 
+    <!-- Pagination footer -->
+    <div v-if="total" class="shrink-0 border-t border-gray-100 bg-white px-5">
+      <Pagination :page="page" :page-size="pageSize" :total="total" :loading="loading"
+        @update:page="goToPage" @load-more="loadMore" />
+    </div>
+
     <!-- Slide Panel -->
     <SlidePanel v-model="panelOpen" :title="editing ? 'Edit Visit' : 'New Visit'" :saving="saving" @save="save">
       <div class="space-y-4">
@@ -84,6 +90,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { call } from '@/utils/frappe'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
 import dayjs from 'dayjs'
 
@@ -92,6 +99,9 @@ const { customers, salesPersons, beatPlans, loadCustomers, loadSalesPersons, loa
 const search = ref('')
 const statusFilter = ref('')
 const dateFilter = ref('')
+const page = ref(1)
+const pageSize = 50
+const total = ref(0)
 const loading = ref(false)
 const saving = ref(false)
 const panelOpen = ref(false)
@@ -101,13 +111,31 @@ const errors = reactive({})
 
 const form = reactive({ customer: '', sales_person: '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Planned', notes: '' })
 
-async function load() {
+async function load(append = false) {
   loading.value = true
   try {
-    const res = await call('sfa_core.api.list.get_visits', { limit: 200 })
-    visits.value = res.message || []
+    const res = (await call('sfa_core.api.list.get_visits', {
+      search: search.value || null,
+      status: statusFilter.value || null,
+      date_from: dateFilter.value || null,
+      date_to: dateFilter.value || null,
+      start: (page.value - 1) * pageSize,
+      page_length: pageSize,
+    })).message || {}
+    const items = res.items || []
+    visits.value = append ? [...visits.value, ...items] : items
+    total.value = res.total || 0
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
+
+let searchTimer = null
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { page.value = 1; load() }, 350)
+}
+function goToPage(p) { page.value = p; load(false) }
+function loadMore() { page.value += 1; load(true) }
+function applyFilters() { page.value = 1; load(false) }
 
 function openNew() {
   editing.value = null
@@ -141,13 +169,7 @@ async function save() {
   finally { saving.value = false }
 }
 
-const filtered = computed(() => {
-  let l = visits.value
-  if (search.value) { const q = search.value.toLowerCase(); l = l.filter(v => v.customer?.toLowerCase().includes(q) || v.sales_person?.toLowerCase().includes(q)) }
-  if (statusFilter.value) l = l.filter(v => v.status === statusFilter.value)
-  if (dateFilter.value) l = l.filter(v => v.visit_date === dateFilter.value)
-  return l
-})
+const filtered = computed(() => visits.value)
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 const formatTime = (t) => t ? dayjs(t).format('HH:mm') : '—'

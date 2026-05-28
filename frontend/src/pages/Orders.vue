@@ -5,7 +5,7 @@
     <div class="flex h-[52px] shrink-0 items-center border-b border-gray-100 bg-white px-5 gap-3">
       <h1 class="text-sm font-semibold text-gray-900">Orders</h1>
       <div class="flex-1" />
-      <span class="text-xs text-gray-400">{{ filtered.length }} orders</span>
+      <span class="text-xs text-gray-400">{{ total }} orders</span>
       <button @click="searchModal=true" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-gray-900 px-3 text-xs font-medium text-white hover:bg-gray-700">
         <FeatherIcon name="plus" class="h-3.5 w-3.5" /> New Order
       </button>
@@ -17,16 +17,16 @@
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-100 bg-white px-4 py-2.5">
       <div class="relative">
         <FeatherIcon name="search" class="absolute left-2.5 top-2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-        <input v-model="search" placeholder="Customer, order ID…"
+        <input v-model="search" @input="onSearchInput" placeholder="Customer, order ID…"
           class="h-8 w-44 rounded-md border border-gray-200 bg-white pl-8 pr-3 text-sm focus:border-gray-400 focus:outline-none" />
       </div>
 
-      <select v-model="repFilter" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
+      <select v-model="repFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
         <option value="">All Reps</option>
         <option v-for="r in repOptions" :key="r">{{ r }}</option>
       </select>
 
-      <select v-model="statusFilter" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
+      <select v-model="statusFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
         <option value="">All Statuses</option>
         <option value="Draft">Draft</option>
         <option value="To Deliver and Bill">To Deliver and Bill</option>
@@ -37,9 +37,9 @@
 
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-gray-400">From</span>
-        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, load)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateFrom" type="date" @change="setFrom($event.target.value, applyFilters)" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
         <span class="text-xs text-gray-400">to</span>
-        <input :value="dateTo" type="date" @change="setTo($event.target.value, load)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
+        <input :value="dateTo" type="date" @change="setTo($event.target.value, applyFilters)" :min="dateFrom" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none" />
       </div>
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
@@ -48,8 +48,8 @@
     </div>
 
     <!-- Summary strip -->
-    <div v-if="filtered.length" class="flex shrink-0 items-center gap-6 border-b border-gray-100 bg-gray-50 px-5 py-2 text-sm">
-      <span><strong class="text-gray-900">{{ filtered.length }}</strong> <span class="text-gray-400">orders</span></span>
+    <div v-if="total" class="flex shrink-0 items-center gap-6 border-b border-gray-100 bg-gray-50 px-5 py-2 text-sm">
+      <span><strong class="text-gray-900">{{ total }}</strong> <span class="text-gray-400">orders</span></span>
       <span><strong class="text-gray-900">{{ fmt(totalRevenue) }}</strong> <span class="text-gray-400">total value</span></span>
       <span><strong class="text-gray-900">{{ totalCartons }}</strong> <span class="text-gray-400">cartons</span></span>
     </div>
@@ -96,15 +96,23 @@
         <p class="text-xs mt-1">Try adjusting your filters</p>
       </div>
     </div>
+
+    <!-- Pagination footer -->
+    <div v-if="total" class="shrink-0 border-t border-gray-100 bg-white px-5">
+      <Pagination :page="page" :page-size="pageSize" :total="total" :loading="loading"
+        @update:page="goToPage" @load-more="loadMore" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDateRange } from '@/composables/useDateRange'
+import { useLinkedData } from '@/composables/useLinkedData'
 import { getList, call } from '@/utils/frappe'
 import { formatCurrency } from '@/utils/currency'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import Pagination from '@/components/ui/Pagination.vue'
 import dayjs from 'dayjs'
 import CustomerSearchModal from '@/components/ui/CustomerSearchModal.vue'
 
@@ -116,45 +124,71 @@ const repFilter = ref('')
 const statusFilter = ref('')
 const { dateFrom, dateTo, dateError, setFrom, setTo, reset: resetDates } = useDateRange(30)
 
-const repOptions = computed(() => [...new Set(orders.value.map(o => o.sales_person).filter(Boolean))].sort())
+// Pagination + server-side totals
+const page = ref(1)
+const pageSize = 50
+const total = ref(0)
+const sumRevenue = ref(0)
+const sumCartons = ref(0)
 
-const filtered = computed(() => {
-  let l = orders.value
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    l = l.filter(o => o.name?.toLowerCase().includes(q) || o.customer?.toLowerCase().includes(q))
-  }
-  if (repFilter.value) l = l.filter(o => o.sales_person === repFilter.value)
-  if (statusFilter.value) l = l.filter(o => o.status === statusFilter.value)
-  return l
-})
+// Rep options come from all sales persons (not just the current page).
+const repOptions = ref([])
+const linked = useLinkedData()
 
-const totalRevenue = computed(() => filtered.value.reduce((s, o) => s + (o.grand_total || 0), 0))
-const totalCartons = computed(() => filtered.value.reduce((s, o) => s + (o.total_qty || 0), 0))
+// List as-is — filtering/search happen server-side now.
+const filtered = computed(() => orders.value)
+const totalRevenue = computed(() => sumRevenue.value)
+const totalCartons = computed(() => sumCartons.value)
 
-async function load() {
+let searchTimer = null
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { page.value = 1; load() }, 350)
+}
+
+async function load(append = false) {
   loading.value = true
   try {
-    orders.value = (await call('sfa_core.api.list.get_orders', {
+    const res = (await call('sfa_core.api.list.get_orders', {
+      search: search.value || null,
+      rep: repFilter.value || null,
       status: statusFilter.value || null,
       date_from: dateFrom.value || null,
       date_to: dateTo.value || null,
-      limit: 200,
-    })).message || []
+      start: (page.value - 1) * pageSize,
+      page_length: pageSize,
+    })).message || {}
+    const items = res.items || []
+    orders.value = append ? [...orders.value, ...items] : items
+    total.value = res.total || 0
+    sumRevenue.value = res.sum_revenue || 0
+    sumCartons.value = res.sum_qty || 0
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
+
+// Desktop: jump to a page (replace). Mobile: load-more (append).
+function goToPage(p) { page.value = p; load(false) }
+function loadMore() { page.value += 1; load(true) }
+
+// Re-load page 1 when a server-side filter changes.
+function applyFilters() { page.value = 1; load(false) }
 
 function clearFilters() {
   search.value = ''
   repFilter.value = ''
   statusFilter.value = ''
   resetDates()
+  page.value = 1
   load()
 }
 
 const fmt = (v) => formatCurrency(v || 0)
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 
-onMounted(load)
+onMounted(async () => {
+  await linked.loadSalesPersons()
+  repOptions.value = linked.salesPersons.value
+  load()
+})
 </script>
