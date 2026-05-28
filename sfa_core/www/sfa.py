@@ -10,6 +10,17 @@ def get_context(context):
         frappe.local.flags.redirect_location = "/login?redirect-to=/sfa"
         raise frappe.Redirect
 
+    # Users with no SFA role at all → redirect to Desk
+    user_roles = set(frappe.get_roles(frappe.session.user))
+    sfa_roles = {'SFA Admin', 'SFA Manager', 'SFA Rep'}
+    has_sfa = bool(sfa_roles.intersection(user_roles))
+
+    # Administrator and System Manager can access SFA if they have an SFA role
+    # If they have no SFA role, send them to Desk
+    if not has_sfa and frappe.session.user != 'Administrator':
+        frappe.local.flags.redirect_location = "/app"
+        raise frappe.Redirect
+
     frappe.db.commit()
     context.boot = get_boot()
     return context

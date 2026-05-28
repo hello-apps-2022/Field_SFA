@@ -101,3 +101,36 @@ def get_session_context():
     """Called on SFA boot — returns user role and identity to frontend."""
     ctx = get_user_context()
     return ctx
+
+
+
+def on_login(login_manager):
+    pass  # deprecated, kept for safety
+
+
+def on_session_creation(login_manager):
+    user = login_manager.user if hasattr(login_manager, 'user') else frappe.session.user
+    if not user or user in ('Administrator', 'Guest'):
+        return
+    roles = frappe.get_roles(user)
+    if {'SFA Admin', 'SFA Manager', 'SFA Rep'}.intersection(set(roles)):
+        frappe.cache.hset("redirect_after_login", user, "/sfa")
+
+
+def redirect_sfa_users():
+    try:
+        if not hasattr(frappe.local, 'request') or not frappe.local.request:
+            return
+        path = frappe.local.request.path
+        if path != '/app' and not path.startswith('/app/'):
+            return
+        user = frappe.session.user
+        if not user or user in ('Administrator', 'Guest'):
+            return
+        roles = set(frappe.get_roles(user))
+        if {'SFA Admin', 'SFA Manager', 'SFA Rep'}.intersection(roles) and not {'System Manager', 'Administrator'}.intersection(roles):
+            raise frappe.Redirect('/sfa')
+    except frappe.Redirect:
+        raise
+    except Exception:
+        pass

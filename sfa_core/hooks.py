@@ -6,11 +6,16 @@ app_email = "tech@hemabeverages.com"
 app_license = "mit"
 app_version = "0.0.1"
 
-app_include_css = "/assets/sfa_core/dist/sfa_core.bundle.css"
-app_include_js = "/assets/sfa_core/dist/sfa_desk.bundle.js"
+
+
 
 after_install = "sfa_core.field_sfa.install.after_install.after_install"
 boot_session = "sfa_core.field_sfa.boot.boot_session"
+
+# Redirect SFA users to the SFA app after login
+on_session_creation = "sfa_core.api.auth.on_session_creation"
+
+# Intercept /app requests and redirect SFA-only users to /sfa
 
 doc_events = {
     "Customer": {
@@ -55,7 +60,9 @@ fixtures = [
     {"doctype": "Role", "filters": [["role_name", "in", ["SFA Manager", "SFA Supervisor", "SFA Rep", "SFA Viewer"]]]},
 ]
 
-# Serve SFA app for all /sfa/* routes
+# Redirect plain /login to /login?redirect-to=/sfa for SFA users
+# (handled via sfa.py — guests hitting /sfa get sent to login with redirect param)
+
 website_route_rules = [
     {"from_route": "/sfa/<path:app_path>", "to_route": "sfa"},
 ]

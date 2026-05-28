@@ -153,6 +153,9 @@ def create_user(first_name, last_name, email, password, role,
     user.insert(ignore_permissions=True)
     update_password(email, password)
 
+    # Set home page so user lands on SFA app after login
+    frappe.db.set_value('Role', role, 'home_page', '/sfa')
+
     # Create Sales Person
     sales_person_name = f'{first_name} {last_name}'.strip()
     # Determine parent and territory
