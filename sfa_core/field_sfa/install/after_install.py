@@ -31,7 +31,20 @@ def seed_brand_defaults():
     """Seed the PRODUCT (FieldPro) brand defaults if unset, then sync to Frappe.
 
     Only fills blank fields, so a tenant's saved overrides (e.g. Hema's logo,
-    loaded via fixture) are never clobbered. Idempotent — safe on every run."""
+    loaded via fixture) are never clobbered. Idempotent — safe on every run.
+
+    Skips gracefully if the DocType isn't synced/importable yet (e.g. during an
+    early migrate pass) so it can never abort the migration."""
+    if not frappe.db.exists("DocType", "SFA Brand Settings"):
+        return
+    try:
+        from sfa_core.field_sfa.doctype.sfa_brand_settings.sfa_brand_settings import (
+            sync_brand_to_frappe,
+        )
+    except Exception:
+        # Controller not importable yet — defer to the next migrate/the patch.
+        return
+
     bs = frappe.get_single("SFA Brand Settings")
     changed = False
     for key, val in PRODUCT_DEFAULTS.items():
@@ -39,12 +52,8 @@ def seed_brand_defaults():
             bs.set(key, val)
             changed = True
     if changed:
-        bs.save(ignore_permissions=True)
+        bs.save(ignore_permissions=True)  # on_update triggers sync_brand_to_frappe
     else:
-        # Still mirror existing values into Frappe's brand slots.
-        from sfa_core.field_sfa.doctype.sfa_brand_settings.sfa_brand_settings import (
-            sync_brand_to_frappe,
-        )
         sync_brand_to_frappe()
 
 
@@ -319,6 +328,48 @@ def setup_custom_fields():
             "fieldtype": "Link",
             "options": "SFA Visit",
             "insert_after": "customer",
+        },
+        {
+            "dt": "Sales Order",
+            "fieldname": "custom_sfa_rep",
+            "label": "SFA Rep",
+            "fieldtype": "Link",
+            "options": "Sales Person",
+            "insert_after": "custom_sfa_visit",
+            "description": "Sales Person (rep) who placed this order via SFA.",
+        },
+        {
+            "dt": "Sales Order Item",
+            "fieldname": "custom_carton_qty",
+            "label": "Carton Qty",
+            "fieldtype": "Float",
+            "insert_after": "qty",
+            "description": "Paid carton quantity (SFA free-carton pricing model).",
+        },
+        {
+            "dt": "Sales Order Item",
+            "fieldname": "custom_free_qty",
+            "label": "Free Qty",
+            "fieldtype": "Float",
+            "insert_after": "custom_carton_qty",
+            "description": "Free carton quantity (margin embedded as free stock).",
+        },
+        {
+            "dt": "Sales Order Item",
+            "fieldname": "custom_unpaid_qty",
+            "label": "Unpaid Qty",
+            "fieldtype": "Float",
+            "insert_after": "custom_free_qty",
+            "description": "Unpaid/credit carton quantity.",
+        },
+        {
+            "dt": "User",
+            "fieldname": "custom_can_export_reports",
+            "label": "Can Export SFA Reports",
+            "fieldtype": "Check",
+            "insert_after": "username",
+            "default": 0,
+            "description": "Allow this user to download/export SFA reports (CSV/Excel). Admins can always export.",
         },
     ]
 

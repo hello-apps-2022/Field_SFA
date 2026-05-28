@@ -16,7 +16,7 @@ def execute(filters=None):
         SELECT 
             ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(pl.points), 0) DESC) as rank,
             sp.name as sales_person,
-            sp.territory,
+            sp.custom_territory as territory,
             COALESCE(SUM(pl.points), 0) as total_points,
             COUNT(DISTINCT rb.name) as badges,
             COUNT(DISTINCT v.name) as visits,

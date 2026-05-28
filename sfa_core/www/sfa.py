@@ -65,6 +65,9 @@ def get_boot():
             "image": frappe.db.get_value("User", user, "user_image") or "",
             "full_name": frappe.db.get_value("User", user, "full_name") or user,
             "roles": frappe.get_roles(user),
+            "can_export_reports": bool(
+                frappe.db.get_value("User", user, "custom_can_export_reports")
+            ) or (user == "Administrator"),
         },
         "timezone": {
             "system": get_system_timezone(),

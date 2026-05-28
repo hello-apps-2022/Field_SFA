@@ -95,7 +95,8 @@ def get_users():
         role = None
         if sp.custom_user_id:
             user = frappe.db.get_value('User', sp.custom_user_id,
-                ['name', 'full_name', 'email', 'enabled', 'user_image'],
+                ['name', 'full_name', 'email', 'enabled', 'user_image',
+                 'custom_can_export_reports'],
                 as_dict=True)
             if user:
                 roles = frappe.get_roles(sp.custom_user_id)
@@ -120,6 +121,7 @@ def get_users():
             'last_seen': sp.custom_last_seen,
             'role': role,
             'has_user': bool(user),
+            'can_export_reports': bool(user.custom_can_export_reports) if user else False,
         })
 
     return result
@@ -188,7 +190,8 @@ def create_user(first_name, last_name, email, password, role,
 
 @frappe.whitelist()
 def update_user(sales_person, role=None, territory=None, mobile_no=None,
-                sfa_active=None, first_name=None, last_name=None, reports_to=None):
+                sfa_active=None, first_name=None, last_name=None, reports_to=None,
+                can_export_reports=None):
     """Update a user's role, territory, or status."""
     require_role('SFA Admin')
 
@@ -208,6 +211,9 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
     # Update User
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')
     if user_id:
+        if can_export_reports is not None:
+            frappe.db.set_value('User', user_id, 'custom_can_export_reports',
+                                1 if can_export_reports else 0)
         if role:
             # Remove existing SFA roles
             frappe.db.delete('Has Role', {

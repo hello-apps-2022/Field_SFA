@@ -21,7 +21,7 @@ def execute(filters=None):
             csl.share_type,
             csl.share_date as since,
             DATEDIFF(CURDATE(), c.custom_last_visit_date) as days_since_visit,
-            c.outstanding_amount as outstanding,
+            c.custom_outstanding_payments as outstanding,
             c.territory
         FROM `tabSFA Customer Share Log` csl
         JOIN `tabCustomer` c ON c.name = csl.customer

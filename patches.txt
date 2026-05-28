@@ -1,2 +1,5 @@
 sfa_core.patches.v1_0.remove_old_response_child_tables
 sfa_core.patches.v1_0.seed_brand_defaults
+sfa_core.patches.v1_0.add_export_reports_flag
+sfa_core.patches.v1_0.add_sfa_rep_field
+sfa_core.patches.v1_0.add_carton_qty_fields
