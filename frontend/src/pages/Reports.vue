@@ -27,18 +27,23 @@
         </div>
 
         <!-- Filters -->
-        <div class="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
-          <FormField v-if="needs('from_date')" label="From" type="date" v-model="filters.from_date" class="w-40" />
-          <FormField v-if="needs('to_date')" label="To" type="date" v-model="filters.to_date" :min="filters.from_date" class="w-40" />
-          <FormField v-if="needs('territory') && auth.isAdmin" label="Territory" type="select" v-model="filters.territory" :options="territoryOpts" class="w-44" />
-          <FormField v-if="needs('sales_person') && !auth.isRep" label="Sales Person" type="select" v-model="filters.sales_person" :options="repOpts" class="w-44" />
-          <FormField v-if="needs('form_template')" label="Form Template" type="select" v-model="filters.form_template" :options="formTemplateOpts" class="w-48" />
-          <Btn @click="loadData" :disabled="loading">{{ loading ? 'Running…' : 'Run' }}</Btn>
+        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <FormField v-if="needs('from_date')" label="From" type="date" :model-value="dateFrom"
+              @update:model-value="(v) => setFrom(v)" class="w-40" />
+            <FormField v-if="needs('to_date')" label="To" type="date" :model-value="dateTo" :min="dateFrom"
+              @update:model-value="(v) => setTo(v)" class="w-40" />
+            <FormField v-if="needs('territory') && auth.isAdmin" label="Territory" type="select" v-model="filters.territory" :options="territoryOpts" placeholder="All territories" class="w-44" />
+            <FormField v-if="needs('sales_person') && !auth.isRep" label="Sales Person" type="select" v-model="filters.sales_person" :options="repOpts" placeholder="All reps" class="w-44" />
+            <FormField v-if="needs('form_template')" label="Form Template" type="select" v-model="filters.form_template" :options="formTemplateOpts" :placeholder="formTemplateOpts.length ? 'Select template…' : 'No templates yet'" class="w-48" />
+            <Btn @click="loadData" :disabled="loading || !!dateError">{{ loading ? 'Running…' : 'Run' }}</Btn>
 
-          <div v-if="canExport" class="ml-auto flex gap-2">
-            <Btn variant="ghost" @click="doExport('Excel')"><FeatherIcon name="download" class="mr-1 h-3.5 w-3.5" />Excel</Btn>
-            <Btn variant="ghost" @click="doExport('CSV')"><FeatherIcon name="download" class="mr-1 h-3.5 w-3.5" />CSV</Btn>
+            <div v-if="canExport" class="ml-auto flex gap-2">
+              <Btn variant="ghost" @click="doExport('Excel')"><FeatherIcon name="download" class="mr-1 h-3.5 w-3.5" />Excel</Btn>
+              <Btn variant="ghost" @click="doExport('CSV')"><FeatherIcon name="download" class="mr-1 h-3.5 w-3.5" />CSV</Btn>
+            </div>
           </div>
+          <p v-if="dateError" class="mt-2 text-xs text-red-500">{{ dateError }}</p>
         </div>
 
         <!-- Notice (e.g. report needs a filter selected) -->
@@ -51,8 +56,8 @@
         <ReportChart v-if="chart && rows.length" class="mb-4"
           :title="activeReport.label" :type="chart.type" :rows="rows" :x-field="chart.x" :y-field="chart.y" />
 
-        <!-- Table -->
-        <div class="overflow-auto rounded-xl border border-gray-200 bg-white">
+        <!-- Table (hidden while a blocking notice asks for a required filter) -->
+        <div v-if="!notice" class="overflow-auto rounded-xl border border-gray-200 bg-white">
           <table class="min-w-full text-sm">
             <thead class="border-b border-gray-200 bg-gray-50">
               <tr>
@@ -87,6 +92,7 @@ import ReportChart from '@/components/ui/ReportChart.vue'
 import { call, getCsrfToken } from '@/utils/frappe'
 import { auth } from '@/utils/auth'
 import { useLinkedData } from '@/composables/useLinkedData'
+import { useDateRange } from '@/composables/useDateRange'
 import { errorToast } from '@/utils/toast'
 import { formatCurrency } from '@/utils/currency'
 
@@ -104,6 +110,7 @@ const territoryOpts = ref([])
 const repOpts = ref([])
 const formTemplateOpts = ref([])
 const linked = useLinkedData()
+const { dateFrom, dateTo, dateError, setFrom, setTo, validateRange, reset: resetDates } = useDateRange(30)
 
 onMounted(async () => {
   try {
@@ -120,36 +127,42 @@ function needs(f) {
   return activeReport.value?.filters?.includes(f)
 }
 
-function defaultDates() {
-  const today = new Date()
-  const past = new Date()
-  past.setMonth(past.getMonth() - 1)
-  return { from: past.toISOString().slice(0, 10), to: today.toISOString().slice(0, 10) }
-}
-
 async function openReport(r) {
   activeReport.value = r
   Object.keys(filters).forEach((k) => delete filters[k])
-  const d = defaultDates()
-  if (r.filters.includes('from_date')) filters.from_date = d.from
-  if (r.filters.includes('to_date')) filters.to_date = d.to
+  resetDates(30)
 
   if (r.filters.includes('territory') && !territoryOpts.value.length) {
     await linked.loadTerritories()
-    territoryOpts.value = ['', ...linked.territories.value]
+    territoryOpts.value = linked.territories.value
   }
   if (r.filters.includes('sales_person') && !repOpts.value.length) {
     await linked.loadSalesPersons()
-    repOpts.value = ['', ...linked.salesPersons.value]
+    repOpts.value = linked.salesPersons.value
   }
   if (r.filters.includes('form_template') && !formTemplateOpts.value.length) {
     try {
       const fts = await call('frappe.client.get_list', {
         doctype: 'SFA Form Template', fields: ['name'], limit_page_length: 200,
       })
-      formTemplateOpts.value = ['', ...((fts.message) || []).map((f) => f.name)]
+      formTemplateOpts.value = ((fts.message) || []).map((f) => f.name)
     } catch (e) { /* ignore */ }
   }
+  // Reports that can't run until a specific filter is chosen — don't auto-run
+  // them (avoids a pointless failed request); show a prompt instead.
+  const REQUIRED = {
+    response_by_question: { field: 'form_template', msg: 'Please select a Form Template to analyse responses by question.' },
+    option_distribution: { field: 'form_template', msg: 'Please select a Form Template and Question.' },
+  }
+  const req = REQUIRED[r.name]
+  if (req && !filters[req.field]) {
+    notice.value = req.msg
+    columns.value = []
+    rows.value = []
+    chart.value = null
+    return
+  }
+
   await loadData()
 }
 
@@ -163,8 +176,12 @@ function closeReport() {
 
 async function loadData() {
   if (!activeReport.value) return
+  if (!validateRange()) return
   loading.value = true
   notice.value = ''
+  // Sync validated dates into the filter payload
+  if (needs('from_date')) filters.from_date = dateFrom.value
+  if (needs('to_date')) filters.to_date = dateTo.value
   try {
     const res = await call('sfa_core.api.reports.run_report', {
       report_name: activeReport.value.name,
@@ -205,6 +222,9 @@ function fmtCell(val, c) {
 
 function doExport(fmt) {
   if (!canExport.value) return
+  if (!validateRange()) return
+  if (needs('from_date')) filters.from_date = dateFrom.value
+  if (needs('to_date')) filters.to_date = dateTo.value
   const form = document.createElement('form')
   form.method = 'POST'
   form.action = '/api/method/sfa_core.api.reports.export_report'

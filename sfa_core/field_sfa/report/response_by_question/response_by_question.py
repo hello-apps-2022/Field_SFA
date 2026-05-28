@@ -39,10 +39,10 @@ def execute(filters=None):
 
     # Total responses for this template in the period
     total_count = frappe.db.sql("""
-        SELECT COUNT(name) as cnt
-        FROM `tabSFA Form Response`
-        WHERE form_template = %(form_template)s
-          AND docstatus = 1
+        SELECT COUNT(r.name) as cnt
+        FROM `tabSFA Form Response` r
+        WHERE r.form_template = %(form_template)s
+          AND r.docstatus = 1
           {date_filter}
     """.format(date_filter=date_filter), args, as_dict=True)
     total = (total_count[0]["cnt"] if total_count else 0) or 0
