@@ -86,6 +86,7 @@ def apply_leave(payload):
     doc.from_date = getdate(payload["from_date"])
     doc.to_date = getdate(payload["to_date"])
     doc.half_day = int(payload.get("half_day", 0))
+    doc.half_day_date = getdate(payload["half_day_date"]) if payload.get("half_day_date") else None
     doc.description = payload.get("reason", "")
     doc.workflow_state = "Draft"
     doc.status = "Open"
@@ -124,6 +125,7 @@ def update_leave_draft(name, payload):
         doc.to_date = getdate(payload["to_date"])
     if "half_day" in payload:
         doc.half_day = int(payload.get("half_day", 0))
+        doc.half_day_date = getdate(payload["half_day_date"]) if payload.get("half_day_date") else None
     if "reason" in payload:
         doc.description = payload.get("reason", "")
 

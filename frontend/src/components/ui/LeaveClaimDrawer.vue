@@ -173,6 +173,9 @@
       <p v-else-if="form.from_date && form.to_date && !form.half_day" class="text-xs text-gray-500">
         {{ rangeDayCount }} day{{ rangeDayCount === 1 ? '' : 's' }} requested
       </p>
+      <p v-else-if="form.half_day && halfDayApplicable" class="text-xs text-gray-500">
+        0.5 day requested (half day)
+      </p>
 
       <!-- Half day is only valid when From == To. Hide the toggle otherwise. -->
       <div v-if="halfDayApplicable" class="flex items-center gap-2 text-sm">
@@ -509,6 +512,7 @@ async function saveDraft() {
       from_date: form.from_date,
       to_date: form.to_date,
       half_day: form.half_day ? 1 : 0,
+      half_day_date: form.half_day ? form.from_date : null,
       reason: form.reason || '',
     }
     // payload is JSON-stringified because Frappe's whitelist endpoints
