@@ -27,6 +27,7 @@ on_session_creation = "sfa_core.api.auth.on_session_creation"
 # Intercept /app requests and redirect SFA-only users to /sfa
 
 doc_events = {
+    "Leave Application": {"validate": "sfa_core.api.leave_validation.validate_effective_leave_balance"},
     "Customer": {
         "validate": "sfa_core.field_sfa.doc_events.customer.validate",
         "after_insert": "sfa_core.field_sfa.doc_events.customer.after_insert",
