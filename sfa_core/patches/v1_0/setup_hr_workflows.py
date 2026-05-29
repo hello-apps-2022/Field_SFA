@@ -54,6 +54,11 @@ TRANSITIONS = [
     ("Submit for Approval", "Draft", "Pending Approval", None, None, 1),
     ("Approve", "Pending Approval", "Approved", APPROVER_ROLES, None, 0),
     ("Reject", "Pending Approval", "Rejected", APPROVER_ROLES, None, 0),
+    # Rejected -> Draft: the rep's fix-and-resubmit path. update_leave_draft /
+    # the expense equivalent set workflow_state back to Draft on edit, which the
+    # engine only permits if a transition exists. allow_self=1 because the owner
+    # is revising their own turned-down doc; admin may also revise.
+    ("Revise", "Rejected", "Draft", ["SFA Rep", ADMIN_ROLE], None, 1),
 ]
 
 # hrms's Expense Claim and Leave Application each enforce their OWN native status
