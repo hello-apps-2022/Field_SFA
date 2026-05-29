@@ -271,16 +271,14 @@ def get_payments(search=None, rep=None, status=None, date_from=None,
 
     # Aggregate across ALL matching payments (not just this page). Cartons are
     # explicitly tagged; everything else (Cash, or untagged) counts as cash.
-    agg = frappe.get_all('SFA Payment', filters=filters, or_filters=or_filters,
-                         fields=['COALESCE(SUM(amount), 0) as total'])
-    sum_amount = float(agg[0].total) if agg else 0.0
-
-    carton_filters = dict(filters)
-    carton_filters['custom_payment_mode'] = 'Cartons'
-    carton_agg = frappe.get_all('SFA Payment', filters=carton_filters, or_filters=or_filters,
-                                fields=['COALESCE(SUM(amount), 0) as total'])
-    sum_carton = float(carton_agg[0].total) if carton_agg else 0.0
-    carton_count = frappe.db.count('SFA Payment', filters=carton_filters)
+    # Plain fields totalled in Python: function fields (COALESCE/SUM) in get_all
+    # are blocked by frappe for non-System-Manager users (the 417).
+    rows = frappe.get_all('SFA Payment', filters=filters, or_filters=or_filters,
+                          fields=['amount', 'custom_payment_mode'])
+    sum_amount = sum(float(r.amount or 0) for r in rows)
+    carton_rows = [r for r in rows if r.custom_payment_mode == 'Cartons']
+    sum_carton = sum(float(r.amount or 0) for r in carton_rows)
+    carton_count = len(carton_rows)
     sum_cash = sum_amount - sum_carton
 
     return {'items': payments, 'total': total, 'sum_amount': sum_amount,
