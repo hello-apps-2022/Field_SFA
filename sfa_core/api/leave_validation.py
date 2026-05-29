@@ -70,26 +70,10 @@ def validate_effective_leave_balance(doc, method=None):
 
 
 def _effective_balance(employee, leave_type, on_date):
-    """Approved-only, future-inclusive balance for the allocation period that
-    `on_date` falls in.
-
-    consider_all_leaves_in_the_allocation_period=True is the key: it ignores the
-    as-of-date cutoff (the source of the original bug) and nets out every
-    submitted leave in the period, including ones dated after this application.
-    The current doc isn't submitted yet at validate time, so it never counts
-    against itself.
-    """
-    from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
-
-    balance = get_leave_balance_on(
-        employee,
-        leave_type,
-        on_date,
-        consider_all_leaves_in_the_allocation_period=True,
-    )
-    if isinstance(balance, dict):          # only with for_consumption=True
-        balance = balance.get("leave_balance", 0)
-    return float(balance or 0)
+    """Delegates to the shared core in api/leave so the validator and the
+    planning UI (get_leave_balance) use identical balance math."""
+    from sfa_core.api.leave import effective_leave_balance
+    return float(effective_leave_balance(employee, leave_type, on_date) or 0)
 
 
 def _is_quota_tracked(doc):

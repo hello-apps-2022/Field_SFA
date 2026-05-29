@@ -185,6 +185,34 @@ def action_leave(name, action, reason=None):
             "docstatus": doc.docstatus}
 
 
+def effective_leave_balance(employee, leave_type, as_of=None):
+    """Approved-only, future-inclusive remaining balance for one leave type.
+
+    hrms's get_leave_balance_on ignores leaves dated after `as_of`;
+    consider_all_leaves_in_the_allocation_period=True nets out every submitted
+    (=approved) leave in the allocation period instead, so the number means
+    "days you can still plan", not "ledger today". Shared by the planning UI
+    (as_of=today) and the pre-submit validator (as_of=application from_date),
+    so the displayed balance and the block use identical math.
+
+    Returns float, or None if hrms can't compute (e.g. no allocation).
+    """
+    from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
+    as_of = getdate(as_of) if as_of else getdate(frappe.utils.today())
+    try:
+        bal = get_leave_balance_on(
+            employee, leave_type, as_of,
+            consider_all_leaves_in_the_allocation_period=True,
+        )
+    except Exception:
+        return None
+    if bal is None:
+        return None
+    if isinstance(bal, dict):
+        bal = bal.get("leave_balance", 0)
+    return float(bal or 0)
+
+
 @frappe.whitelist()
 def get_leave_balance():
     """
@@ -201,30 +229,12 @@ def get_leave_balance():
     ctx = get_hr_context()
     if not ctx.employee:
         return {"balances": []}
-    from hrms.hr.doctype.leave_application.leave_application import get_leave_balance_on
     types = frappe.get_all("Leave Type", fields=["name"])
-    today = frappe.utils.today()
-
-    # Future-dated approved leaves not yet deducted from hrms's ledger.
-    # docstatus=1 + status='Approved' + from_date > today.
-    future_approved = frappe.db.sql("""
-        select leave_type, sum(total_leave_days) as days
-        from `tabLeave Application`
-        where employee = %(emp)s and docstatus = 1 and status = 'Approved'
-          and from_date > %(today)s
-        group by leave_type
-    """, {"emp": ctx.employee, "today": today}, as_dict=1)
-    future_days = {r.leave_type: float(r.days or 0) for r in future_approved}
-
-    balances = []
-    for t in types:
-        try:
-            bal = get_leave_balance_on(ctx.employee, t.name, today)
-        except Exception:
-            bal = None
-        if bal is not None:
-            bal = float(bal) - future_days.get(t.name, 0.0)
-        balances.append({"leave_type": t.name, "balance": bal})
+    balances = [
+        {"leave_type": t.name,
+         "balance": effective_leave_balance(ctx.employee, t.name)}
+        for t in types
+    ]
     return {"balances": balances}
 
 
