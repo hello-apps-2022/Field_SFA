@@ -6,7 +6,7 @@ custom fields. Duplicates are skipped and reported.
 """
 import frappe
 from frappe import _
-from sfa_core.api.auth import get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context
 
 IMPORT_COLUMNS = ["customer_name", "territory", "mobile_no", "customer_group", "outlet_tier", "location_area", "location_city"]
 REQUIRED_COLUMNS = ["customer_name", "territory"]

@@ -1,6 +1,6 @@
 import frappe
 from frappe.utils import nowdate, add_days, getdate
-from sfa_core.api.auth import get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context
 
 
 @frappe.whitelist()

@@ -1,5 +1,5 @@
 import frappe
-from sfa_core.api.auth import get_user_context, require_role
+from sfa_core.api.auth import get_scope_context as get_user_context, require_role
 
 
 @frappe.whitelist()

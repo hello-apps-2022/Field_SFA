@@ -101,6 +101,10 @@
                   <span class="w-36 shrink-0 text-xs text-gray-400">Sales Person</span>
                   <span class="flex-1 text-sm text-gray-800">{{ doc.sales_person || '—' }}</span>
                 </div>
+                <div v-if="doc.joint_with" class="flex border-b border-gray-50 px-4 py-2.5">
+                  <span class="w-36 shrink-0 text-xs text-gray-400">Joint Visit With</span>
+                  <span class="flex-1 text-sm text-gray-800">{{ doc.joint_with }}</span>
+                </div>
                 <div class="flex border-b border-gray-50 px-4 py-2.5">
                   <span class="w-36 shrink-0 text-xs text-gray-400">Beat Plan</span>
                   <span class="flex-1 text-sm" :class="doc.beat_plan?'text-gray-800':'text-gray-400 italic'">{{ doc.beat_plan || 'Not set' }}</span>
@@ -262,7 +266,7 @@
   <!-- Edit Panel -->
   <SlidePanel v-model="editPanel" title="Edit Visit" :saving="saving" @save="save">
     <div class="space-y-4">
-      <FormField v-model="form.status" label="Status" type="select" :options="['Open','In Progress','Completed','Auto Closed','Cancelled']" />
+      <FormField v-model="form.status" label="Status" type="select" :options="['Open','In Progress','Completed','Cancelled']" />
       <FormField v-model="form.visit_purpose" label="Visit Purpose" type="select"
         :options="['Sales Order','Payment Collection','Stock Check','Merchandising','Relationship','Other']" />
       <FormField v-model="form.notes" label="Notes" type="textarea" />

@@ -5,3 +5,4 @@ sfa_core.patches.v1_0.add_rep_company_assignment
 sfa_core.patches.v1_0.migrate_free_carton_multi_target
 sfa_core.patches.v1_0.add_order_lifecycle_fields
 sfa_core.patches.v1_0.backfill_visit_checkin
+sfa_core.patches.v1_0.add_role_tiers_and_reports_to

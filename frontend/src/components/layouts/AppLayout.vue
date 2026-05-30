@@ -110,7 +110,7 @@
       <!-- Bottom -->
       <div class="shrink-0 border-t border-gray-100 py-2 px-1.5 space-y-0.5">
         <NavLink v-if="auth.canAccess('settings')" :item="{ label: 'Settings', to: '/settings', icon: 'settings' }" :collapsed="!isExpanded" />
-        <a href="/app" target="_blank"
+        <a v-if="auth.isAdmin" href="/app" target="_blank"
           class="flex h-8 w-full items-center rounded-md px-2 text-gray-500 hover:bg-gray-200 hover:text-gray-800 overflow-hidden"
           :title="!isExpanded ? 'Frappe Desk' : ''">
           <FeatherIcon name="external-link" class="h-3.5 w-3.5 shrink-0" />

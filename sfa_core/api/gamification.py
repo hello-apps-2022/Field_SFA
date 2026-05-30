@@ -169,7 +169,7 @@ def toggle_badge(name, is_active):
 @frappe.whitelist()
 def get_points_ledger(search=None, period=None, date_from=None, date_to=None, territory=None, start=0, page_length=50):
     """Paginated points ledger (admin/manager view), scoped by date + territory."""
-    from sfa_core.api.auth import get_user_context
+    from sfa_core.api.auth import get_scope_context as get_user_context
     ctx = get_user_context()
     filters = {}
     # Reps see only their own ledger
@@ -209,7 +209,7 @@ def get_points_ledger(search=None, period=None, date_from=None, date_to=None, te
 @frappe.whitelist()
 def get_earned_badges(period=None, date_from=None, date_to=None, territory=None):
     """Earned badges (SFA Rep Badge), scoped by awarded date, territory and role."""
-    from sfa_core.api.auth import get_user_context
+    from sfa_core.api.auth import get_scope_context as get_user_context
     ctx = get_user_context()
     filters = {}
     if ctx.get("is_rep") and ctx.get("sales_person"):

@@ -4,7 +4,7 @@ Guarded list endpoints for all main SFA doctypes.
 All endpoints enforce row-level access based on role.
 """
 import frappe
-from sfa_core.api.auth import get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context, get_scoped_sales_persons, get_customer_scope_sp
 
 
 def _apply_role_filters(filters, ctx, rep_field='custom_sfa_rep', territory_field='territory'):
@@ -19,8 +19,9 @@ def _apply_role_filters(filters, ctx, rep_field='custom_sfa_rep', territory_fiel
     if ctx['is_manager'] and ctx['territory']:
         filters[territory_field] = ctx['territory']
     elif ctx['is_rep']:
-        if ctx['sales_person']:
-            filters[rep_field] = ctx['sales_person']
+        sps = get_customer_scope_sp() if rep_field == 'custom_sfa_rep' else get_scoped_sales_persons()
+        if sps:
+            filters[rep_field] = ['in', sps]
         else:
             filters['name'] = '__no_access__'
     elif not ctx['role']:
@@ -102,9 +103,10 @@ def get_visits(search=None, rep=None, status=None, date_from=None,
 
     # Role-based scoping
     if ctx['is_rep']:
-        if not ctx['sales_person']:
+        sps = get_scoped_sales_persons()
+        if not sps:
             return {'items': [], 'total': 0}
-        filters['sales_person'] = ctx['sales_person']
+        filters['sales_person'] = ['in', sps]
     elif ctx['is_manager'] and ctx['territory']:
         # Scope to visits whose customer is in the manager's territory.
         terr_customers = frappe.get_all('Customer',
@@ -150,7 +152,7 @@ def get_visits(search=None, rep=None, status=None, date_from=None,
         filters=filters,
         or_filters=or_filters,
         fields=['name', 'customer', 'sales_person', 'visit_date',
-                'status', 'visit_purpose', 'duration_minutes', 'beat_plan',
+                'status', 'visit_purpose', 'duration_minutes', 'beat_plan', 'joint_with',
                 'check_in_time'],
         order_by='visit_date desc',
         start=start,
@@ -171,10 +173,12 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
     values = []
 
     if ctx['is_rep']:
-        if not ctx['sales_person']:
+        sps = get_customer_scope_sp()
+        if not sps:
             return {'items': [], 'total': 0}
-        conditions.append("c.custom_sfa_rep = %s")
-        values.append(ctx['sales_person'])
+        ph = ', '.join(['%s'] * len(sps))
+        conditions.append(f"c.custom_sfa_rep IN ({ph})")
+        values.extend(sps)
     elif ctx['is_manager'] and ctx['territory']:
         conditions.append("c.territory = %s")
         values.append(ctx['territory'])
@@ -233,9 +237,10 @@ def get_payments(search=None, rep=None, status=None, date_from=None,
     filters = {}
 
     if ctx['is_rep']:
-        if not ctx['sales_person']:
+        sps = get_scoped_sales_persons()
+        if not sps:
             return {'items': [], 'total': 0}
-        filters['sales_person'] = ctx['sales_person']
+        filters['sales_person'] = ['in', sps]
     elif ctx['is_manager'] and ctx['territory']:
         # Payments have no territory field — scope via customer in territory.
         terr_customers = frappe.get_all('Customer',

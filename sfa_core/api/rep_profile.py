@@ -1,6 +1,6 @@
 import frappe
 from frappe.utils import flt, today, get_first_day
-from sfa_core.api.auth import get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context
 
 
 def _gate(ctx, sales_person):

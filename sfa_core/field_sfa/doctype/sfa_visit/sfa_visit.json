@@ -10,6 +10,7 @@
   "beat_plan",
   "customer",
   "sales_person",
+  "joint_with",
   "visit_date",
   "check_in_time",
   "check_in_latitude",
@@ -47,6 +48,13 @@
    "fieldtype": "Link",
    "options": "Sales Person",
    "reqd": 1
+  },
+  {
+   "fieldname": "joint_with",
+   "fieldtype": "Link",
+   "label": "Joint Visit With",
+   "options": "Sales Person",
+   "description": "Colleague this visit was made together with (joint/accompanied visit)."
   },
   {
    "fieldname": "visit_date",

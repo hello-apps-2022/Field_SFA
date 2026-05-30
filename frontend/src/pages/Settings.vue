@@ -286,6 +286,8 @@ const roleStyles = {
   'SFA Admin':   { avatar: 'bg-purple-100 text-purple-700', badge: 'bg-purple-100 text-purple-700', border: 'border-purple-200' },
   'SFA Manager': { avatar: 'bg-blue-100 text-blue-700',     badge: 'bg-blue-100 text-blue-700',     border: 'border-blue-200' },
   'SFA Rep':     { avatar: 'bg-green-100 text-green-700',   badge: 'bg-green-100 text-green-700',   border: 'border-green-200' },
+  'SFA Supervisor':   { avatar: 'bg-amber-100 text-amber-700', badge: 'bg-amber-100 text-amber-700', border: 'border-amber-200' },
+  'SFA Field Helper': { avatar: 'bg-gray-100 text-gray-700',   badge: 'bg-gray-100 text-gray-700',   border: 'border-gray-200' },
 }
 const defaultStyle = { avatar: 'bg-gray-100 text-gray-600', badge: 'bg-gray-100 text-gray-600', border: 'border-gray-200' }
 
@@ -412,9 +414,11 @@ const errors = reactive({})
 const territories = ref([])
 
 const roleOptions = [
-  { value: 'SFA Rep',     label: 'Rep',     desc: 'Field sales exec' },
-  { value: 'SFA Manager', label: 'Manager', desc: 'Territory manager' },
-  { value: 'SFA Admin',   label: 'Admin',   desc: 'Full access' },
+  { value: 'SFA Rep',          label: 'Rep',        desc: 'Field sales exec' },
+  { value: 'SFA Field Helper', label: 'Helper',     desc: 'Works under a rep' },
+  { value: 'SFA Supervisor',   label: 'Supervisor', desc: 'Territory manager' },
+  { value: 'SFA Manager',      label: 'Manager',    desc: 'All territories' },
+  { value: 'SFA Admin',        label: 'Admin',      desc: 'Full access' },
 ]
 
 const form = reactive({
@@ -432,7 +436,7 @@ const editTab = ref('Details')
 const companyList = ref([])
 
 const managerOptions = computed(() =>
-  users.value.filter(u => u.role === 'SFA Admin' || u.role === 'SFA Manager')
+  users.value.filter(u => ['SFA Admin', 'SFA Manager', 'SFA Supervisor', 'SFA Rep'].includes(u.role))
 )
 
 function roleColor(role) {
@@ -440,6 +444,8 @@ function roleColor(role) {
     'SFA Admin':   { bg: 'bg-purple-100', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700' },
     'SFA Manager': { bg: 'bg-blue-100',   text: 'text-blue-700',   badge: 'bg-blue-100 text-blue-700' },
     'SFA Rep':     { bg: 'bg-green-100',  text: 'text-green-700',  badge: 'bg-green-100 text-green-700' },
+    'SFA Supervisor':   { bg: 'bg-amber-100', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
+    'SFA Field Helper': { bg: 'bg-gray-100',  text: 'text-gray-600',  badge: 'bg-gray-100 text-gray-600' },
   }
   return map[role] || { bg: 'bg-gray-100', text: 'text-gray-600', badge: 'bg-gray-100 text-gray-600' }
 }

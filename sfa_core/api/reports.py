@@ -9,7 +9,7 @@ access. Export (CSV/Excel) is gated by a per-user flag; admins always allowed.
 """
 import frappe
 from frappe import _
-from sfa_core.api.auth import get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context
 
 
 # Allowlist of reports the SPA may run, with display metadata + which filter

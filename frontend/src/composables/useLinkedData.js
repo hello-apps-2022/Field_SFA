@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { getList, call } from '@/utils/frappe'
+import { auth } from '@/utils/auth'
 
 const cache = {}
 
@@ -15,6 +16,7 @@ export function useLinkedData() {
   const salesPersons = ref([])
   const customerGroups = ref([])
   const beatPlans = ref([])
+  const reportingChain = ref([])
   const items = ref([])
   const paymentTypes = ref([])
   const visitPurposes = ref([])
@@ -30,7 +32,7 @@ export function useLinkedData() {
   }
 
   async function loadSalesPersons() {
-    const data = await cached('sales_persons', () => getList('Sales Person', { fields: ['name'], limit: 200 }))
+    const data = await cached('sales_persons', () => getList('Sales Person', { fields: ['name'], filters: { is_group: 0 }, limit: 200 }))
     salesPersons.value = data.map(s => s.name)
   }
 
@@ -42,7 +44,10 @@ export function useLinkedData() {
   }
 
   async function loadBeatPlans() {
-    const data = await cached('beat_plans', () => getList('SFA Beat Plan', { fields: ['name', 'plan_name'], limit: 200 }))
+    const filters = {}
+    if (auth.isRep || auth.isHelper) filters.sales_person = auth.salesPerson
+    else if (auth.isSupervisor && auth.territory) filters.territory = auth.territory
+    const data = await cached('beat_plans', () => getList('SFA Beat Plan', { fields: ['name', 'plan_name'], filters, limit: 200 }))
     beatPlans.value = data.map(b => ({ value: b.name, label: b.plan_name || b.name }))
   }
 
@@ -61,10 +66,16 @@ export function useLinkedData() {
     visitPurposes.value = data.map(v => v.name)
   }
 
+  async function loadReportingChain(salesPerson) {
+    const args = salesPerson ? { sales_person: salesPerson } : {}
+    const res = await call('sfa_core.api.auth.get_reporting_chain', args)
+    reportingChain.value = res.message || []
+  }
+
   return {
-    customers, territories, salesPersons, customerGroups,
+    customers, territories, salesPersons, customerGroups, reportingChain,
     beatPlans, items, paymentTypes, visitPurposes,
     loadCustomers, loadTerritories, loadSalesPersons, loadCustomerGroups,
-    loadBeatPlans, loadItems, loadPaymentTypes, loadVisitPurposes,
+    loadBeatPlans, loadItems, loadPaymentTypes, loadVisitPurposes, loadReportingChain,
   }
 }

@@ -67,6 +67,7 @@ def create_sfa_roles():
         {"role_name": "SFA Manager", "desk_access": 1},
         {"role_name": "SFA Supervisor", "desk_access": 1},
         {"role_name": "SFA Rep", "desk_access": 0},
+        {"role_name": "SFA Field Helper", "desk_access": 0},
         {"role_name": "SFA Viewer", "desk_access": 1},
     ]
     for role in roles:

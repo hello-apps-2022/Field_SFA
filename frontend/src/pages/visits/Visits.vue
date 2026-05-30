@@ -82,11 +82,12 @@
     <!-- Slide Panel -->
     <SlidePanel v-model="panelOpen" :title="editing ? 'Edit Visit' : 'New Visit'" :saving="saving" @save="save">
       <div class="space-y-4">
-        <FormField v-model="form.customer" label="Customer" type="select" :options="customers" required :error="errors.customer" />
-        <FormField v-model="form.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="errors.sales_person" />
+        <SearchSelect v-model="form.customer" label="Customer" :options="customers" required :error="errors.customer" placeholder="Search customer…" />
+        <FormField v-if="showSalesPersonField" v-model="form.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="errors.sales_person" />
+        <FormField v-model="form.joint_with" label="Joint Visit With" type="select" :options="jointWithOptions" />
         <FormField v-model="form.beat_plan" label="Beat Plan" type="select" :options="beatPlans" />
         <FormField v-model="form.visit_date" label="Visit Date" type="date" required :error="errors.visit_date" />
-        <FormField v-model="form.status" label="Status" type="select" :options="['Planned','In Progress','Completed','Cancelled']" />
+        <FormField v-model="form.status" label="Status" type="select" :options="['Open','In Progress','Completed','Cancelled']" />
         <FormField v-model="form.notes" label="Notes" type="textarea" />
       </div>
     </SlidePanel>
@@ -94,16 +95,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
-import { call } from '@/utils/frappe'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { call, saveDoc, insertDoc } from '@/utils/frappe'
+import { auth } from '@/utils/auth'
+import { successToast, errorToast } from '@/utils/toast'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
+import SearchSelect from '@/components/ui/SearchSelect.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
 import dayjs from 'dayjs'
 
-const { customers, salesPersons, territories, beatPlans, loadCustomers, loadSalesPersons, loadTerritories, loadBeatPlans } = useLinkedData()
+const { customers, salesPersons, territories, beatPlans, reportingChain, loadCustomers, loadSalesPersons, loadTerritories, loadBeatPlans, loadReportingChain } = useLinkedData()
 
 const search = ref('')
 const statusFilter = ref('')
@@ -121,7 +125,10 @@ const editing = ref(null)
 const visits = ref([])
 const errors = reactive({})
 
-const form = reactive({ customer: '', sales_person: '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Planned', notes: '' })
+const form = reactive({ customer: '', sales_person: auth.salesPerson || '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Open', joint_with: '', notes: '' })
+const showSalesPersonField = computed(() => auth.isAdmin || auth.isManager || auth.isSupervisor)
+const jointWithOptions = computed(() => reportingChain.value)
+watch(() => form.sales_person, (v) => loadReportingChain(v), { immediate: true })
 
 async function load(append = false) {
   loading.value = true
@@ -153,14 +160,14 @@ function applyFilters() { page.value = 1; load(false) }
 
 function openNew() {
   editing.value = null
-  Object.assign(form, { customer: '', sales_person: '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Planned', notes: '' })
+  Object.assign(form, { customer: '', sales_person: auth.salesPerson || '', beat_plan: '', visit_date: dayjs().format('YYYY-MM-DD'), status: 'Open', joint_with: '', notes: '' })
   Object.keys(errors).forEach(k => delete errors[k])
   panelOpen.value = true
 }
 
 function openEdit(v) {
   editing.value = v.name
-  Object.assign(form, { customer: v.customer, sales_person: v.sales_person, beat_plan: v.beat_plan || '', visit_date: v.visit_date, status: v.status, notes: v.notes || '' })
+  Object.assign(form, { customer: v.customer, sales_person: v.sales_person, beat_plan: v.beat_plan || '', visit_date: v.visit_date, status: v.status, joint_with: v.joint_with || '', notes: v.notes || '' })
   Object.keys(errors).forEach(k => delete errors[k])
   panelOpen.value = true
 }
@@ -168,18 +175,17 @@ function openEdit(v) {
 async function save() {
   let valid = true
   if (!form.customer) { errors.customer = 'Required'; valid = false }
-  if (!form.sales_person) { errors.sales_person = 'Required'; valid = false }
+  if (showSalesPersonField.value && !form.sales_person) { errors.sales_person = 'Required'; valid = false }
   if (!form.visit_date) { errors.visit_date = 'Required'; valid = false }
   if (!valid) return
   saving.value = true
   try {
-    const doc = { doctype: 'SFA Visit', ...form }
-    if (editing.value) { doc.name = editing.value; await call('frappe.client.save', { doc }) }
-    else { await call('frappe.client.insert', { doc }) }
-    frappe.show_alert({ message: editing.value ? 'Visit updated' : 'Visit created', indicator: 'green' })
+    if (editing.value) await saveDoc({ doctype: 'SFA Visit', name: editing.value, ...form })
+    else await insertDoc({ doctype: 'SFA Visit', ...form })
+    successToast(editing.value ? 'Visit updated' : 'Visit created')
     panelOpen.value = false
     load()
-  } catch (e) { frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' }) }
+  } catch (e) { errorToast(e.message || 'Save failed') }
   finally { saving.value = false }
 }
 

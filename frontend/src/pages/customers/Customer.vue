@@ -519,6 +519,7 @@
         {{ doc?.customer_name }}
       </div>
       <FormField v-model="visitForm.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="visitErrors.sales_person" />
+      <FormField v-model="visitForm.joint_with" label="Joint Visit With" type="select" :options="jointWithVisitOptions" />
       <FormField v-model="visitForm.beat_plan" label="Beat Plan" type="select" :options="beatPlans" />
       <FormField v-model="visitForm.visit_date" label="Visit Date" type="date" required />
       <FormField v-model="visitForm.visit_purpose" label="Purpose" type="select"
@@ -802,8 +803,8 @@ import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 const props = defineProps({ name: String })
 const {
-  customerGroups, territories, salesPersons, beatPlans, items, paymentTypes,
-  loadCustomerGroups, loadTerritories, loadSalesPersons, loadBeatPlans, loadItems, loadPaymentTypes,
+  customerGroups, territories, salesPersons, beatPlans, items, paymentTypes, reportingChain,
+  loadCustomerGroups, loadTerritories, loadSalesPersons, loadBeatPlans, loadItems, loadPaymentTypes, loadReportingChain,
 } = useLinkedData()
 
 const doc = ref(null)
@@ -916,7 +917,9 @@ const form = reactive({ customer_name:'', customer_type:'Company', customer_grou
 const locationForm = reactive({ latitude:'', longitude:'', area:'', city:'', district:'', address:'' })
 import { auth } from '@/utils/auth'
 
-const visitForm = reactive({ sales_person: auth.salesPerson || '', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', notes:'' })
+const visitForm = reactive({ sales_person: auth.salesPerson || '', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', joint_with:'', notes:'' })
+const jointWithVisitOptions = computed(() => reportingChain.value)
+watch(() => visitForm.sales_person, (v) => loadReportingChain(v), { immediate: true })
 const visitErrors = reactive({})
 const orderForm = reactive({ transaction_date:dayjs().format('YYYY-MM-DD'), delivery_date:'', items:[], remarks:'', order_type:'Booking' })
 

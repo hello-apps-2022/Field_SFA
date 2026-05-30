@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import nowdate, getdate
 import json
-from sfa_core.api.auth import get_user_context, require_role
+from sfa_core.api.auth import get_scope_context as get_user_context, require_role
 
 
 @frappe.whitelist()
@@ -114,7 +114,7 @@ def can_rep_create():
 
 @frappe.whitelist()
 def set_rep_creation_permission(allow):
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin', 'SFA Manager', 'SFA Supervisor')
     frappe.db.set_default('beat_plan_rep_can_create', '1' if allow else '0')
     frappe.db.commit()
     return {'success': True}
@@ -122,7 +122,7 @@ def set_rep_creation_permission(allow):
 
 @frappe.whitelist()
 def add_beat(beat_plan, beat_name, days, area_name=None, area_notes=None):
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin', 'SFA Manager', 'SFA Supervisor')
     if isinstance(days, str):
         days = json.loads(days)
 
@@ -189,7 +189,7 @@ def add_customer_to_beat(beat_name, customer):
 
 @frappe.whitelist()
 def remove_customer_from_beat(beat_name, customer):
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin', 'SFA Manager', 'SFA Supervisor')
     beat_doc = frappe.get_doc('SFA Beat Plan Beat', beat_name)
     beat_doc.customers = [c for c in beat_doc.customers if c.customer != customer]
     for i, c in enumerate(beat_doc.customers, 1):
@@ -202,7 +202,7 @@ def remove_customer_from_beat(beat_name, customer):
 
 @frappe.whitelist()
 def reorder_beat_customers(beat_name, customer_order):
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin', 'SFA Manager', 'SFA Supervisor')
     if isinstance(customer_order, str):
         customer_order = json.loads(customer_order)
     beat_doc = frappe.get_doc('SFA Beat Plan Beat', beat_name)

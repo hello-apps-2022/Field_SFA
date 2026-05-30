@@ -100,13 +100,13 @@
 
         <!-- Menu items -->
         <div class="py-1">
-          <a href="/app" target="_blank"
+          <a v-if="auth.isAdmin" href="/app" target="_blank"
             class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <FeatherIcon name="external-link" class="h-4 w-4 text-gray-400" />
             Frappe Desk
           </a>
-          <router-link to="/settings"
+          <router-link v-if="auth.canAccess('settings')" to="/settings"
             class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             @click="profileMenu = false"
           >
@@ -133,6 +133,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getList } from '@/utils/frappe'
+import { auth } from '@/utils/auth'
 
 const router = useRouter()
 

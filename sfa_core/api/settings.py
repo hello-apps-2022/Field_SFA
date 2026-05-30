@@ -3,10 +3,27 @@ from frappe.utils.password import update_password
 from sfa_core.api.auth import require_role
 
 
+def _is_admin_user():
+    from sfa_core.api.auth import get_user_role
+    return get_user_role() == 'SFA Admin'
+
+
+def _guard_no_admin_escalation(target_role=None, target_sales_person=None):
+    """Managers may manage the team but cannot create, modify, or promote Admin users."""
+    if _is_admin_user():
+        return
+    if target_role == 'SFA Admin':
+        frappe.throw('Only an admin can assign the Admin role.', frappe.PermissionError)
+    if target_sales_person:
+        uid = frappe.db.get_value('Sales Person', target_sales_person, 'custom_user_id')
+        if uid and 'SFA Admin' in frappe.get_roles(uid):
+            frappe.throw('Only an admin can modify an admin user.', frappe.PermissionError)
+
+
 @frappe.whitelist()
 def get_team_hierarchy():
     """Returns tree structure of all SFA users for hierarchy view."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
     users = _get_all_users()
     by_sp = {u['sales_person']: u for u in users}
 
@@ -25,7 +42,7 @@ def get_team_hierarchy():
     # If everything is flat (all roots), group by role for visual hierarchy
     if len(roots) == len(users) and len(users) > 1:
         # Sort: admins first, then managers, then reps
-        role_order = {'SFA Admin': 0, 'SFA Manager': 1, 'SFA Rep': 2, None: 3}
+        role_order = {'SFA Admin': 0, 'SFA Manager': 1, 'SFA Supervisor': 2, 'SFA Rep': 3, 'SFA Field Helper': 4, None: 5}
         roots.sort(key=lambda u: role_order.get(u.get('role'), 3))
 
     return roots
@@ -49,7 +66,9 @@ def _get_all_users():
                 roles = frappe.get_roles(sp.custom_user_id)
                 if 'SFA Admin' in roles: role = 'SFA Admin'
                 elif 'SFA Manager' in roles: role = 'SFA Manager'
+                elif 'SFA Supervisor' in roles: role = 'SFA Supervisor'
                 elif 'SFA Rep' in roles: role = 'SFA Rep'
+                elif 'SFA Field Helper' in roles: role = 'SFA Field Helper'
         # Get manager name for display
         reports_to_name = None
         if sp.parent_sales_person and sp.parent_sales_person != 'Sales Team':
@@ -77,7 +96,7 @@ def _get_all_users():
 @frappe.whitelist()
 def get_users():
     """Get all SFA users with their Sales Person details."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
 
     sales_persons = frappe.get_all('Sales Person',
         filters={'is_group': 0},
@@ -104,8 +123,12 @@ def get_users():
                     role = 'SFA Admin'
                 elif 'SFA Manager' in roles:
                     role = 'SFA Manager'
+                elif 'SFA Supervisor' in roles:
+                    role = 'SFA Supervisor'
                 elif 'SFA Rep' in roles:
                     role = 'SFA Rep'
+                elif 'SFA Field Helper' in roles:
+                    role = 'SFA Field Helper'
 
         result.append({
             'sales_person': sp.name,
@@ -132,11 +155,12 @@ def get_users():
 def create_user(first_name, last_name, email, password, role,
                 territory=None, mobile_no=None, reports_to=None):
     """Create a Frappe User + Sales Person and link them."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
 
     # Validate role
-    if role not in ('SFA Admin', 'SFA Manager', 'SFA Rep'):
+    if role not in ('SFA Admin', 'SFA Manager', 'SFA Supervisor', 'SFA Rep', 'SFA Field Helper'):
         frappe.throw('Invalid role')
+    _guard_no_admin_escalation(target_role=role)
 
     # Check if user already exists
     if frappe.db.exists('User', email):
@@ -194,7 +218,7 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
                 sfa_active=None, first_name=None, last_name=None, reports_to=None,
                 can_export_reports=None, companies=None):
     """Update a user's role, territory, or status."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
 
     # Update Sales Person
     sp_update = {}
@@ -225,10 +249,11 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
             frappe.db.set_value('User', user_id, 'custom_can_export_reports',
                                 1 if can_export_reports else 0)
         if role:
+            _guard_no_admin_escalation(target_role=role, target_sales_person=sales_person)
             # Remove existing SFA roles
             frappe.db.delete('Has Role', {
                 'parent': user_id,
-                'role': ['in', ['SFA Admin', 'SFA Manager', 'SFA Rep']],
+                'role': ['in', ['SFA Admin', 'SFA Manager', 'SFA Supervisor', 'SFA Rep', 'SFA Field Helper']],
             })
             # Add new role
             frappe.get_doc({
@@ -254,7 +279,8 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
 @frappe.whitelist()
 def reset_password(sales_person, new_password):
     """Reset a user's password."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
+    _guard_no_admin_escalation(target_sales_person=sales_person)
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')
     if not user_id:
         frappe.throw('No user linked to this sales person')
@@ -266,7 +292,8 @@ def reset_password(sales_person, new_password):
 @frappe.whitelist()
 def toggle_user_active(sales_person, enabled):
     """Enable or disable a user account."""
-    require_role('SFA Admin')
+    require_role('SFA Admin', 'SFA Manager')
+    _guard_no_admin_escalation(target_sales_person=sales_person)
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')
     if user_id:
         frappe.db.set_value('User', user_id, 'enabled', 1 if enabled else 0)
