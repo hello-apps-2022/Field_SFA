@@ -77,6 +77,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { call } from '@/utils/frappe';
+import { successToast, errorToast } from '@/utils/toast'
 import { SurveyCreatorModel } from 'survey-creator-core';
 import { SurveyCreatorComponent } from 'survey-creator-vue';
 import { Model as SurveyModel } from 'survey-core';
@@ -153,7 +154,7 @@ function previewForm() {
 
 async function saveForm() {
   if (!templateName.value.trim()) {
-    frappe.show_alert({ message: 'Please enter a template name', indicator: 'red' });
+    errorToast('Please enter a template name')
     return;
   }
   saving.value = true;
@@ -184,11 +185,11 @@ async function saveForm() {
       await call('frappe.client.insert', { doc });
     }
 
-    frappe.show_alert({ message: 'Saved successfully', indicator: 'green' });
+    successToast('Saved successfully')
     emit('save');
   } catch (err) {
     const msg = err?.message || err?.exc_type || JSON.stringify(err);
-    frappe.show_alert({ message: 'Save failed: ' + msg, indicator: 'red' });
+    errorToast('Save failed: ' + msg)
   } finally {
     saving.value = false;
   }

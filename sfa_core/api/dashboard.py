@@ -1,6 +1,6 @@
 import frappe
 from frappe.utils import nowdate, add_days, getdate
-from sfa_core.api.auth import get_scope_context as get_user_context
+from sfa_core.api.auth import get_scope_context as get_user_context, get_scoped_sales_persons, get_customer_scope_sp
 
 
 @frappe.whitelist()
@@ -24,8 +24,10 @@ def get_dashboard_data(period='week'):
 
     # Build territory/rep scope fragments based on role
     if ctx['is_rep']:
-        visit_filter = f"AND v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
-        cust_filter  = f"AND c.custom_sfa_rep = {frappe.db.escape(ctx['sales_person'])}"
+        _sps = get_scoped_sales_persons()
+        _csps = get_customer_scope_sp()
+        visit_filter = (f"AND v.sales_person IN ({', '.join(frappe.db.escape(s) for s in _sps)})" if _sps else "AND 1=0")
+        cust_filter  = (f"AND c.custom_sfa_rep IN ({', '.join(frappe.db.escape(s) for s in _csps)})" if _csps else "AND 1=0")
     elif ctx['is_manager'] and ctx['territory']:
         visit_filter = f"AND c2.territory = {frappe.db.escape(ctx['territory'])}"
         cust_filter  = f"AND c.territory = {frappe.db.escape(ctx['territory'])}"
@@ -161,7 +163,8 @@ def get_recent_visits(limit=10):
     ctx = get_user_context()
     filters = {'status': ['!=', 'Cancelled']}
     if ctx['is_rep']:
-        filters['sales_person'] = ctx['sales_person']
+        _sps = get_scoped_sales_persons()
+        filters['sales_person'] = ['in', _sps] if _sps else ['in', ['__none__']]
     return frappe.get_all('SFA Visit',
         filters=filters,
         fields=['name', 'customer', 'sales_person',
@@ -182,7 +185,8 @@ def get_overdue_customers(limit=10):
         'custom_next_visit_due': ['<', str(getdate(nowdate()))],
     }
     if ctx['is_rep']:
-        filters['custom_sfa_rep'] = ctx['sales_person']
+        _csps = get_customer_scope_sp()
+        filters['custom_sfa_rep'] = ['in', _csps] if _csps else ['in', ['__none__']]
     elif ctx['is_manager'] and ctx['territory']:
         filters['territory'] = ctx['territory']
 
@@ -202,7 +206,8 @@ def get_visit_trend(days=7):
     date_from = str(getdate(add_days(today, -int(days) + 1)))
 
     if ctx['is_rep']:
-        extra = f"AND v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
+        _sps = get_scoped_sales_persons()
+        extra = (f"AND v.sales_person IN ({', '.join(frappe.db.escape(s) for s in _sps)})" if _sps else "AND 1=0")
     elif ctx['is_manager'] and ctx['territory']:
         extra = f"AND c.territory = {frappe.db.escape(ctx['territory'])}"
     else:

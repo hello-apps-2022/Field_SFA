@@ -124,6 +124,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -171,10 +172,10 @@ const cards = computed(() => {
 async function duplicate(t) {
   try {
     await call('sfa_core.field_sfa.api.form.duplicate_form_template', { template_name: t.name })
-    frappe.show_alert({ message: 'Template duplicated', indicator: 'green' })
+    successToast('Template duplicated')
     load()
   } catch {
-    frappe.show_alert({ message: 'Failed to duplicate', indicator: 'red' })
+    errorToast('Failed to duplicate')
   }
 }
 

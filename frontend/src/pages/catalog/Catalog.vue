@@ -47,6 +47,7 @@
             <td class="px-5 py-3 text-right whitespace-nowrap">
               <button @click="openProduct(p)" class="text-gray-400 hover:text-gray-800 mr-3" title="Edit"><FeatherIcon name="edit-2" class="h-3.5 w-3.5" /></button>
               <button v-if="!p.disabled" @click="disableProduct(p)" class="text-gray-300 hover:text-red-500" title="Disable"><FeatherIcon name="slash" class="h-3.5 w-3.5" /></button>
+              <button v-else @click="enableProduct(p)" class="text-gray-300 hover:text-green-600" title="Enable"><FeatherIcon name="check-circle" class="h-3.5 w-3.5" /></button>
             </td>
           </tr>
         </tbody>
@@ -61,7 +62,11 @@
         </div>
         <div class="divide-y divide-gray-50 rounded-md border border-gray-100">
           <div v-for="c in categories" :key="c.name" class="flex items-center justify-between px-4 py-2.5 text-sm text-gray-800">
-            {{ c.name }}
+            <span :class="c.enabled ? '' : 'text-gray-400 line-through'">{{ c.name }}</span>
+            <div class="flex items-center gap-2">
+              <span :class="c.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="rounded px-1.5 py-0.5 text-[10px] font-medium">{{ c.enabled ? 'Active' : 'Off' }}</span>
+              <button @click="toggleCategory(c)" class="text-gray-300 hover:text-gray-700" :title="c.enabled ? 'Disable' : 'Enable'"><FeatherIcon :name="c.enabled ? 'slash' : 'check-circle'" class="h-3.5 w-3.5" /></button>
+            </div>
           </div>
           <div v-if="!categories.length" class="px-4 py-6 text-center text-xs text-gray-400">No categories yet</div>
         </div>
@@ -217,8 +222,16 @@ async function saveProduct() {
 async function disableProduct(p) {
   if (!confirm('Disable ' + p.item_name + '? It will stop appearing in new orders.')) return
   try {
-    await call('sfa_core.field_sfa.api.catalog.delete_product', { name: p.name })
+    await call('sfa_core.field_sfa.api.catalog.set_product_enabled', { name: p.name, enabled: 0 })
     successToast('Product disabled')
+    await loadAll()
+  } catch (e) { errorToast(e.message || 'Failed') }
+}
+
+async function enableProduct(p) {
+  try {
+    await call('sfa_core.field_sfa.api.catalog.set_product_enabled', { name: p.name, enabled: 1 })
+    successToast('Product enabled')
     await loadAll()
   } catch (e) { errorToast(e.message || 'Failed') }
 }
@@ -231,6 +244,14 @@ async function addCategory() {
     await call('sfa_core.field_sfa.api.catalog.save_category', { category_name: nameVal })
     newCategory.value = ''
     successToast('Category added')
+    await loadAll()
+  } catch (e) { errorToast(e.message || 'Failed') }
+}
+
+async function toggleCategory(c) {
+  try {
+    await call('sfa_core.field_sfa.api.catalog.set_category_enabled', { name: c.name, enabled: c.enabled ? 0 : 1 })
+    successToast(c.enabled ? 'Category disabled' : 'Category enabled')
     await loadAll()
   } catch (e) { errorToast(e.message || 'Failed') }
 }

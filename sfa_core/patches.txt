@@ -6,3 +6,7 @@ sfa_core.patches.v1_0.migrate_free_carton_multi_target
 sfa_core.patches.v1_0.add_order_lifecycle_fields
 sfa_core.patches.v1_0.backfill_visit_checkin
 sfa_core.patches.v1_0.add_role_tiers_and_reports_to
+sfa_core.patches.v1_0.add_category_enabled
+sfa_core.patches.v1_0.add_order_confirmed_fields
+sfa_core.patches.v1_0.drop_sfa_reports_to
+sfa_core.patches.v1_0.add_payment_carton_fields

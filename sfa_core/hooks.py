@@ -45,6 +45,9 @@ doc_events = {
     "SFA Payment": {
         "validate": "sfa_core.field_sfa.doc_events.payment.validate",
         "on_submit": "sfa_core.field_sfa.doc_events.payment.on_submit",
+        "after_insert": "sfa_core.field_sfa.doc_events.payment.update_customer_stats",
+        "on_update": "sfa_core.field_sfa.doc_events.payment.update_customer_stats",
+        "on_trash": "sfa_core.field_sfa.doc_events.payment.update_customer_stats",
     },
     "SFA Form Response": {
         "validate": "sfa_core.field_sfa.doc_events.form_response.validate",

@@ -77,6 +77,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getDoc, call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import { formatCurrency } from '@/utils/currency'
 import Btn from '@/components/ui/Btn.vue'
 import dayjs from 'dayjs'
@@ -130,10 +131,10 @@ async function act(method) {
   acting.value = true
   try {
     await call('sfa_core.field_sfa.api.order_actions.' + method, { name: props.name })
-    if (window.frappe?.show_alert) window.frappe.show_alert({ message: 'Done', indicator: 'green' })
+    successToast('Done')
     await loadDoc()
   } catch (e) {
-    if (window.frappe?.show_alert) window.frappe.show_alert({ message: e.message || 'Action failed', indicator: 'red' })
+    errorToast(e.message || 'Action failed')
   } finally { acting.value = false }
 }
 

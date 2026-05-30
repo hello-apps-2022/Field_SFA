@@ -112,6 +112,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
@@ -216,7 +217,7 @@ async function save() {
         email_id: form.email_id || '', customer_details: form.customer_details || '',
       }
       await call('frappe.client.save', { doc })
-      frappe.show_alert({ message: 'Customer updated', indicator: 'green' })
+      successToast('Customer updated')
     } else {
       await call('sfa_core.api.customer.create_customer', {
         customer_name: form.customer_name,
@@ -226,12 +227,12 @@ async function save() {
         latitude: form.latitude || null,
         longitude: form.longitude || null,
       })
-      frappe.show_alert({ message: 'Outlet created', indicator: 'green' })
+      successToast('Outlet created')
     }
     panelOpen.value = false
     load()
   } catch (e) {
-    frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' })
+    errorToast(e.message || 'Save failed')
   } finally { saving.value = false }
 }
 

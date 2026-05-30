@@ -41,8 +41,19 @@ def delete_company(name):
 # ── Categories (ERPNext Item Groups) ─────────────────────────────────────────
 @frappe.whitelist()
 def get_categories():
-    return frappe.get_all("Item Group", filters={"is_group": 0}, fields=["name"],
+    cats = frappe.get_all("Item Group", filters={"is_group": 0},
+                          fields=["name", "custom_sfa_enabled"],
                           order_by="name asc", ignore_permissions=True)
+    for c in cats:
+        c["enabled"] = 0 if c.get("custom_sfa_enabled") == 0 else 1
+    return cats
+
+
+@frappe.whitelist()
+def set_category_enabled(name, enabled):
+    _require_manager()
+    frappe.db.set_value("Item Group", name, "custom_sfa_enabled", int(enabled))
+    frappe.db.commit()
 
 
 @frappe.whitelist()
@@ -115,3 +126,24 @@ def delete_product(name):
     _require_manager()
     frappe.db.set_value("Item", name, "disabled", 1)
     frappe.db.commit()
+
+
+@frappe.whitelist()
+def set_product_enabled(name, enabled):
+    _require_manager()
+    frappe.db.set_value("Item", name, "disabled", 0 if int(enabled) else 1)
+    frappe.db.commit()
+
+
+@frappe.whitelist()
+def get_orderable_items(search=None):
+    """Rep-facing: sellable items that are enabled and in an enabled category."""
+    disabled_cats = frappe.get_all("Item Group", filters={"custom_sfa_enabled": 0}, pluck="name")
+    filters = {"is_sales_item": 1, "disabled": 0}
+    if disabled_cats:
+        filters["item_group"] = ["not in", disabled_cats]
+    if search:
+        filters["item_name"] = ["like", "%" + search + "%"]
+    return frappe.get_all("Item", filters=filters,
+        fields=["name", "item_name", "item_group", "custom_sfa_company", "standard_rate"],
+        order_by="item_name asc", limit_page_length=0, ignore_permissions=True)

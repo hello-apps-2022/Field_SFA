@@ -33,7 +33,7 @@ def get_current_sales_person():
         {'custom_user_id': user},
         ['name', 'sales_person_name', 'custom_territory',
          'custom_mobile_no', 'custom_sfa_active', 'custom_employee',
-         'custom_sfa_reports_to', 'parent_sales_person'],
+         'parent_sales_person'],
         as_dict=True
     )
     return sp

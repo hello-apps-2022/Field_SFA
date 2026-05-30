@@ -52,8 +52,8 @@ export function useLinkedData() {
   }
 
   async function loadItems() {
-    const data = await cached('items', () => getList('Item', { fields: ['name', 'item_name', 'standard_rate', 'custom_sfa_company', 'item_group'], filters: { is_sales_item: 1, disabled: 0 }, limit: 500 }))
-    items.value = data.map(i => ({ value: i.name, label: i.item_name || i.name, rate: i.standard_rate || 0, company: i.custom_sfa_company || null, category: i.item_group || null }))
+    const res = await cached('items', () => call('sfa_core.field_sfa.api.catalog.get_orderable_items', {}))
+    items.value = (res.message || []).map(i => ({ value: i.name, label: i.item_name || i.name, rate: i.standard_rate || 0, company: i.custom_sfa_company || null, category: i.item_group || null }))
   }
 
   async function loadPaymentTypes() {

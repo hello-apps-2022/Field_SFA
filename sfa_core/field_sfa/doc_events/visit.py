@@ -38,19 +38,25 @@ def _update_customer_stats(customer_name):
             order_by="visit_date desc",
         )
 
-        # Total orders
+        # Confirmed orders: count + billed value
         order_stats = frappe.db.sql("""
             SELECT COUNT(*) as cnt, IFNULL(SUM(grand_total), 0) as total
             FROM `tabSales Order`
             WHERE customer = %s AND docstatus = 1
         """, customer_name, as_dict=True)
 
-        # Outstanding payments (submitted but not reconciled)
-        outstanding = frappe.db.sql("""
+        # Collected payments (finalized: Submitted / Reconciled)
+        collected = frappe.db.sql("""
             SELECT IFNULL(SUM(amount), 0) as total
             FROM `tabSFA Payment`
-            WHERE customer = %s AND status = 'Draft' AND docstatus < 2
+            WHERE customer = %s AND status IN ('Submitted', 'Reconciled')
         """, customer_name, as_dict=True)
+
+        order_total = order_stats[0].total if order_stats else 0
+        collected_total = collected[0].total if collected else 0
+        due = order_total - collected_total
+        if due < 0:
+            due = 0
 
         update = {}
         if last_visit:
@@ -58,10 +64,10 @@ def _update_customer_stats(customer_name):
 
         if order_stats:
             update["custom_total_orders"] = order_stats[0].cnt
-            update["custom_total_revenue"] = order_stats[0].total
 
-        if outstanding:
-            update["custom_outstanding_payments"] = outstanding[0].total
+        # Revenue = collected payments; Due = billed orders - collected
+        update["custom_total_revenue"] = collected_total
+        update["custom_outstanding_payments"] = due
 
         # Compute next visit due
         freq = frappe.db.get_value("Customer", customer_name, "custom_visit_frequency")

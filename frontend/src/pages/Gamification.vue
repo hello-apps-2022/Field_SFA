@@ -245,6 +245,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import { auth } from '@/utils/auth'
 import Pagination from '@/components/ui/Pagination.vue'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
@@ -356,8 +357,8 @@ async function savePoints(c) {
     await call('sfa_core.api.gamification.save_points_config', {
       activity_type: c.activity_type, points: c.points, is_active: c.is_active ? 1 : 0,
     })
-    frappe.show_alert({ message: 'Saved', indicator: 'green' })
-  } catch (e) { frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' }) }
+    successToast('Saved')
+  } catch (e) { errorToast(e.message || 'Save failed') }
   finally { savingCfg.value = null }
 }
 
@@ -400,17 +401,17 @@ async function saveBadge() {
       criteria_type: badgeForm.criteria_type, threshold_value: badgeForm.threshold_value,
       period_days: badgeForm.period_days, points_bonus: badgeForm.points_bonus, is_active: 1,
     })
-    frappe.show_alert({ message: 'Badge saved', indicator: 'green' })
+    successToast('Badge saved')
     badgePanel.value = false
     loadBadgeDefs()
-  } catch (e) { frappe.show_alert({ message: e.message || 'Save failed', indicator: 'red' }) }
+  } catch (e) { errorToast(e.message || 'Save failed') }
   finally { savingBadge.value = false }
 }
 async function toggleBadge(b) {
   try {
     await call('sfa_core.api.gamification.toggle_badge', { name: b.name, is_active: b.is_active ? 0 : 1 })
     loadBadgeDefs()
-  } catch (e) { frappe.show_alert({ message: e.message || 'Failed', indicator: 'red' }) }
+  } catch (e) { errorToast(e.message || 'Failed') }
 }
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'

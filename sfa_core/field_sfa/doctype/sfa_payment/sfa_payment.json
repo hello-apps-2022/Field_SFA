@@ -56,7 +56,7 @@
    "fieldname": "payment_type",
    "label": "Payment Type",
    "fieldtype": "Select",
-   "options": "Cash\nCheque\nMobile Money\nBank Transfer\nCredit Note",
+   "options": "Cash\nCheque\nMobile Money\nBank Transfer\nCredit Note\nCartons",
    "reqd": 1
   },
   {

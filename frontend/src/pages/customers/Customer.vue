@@ -453,12 +453,13 @@
           <p class="text-sm text-gray-500">{{ fPayments.length }} payments</p>
           <div class="flex items-center gap-2">
             <DateRangeFilter v-model:from="pFrom" v-model:to="pTo" />
-            <Btn variant="solid" icon="plus" size="sm" @click="newPaymentPanel=true">Record Payment</Btn>
+            <Btn variant="solid" icon="plus" size="sm" @click="openNewPayment()">Record Payment</Btn>
           </div>
         </div>
         <div v-if="fPayments.length" class="space-y-2">
           <div v-for="p in fPayments" :key="p.name"
-            class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
+            @click="p.status === 'Draft' && openEditPayment(p)"
+            :class="['flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4', p.status === 'Draft' ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors' : '']">
             <div>
               <p class="text-sm font-semibold text-gray-900">{{ formatUGX(p.amount) }}</p>
               <p class="text-xs text-gray-500">{{ p.payment_type }} · {{ formatDate(p.payment_date) }}</p>
@@ -668,6 +669,7 @@
           <Btn variant="ghost" size="sm" icon="trash-2" @click="deleteDraft(viewOrderDoc.name)">Delete</Btn>
         </template>
         <template v-else>
+          <Btn v-if="(viewOrderDoc.custom_sfa_order_type || 'Booking') === 'Booking'" variant="subtle" size="sm" icon="edit-2" @click="openEditDraft(viewOrderDoc)">Edit Items</Btn>
           <Btn variant="solid" size="sm" icon="truck" :loading="savingAction" @click="doDeliver(viewOrderDoc.name)">Mark Delivered</Btn>
           <Btn variant="ghost" size="sm" icon="x-circle" @click="doCancel(viewOrderDoc.name)">Cancel Order</Btn>
         </template>
@@ -676,7 +678,7 @@
   </SlidePanel>
 
   <!-- New Payment Panel -->
-  <SlidePanel v-model="newPaymentPanel" title="Record Payment" :saving="savingPayment" save-label="Record" @save="createPayment">
+  <SlidePanel v-model="newPaymentPanel" :title="editingPayment ? 'Edit Payment' : 'Record Payment'" :saving="savingPayment" save-label="Save as Draft" @save="createPayment">
     <div class="space-y-4">
       <!-- Customer context -->
       <div class="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-sm text-gray-700">
@@ -765,6 +767,14 @@
       </template>
 
       <FormField v-model="paymentForm.notes" label="Notes" type="textarea" />
+
+      <div v-if="paymentForm.status === 'Draft'" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+        <button type="button" @click="submitPayment" :disabled="savingPayment"
+          class="w-full rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+          Submit Payment
+        </button>
+        <p class="mt-1.5 text-center text-xs text-gray-400">Submitting locks this payment from further edits</p>
+      </div>
     </div>
   </SlidePanel>
   <!-- Fill Form Panel -->
@@ -846,6 +856,7 @@ async function openOrder(o) {
   } catch (e) { errorToast(e.message || 'Failed to load order') }
 }
 const editingOrder = ref(null)
+const editingConfirmed = ref(false)
 const savingAction = ref(false)
 function orderState(o) {
   if (o.docstatus === 2) return 'Cancelled'
@@ -859,6 +870,7 @@ function orderStateColor(s) {
 const viewState = computed(() => viewOrderDoc.value ? orderState(viewOrderDoc.value) : '')
 function openNewOrder() {
   editingOrder.value = null
+  editingConfirmed.value = false
   orderForm.items = []
   orderForm.transaction_date = dayjs().format('YYYY-MM-DD')
   orderForm.delivery_date = ''
@@ -870,11 +882,12 @@ async function openEditDraft(o) {
   try {
     const d = await getDoc('Sales Order', o.name)
     editingOrder.value = d.name
+    editingConfirmed.value = d.docstatus === 1
     orderForm.transaction_date = d.transaction_date
     orderForm.delivery_date = d.delivery_date || ''
     orderForm.remarks = d.remarks || ''
     orderForm.order_type = d.custom_sfa_order_type || 'Booking'
-    orderForm.items = (d.items || []).map(it => ({ item_code: it.item_code, item_name: it.item_name, qty: it.qty, rate: it.is_free_item ? 0 : it.rate, is_free: !!it.is_free_item }))
+    orderForm.items = (d.items || []).map(it => ({ docname: it.name, item_code: it.item_code, item_name: it.item_name, qty: it.qty, rate: it.is_free_item ? 0 : it.rate, is_free: !!it.is_free_item }))
     orderViewPanel.value = false
     newOrderPanel.value = true
   } catch (e) { errorToast(e.message || 'Failed to load order') }
@@ -971,10 +984,11 @@ watch(newOrderPanel, (open) => {
 const paymentForm = reactive({
   sales_person: auth.salesPerson || '', payment_date: dayjs().format('YYYY-MM-DD'),
   payment_mode: 'Cash', payment_type: '', amount: '',
-  reference_no: '', notes: '',
+  reference_no: '', notes: '', status: 'Draft',
   carton_items: [],
 })
 const paymentErrors = reactive({})
+const editingPayment = ref(null)
 
 const cartonTotal = computed(() => 0) // No pricing in carton mode
 
@@ -1224,6 +1238,20 @@ async function saveOrder() {
   if (!orderForm.items.some(i => i.item_code)) { errorToast('Add at least one item'); return }
   savingOrder.value = true
   try {
+    if (editingConfirmed.value && editingOrder.value) {
+      const _items = orderForm.items.filter(i => i.item_code && (Number(i.qty) || 0) > 0).map(i => {
+        const row = { item_code: i.item_code, qty: Number(i.qty) || 0, rate: i.is_free ? 0 : (Number(i.rate) || 0) }
+        if (i.docname) row.docname = i.docname
+        return row
+      })
+      await call('sfa_core.field_sfa.api.order_actions.update_order_items', { name: editingOrder.value, items: JSON.stringify(_items) })
+      const savedName = editingOrder.value
+      newOrderPanel.value = false; editingOrder.value = null; editingConfirmed.value = false; orderForm.items = []
+      successToast('Order updated')
+      await load()
+      try { viewOrderDoc.value = await getDoc('Sales Order', savedName); orderViewPanel.value = true } catch (e) {}
+      return
+    }
     // Aggregate duplicate lines by item + free-flag: paid X lines merge into one,
     // free X lines merge into one, but a paid line and a free line of the same
     // SKU stay distinct.
@@ -1283,6 +1311,46 @@ async function saveOrder() {
   finally { savingOrder.value = false }
 }
 
+function openNewPayment() {
+  editingPayment.value = null
+  Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
+  paymentForm.sales_person = auth.salesPerson || ''
+  paymentForm.payment_date = dayjs().format('YYYY-MM-DD')
+  paymentForm.payment_mode = 'Cash'
+  paymentForm.payment_type = ''
+  paymentForm.amount = ''
+  paymentForm.reference_no = ''
+  paymentForm.notes = ''
+  paymentForm.status = 'Draft'
+  paymentForm.carton_items = []
+  newPaymentPanel.value = true
+}
+
+async function openEditPayment(p) {
+  try {
+    const d = await getDoc('SFA Payment', p.name)
+    editingPayment.value = d.name
+    Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
+    paymentForm.sales_person = d.sales_person || ''
+    paymentForm.payment_date = d.payment_date || dayjs().format('YYYY-MM-DD')
+    paymentForm.payment_mode = d.custom_payment_mode === 'Cartons' ? 'Cartons' : 'Cash'
+    paymentForm.payment_type = d.payment_type || ''
+    paymentForm.amount = d.amount || ''
+    paymentForm.reference_no = d.reference_no || ''
+    paymentForm.notes = d.notes || ''
+    paymentForm.status = d.status || 'Draft'
+    paymentForm.carton_items = (d.custom_carton_items || []).map(r => ({
+      item_code: r.item_code, item_name: r.item_name, cartons: r.cartons, rate_per_carton: 0,
+    }))
+    newPaymentPanel.value = true
+  } catch (e) { errorToast(e.message || 'Failed to load payment') }
+}
+
+async function submitPayment() {
+  paymentForm.status = 'Submitted'
+  await createPayment()
+}
+
 async function createPayment() {
   Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
   if (!paymentForm.sales_person) { paymentErrors.sales_person = 'Required'; return }
@@ -1291,8 +1359,8 @@ async function createPayment() {
     if (!paymentForm.payment_type) { paymentErrors.payment_type = 'Required'; return }
     if (!paymentForm.amount || Number(paymentForm.amount) <= 0) { paymentErrors.amount = 'Enter a valid amount'; return }
   } else {
-    const validItems = paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0 && r.rate_per_carton > 0)
-    if (!validItems.length) { errorToast('Add at least one item with cartons and rate'); return }
+    const validItems = paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0)
+    if (!validItems.length) { errorToast('Add at least one item with cartons'); return }
   }
 
   savingPayment.value = true
@@ -1307,7 +1375,7 @@ async function createPayment() {
         }))
       : []
 
-    await insertDoc({
+    const payload = {
       doctype: 'SFA Payment', customer: props.name,
       sales_person: paymentForm.sales_person,
       payment_date: paymentForm.payment_date,
@@ -1317,11 +1385,18 @@ async function createPayment() {
       custom_carton_total: 0,
       custom_carton_items: cartonItems,
       reference_no: paymentForm.reference_no,
-      notes: paymentForm.notes, status: 'Draft',
-    })
+      notes: paymentForm.notes,
+      status: paymentForm.status,
+    }
+    if (editingPayment.value) {
+      await saveDoc({ name: editingPayment.value, ...payload })
+    } else {
+      await insertDoc(payload)
+    }
 
-    successToast('Payment recorded')
+    successToast(editingPayment.value ? 'Payment updated' : 'Payment recorded')
     newPaymentPanel.value = false
+    editingPayment.value = null
     paymentForm.carton_items = []
     paymentForm.payment_mode = 'Cash'
     await load()

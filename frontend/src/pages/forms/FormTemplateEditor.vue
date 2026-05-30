@@ -103,6 +103,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { call } from '@/utils/frappe'
+import { successToast, errorToast } from '@/utils/toast'
 import { useRouter } from 'vue-router'
 import { SurveyCreatorModel } from 'survey-creator-core'
 import { SurveyCreatorComponent } from 'survey-creator-vue'
@@ -156,7 +157,7 @@ onMounted(async () => {
         } catch (e) { console.error('JSON parse error:', e) }
       }
     } catch (e) {
-      frappe.show_alert({ message: 'Failed to load template', indicator: 'red' })
+      errorToast('Failed to load template')
     }
   }
   ready.value = true
@@ -171,7 +172,7 @@ function previewForm() {
 
 async function saveForm() {
   if (!templateName.value.trim()) {
-    frappe.show_alert({ message: 'Template name is required', indicator: 'red' })
+    errorToast('Template name is required')
     return
   }
   saving.value = true
@@ -207,11 +208,11 @@ async function saveForm() {
         router.replace('/form-templates/' + result.message.name)
       }
     }
-    frappe.show_alert({ message: 'Template saved', indicator: 'green' })
+    successToast('Template saved')
   } catch (err) {
     console.error('Save error:', err)
     const msg = err?.message || err?.exc || 'Save failed'
-    frappe.show_alert({ message: msg, indicator: 'red' })
+    errorToast(msg)
   } finally {
     saving.value = false
   }
