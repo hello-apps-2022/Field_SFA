@@ -19,7 +19,9 @@
   "theme_section",
   "primary_color",
   "column_break_theme",
-  "accent_color"
+  "accent_color",
+  "policy_section",
+  "allow_discretionary_free"
  ],
  "fields": [
   {
@@ -104,6 +106,18 @@
    "fieldtype": "Color",
    "label": "Accent Color",
    "default": "#378ADD"
+  },
+  {
+   "fieldname": "policy_section",
+   "label": "Sales Policy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "allow_discretionary_free",
+   "label": "Allow Discretionary Free Cartons",
+   "fieldtype": "Check",
+   "default": "0",
+   "description": "If enabled, reps may mark any order line as free without a matching scheme."
   }
  ],
  "index_web_pages_for_search": 0,

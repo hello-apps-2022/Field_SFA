@@ -6,14 +6,21 @@ def create_order(customer, items, sales_person, visit=None, **kwargs):
     """Create sales order from mobile app"""
     order_items = []
     for item in items:
-        order_items.append({
-            "item_code": item.get("item_code"),
-            "qty": item.get("qty", 1),
-            "rate": item.get("rate", 0),
-            "custom_carton_qty": item.get("carton_qty", 0),
-            "custom_free_qty": item.get("free_qty", 0),
-            "custom_unpaid_qty": item.get("unpaid_qty", 0),
-        })
+        if item.get("is_free") or item.get("is_free_item"):
+            order_items.append({
+                "item_code": item.get("item_code"),
+                "qty": item.get("qty", 1),
+                "rate": 0,
+                "is_free_item": 1,
+            })
+        else:
+            order_items.append({
+                "item_code": item.get("item_code"),
+                "qty": item.get("qty", 1),
+                "rate": item.get("rate", 0),
+                "custom_carton_qty": item.get("carton_qty", 0),
+                "custom_unpaid_qty": item.get("unpaid_qty", 0),
+            })
 
     so = frappe.get_doc({
         "doctype": "Sales Order",

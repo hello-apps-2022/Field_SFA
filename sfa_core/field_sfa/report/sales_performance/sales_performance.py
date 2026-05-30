@@ -11,6 +11,7 @@ def execute(filters=None):
         {"label": _("Payment Value"), "fieldname": "payment_value", "fieldtype": "Currency", "width": 140},
         {"label": _("Cartons"), "fieldname": "cartons", "fieldtype": "Float", "width": 100},
         {"label": _("Free Qty"), "fieldname": "free_qty", "fieldtype": "Float", "width": 100},
+        {"label": _("Flagged Orders"), "fieldname": "flagged_orders", "fieldtype": "Int", "width": 120},
     ]
 
     data = frappe.db.sql("""
@@ -22,7 +23,8 @@ def execute(filters=None):
             COUNT(DISTINCT p.name) as payments,
             SUM(p.amount) as payment_value,
             SUM(soi.custom_carton_qty) as cartons,
-            SUM(soi.custom_free_qty) as free_qty
+            SUM(CASE WHEN soi.is_free_item = 1 THEN soi.qty ELSE 0 END) as free_qty,
+            COUNT(DISTINCT CASE WHEN so.custom_free_beyond_entitlement = 1 THEN so.name END) as flagged_orders
         FROM `tabSales Order` so
         LEFT JOIN `tabSales Order Item` soi ON soi.parent = so.name
         LEFT JOIN `tabSFA Payment` p ON p.sales_person = so.custom_sfa_rep AND p.payment_date = so.transaction_date

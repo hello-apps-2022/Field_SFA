@@ -1,0 +1,7 @@
+sfa_core.patches.v1_0.add_activity_fields_to_expense_claim
+sfa_core.patches.v1_0.add_free_entitlement_flag
+sfa_core.patches.v1_0.add_catalog_fields_and_seed
+sfa_core.patches.v1_0.add_rep_company_assignment
+sfa_core.patches.v1_0.migrate_free_carton_multi_target
+sfa_core.patches.v1_0.add_order_lifecycle_fields
+sfa_core.patches.v1_0.backfill_visit_checkin

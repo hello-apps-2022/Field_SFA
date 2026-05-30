@@ -68,7 +68,7 @@
               <span :class="roleColor(user.role).text">{{ initials(user.full_name) }}</span>
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-semibold text-gray-900 truncate">{{ user.full_name }}</p>
+              <button class="text-left text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline" @click="openProfile(user)">{{ user.full_name }}</button>
               <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
             </div>
           </div>
@@ -91,6 +91,10 @@
             </button>
           </div>
           <div class="col-span-1 flex justify-end gap-1">
+            <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+              @click="openProfile(user)" title="View profile">
+              <FeatherIcon name="user" class="h-3.5 w-3.5" />
+            </button>
             <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
               @click="openEdit(user)">
               <FeatherIcon name="edit-2" class="h-3.5 w-3.5" />
@@ -169,7 +173,7 @@
   <!-- Edit panel -->
   <SlidePanel v-model="editPanel" :title="'Edit — ' + (editUser?.full_name || '')"
     :saving="saving" save-label="Save Changes" @save="saveEdit">
-    <div v-if="editUser" class="space-y-4">
+    <div v-if="editUser">
       <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
           :class="roleColor(editUser.role).bg">
@@ -180,59 +184,82 @@
           <p class="text-xs text-gray-400">{{ editUser.email }}</p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <FormField v-model="editForm.first_name" label="First Name" />
-        <FormField v-model="editForm.last_name" label="Last Name" />
+
+      <div class="my-4 flex items-center gap-1 border-b border-gray-100">
+        <button v-for="t in editTabs" :key="t" @click="editTab = t"
+          class="-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors"
+          :class="editTab === t ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-700'">
+          {{ t }}
+        </button>
       </div>
-      <div>
-        <label class="mb-2 block text-xs font-medium text-gray-600">Role</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button v-for="r in roleOptions" :key="r.value"
-            class="rounded-lg border py-2.5 px-3 text-left transition-colors"
-            :class="editForm.role === r.value
-              ? 'border-gray-900 bg-gray-900 text-white'
-              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'"
-            @click="editForm.role = r.value"
-          >
-            <p class="text-xs font-semibold">{{ r.label }}</p>
-            <p class="text-[10px] mt-0.5 opacity-70">{{ r.desc }}</p>
+
+      <div v-show="editTab === 'Details'" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <FormField v-model="editForm.first_name" label="First Name" />
+          <FormField v-model="editForm.last_name" label="Last Name" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-medium text-gray-600">Role</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button v-for="r in roleOptions" :key="r.value"
+              class="rounded-lg border py-2.5 px-3 text-left transition-colors"
+              :class="editForm.role === r.value
+                ? 'border-gray-900 bg-gray-900 text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'"
+              @click="editForm.role = r.value">
+              <p class="text-xs font-semibold">{{ r.label }}</p>
+              <p class="text-[10px] mt-0.5 opacity-70">{{ r.desc }}</p>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-gray-600">Reports To</label>
+          <select v-model="editForm.reports_to"
+            class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+            <option value="">— Top level —</option>
+            <option v-for="u in managerOptions.filter(u => u.sales_person !== editUser.sales_person)"
+              :key="u.sales_person" :value="u.sales_person">
+              {{ u.full_name }} ({{ u.role }})
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-gray-600">Territory</label>
+          <select v-model="editForm.territory"
+            class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+            <option value="">Select territory…</option>
+            <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
+          </select>
+        </div>
+        <FormField v-model="editForm.mobile_no" label="Mobile Number" />
+      </div>
+
+      <div v-show="editTab === 'Companies'" class="space-y-2">
+        <p class="text-xs text-gray-400">Products this rep can sell. Leave all unchecked to allow every company. Managers and admins always see everything.</p>
+        <label v-for="c in companyList" :key="c.name"
+          class="flex items-center gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 cursor-pointer hover:bg-gray-50">
+          <input type="checkbox" :value="c.company_name" v-model="editForm.companies" class="rounded border-gray-300" />
+          {{ c.company_name }}
+        </label>
+        <div v-if="!companyList.length" class="rounded-lg border border-dashed border-gray-200 py-4 text-center text-xs text-gray-400">
+          No companies defined yet — add them under Catalog.
+        </div>
+      </div>
+
+      <div v-show="editTab === 'Access'" class="space-y-4">
+        <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Can export reports</p>
+            <p class="text-xs text-gray-400">Allow this user to download report data (Excel/CSV). Admins can always export.</p>
+          </div>
+          <button type="button"
+            class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
+            :class="editForm.can_export_reports ? 'bg-gray-900' : 'bg-gray-200'"
+            @click="editForm.can_export_reports = !editForm.can_export_reports">
+            <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
+              :class="editForm.can_export_reports ? 'translate-x-4' : 'translate-x-0.5'" />
           </button>
         </div>
-      </div>
-      <div>
-        <label class="mb-1.5 block text-xs font-medium text-gray-600">Reports To</label>
-        <select v-model="editForm.reports_to"
-          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
-          <option value="">— Top level —</option>
-          <option v-for="u in managerOptions.filter(u => u.sales_person !== editUser.sales_person)"
-            :key="u.sales_person" :value="u.sales_person">
-            {{ u.full_name }} ({{ u.role }})
-          </option>
-        </select>
-      </div>
-      <div>
-        <label class="mb-1.5 block text-xs font-medium text-gray-600">Territory</label>
-        <select v-model="editForm.territory"
-          class="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
-          <option value="">Select territory…</option>
-          <option v-for="t in territories" :key="t.name" :value="t.name">{{ t.name }}</option>
-        </select>
-      </div>
-      <FormField v-model="editForm.mobile_no" label="Mobile Number" />
-
-      <!-- Export reports permission -->
-      <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-        <div>
-          <p class="text-sm font-medium text-gray-700">Can export reports</p>
-          <p class="text-xs text-gray-400">Allow this user to download report data (Excel/CSV). Admins can always export.</p>
-        </div>
-        <button type="button"
-          class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
-          :class="editForm.can_export_reports ? 'bg-gray-900' : 'bg-gray-200'"
-          @click="editForm.can_export_reports = !editForm.can_export_reports">
-          <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
-            :class="editForm.can_export_reports ? 'translate-x-4' : 'translate-x-0.5'" />
-        </button>
       </div>
     </div>
   </SlidePanel>
@@ -362,6 +389,7 @@ export const TreeNode = defineComponent({
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
+import { useRouter } from 'vue-router'
 import { successToast, errorToast } from '@/utils/toast'
 import Btn from '@/components/ui/Btn.vue'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
@@ -369,6 +397,7 @@ import FormField from '@/components/ui/FormField.vue'
 import dayjs from 'dayjs'
 
 const tab = ref('Team')
+const router = useRouter()
 const users = ref([])
 const hierarchy = ref([])
 const loading = ref(false)
@@ -395,8 +424,12 @@ const form = reactive({
 
 const editForm = reactive({
   first_name: '', last_name: '', role: '', territory: '', mobile_no: '', reports_to: '',
-  can_export_reports: false,
+  can_export_reports: false, companies: [],
 })
+
+const editTabs = ['Details', 'Companies', 'Access']
+const editTab = ref('Details')
+const companyList = ref([])
 
 const managerOptions = computed(() =>
   users.value.filter(u => u.role === 'SFA Admin' || u.role === 'SFA Manager')
@@ -427,14 +460,16 @@ function onReportsToChange() {
 async function load() {
   loading.value = true
   try {
-    const [usersRes, hierRes, terrRes] = await Promise.all([
+    const [usersRes, hierRes, terrRes, coRes] = await Promise.all([
       call('sfa_core.api.settings.get_users'),
       call('sfa_core.api.settings.get_team_hierarchy'),
       call('sfa_core.api.settings.get_territories'),
+      call('sfa_core.field_sfa.api.catalog.get_companies'),
     ])
     users.value = usersRes.message || []
     hierarchy.value = hierRes.message || []
     territories.value = terrRes.message || []
+    companyList.value = (coRes.message || []).filter(c => c.enabled)
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
@@ -448,6 +483,10 @@ function openCreate() {
   createPanel.value = true
 }
 
+function openProfile(user) {
+  router.push({ name: 'RepProfile', params: { sp: user.sales_person } })
+}
+
 function openEdit(user) {
   editUser.value = user
   const parts = (user.full_name || '').split(' ')
@@ -459,7 +498,9 @@ function openEdit(user) {
     mobile_no: user.mobile_no || '',
     reports_to: user.reports_to || '',
     can_export_reports: !!user.can_export_reports,
+    companies: [...(user.companies || [])],
   })
+  editTab.value = 'Details'
   editPanel.value = true
 }
 
@@ -507,6 +548,7 @@ async function saveEdit() {
       last_name: editForm.last_name,
       reports_to: editForm.reports_to || null,
       can_export_reports: editForm.can_export_reports ? 1 : 0,
+      companies: JSON.stringify(editForm.companies || []),
     })
     successToast('User updated')
     editPanel.value = false

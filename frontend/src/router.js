@@ -14,7 +14,10 @@ const routes = [
   { path: '/beat-plans', name: 'BeatPlans', component: () => import('@/pages/BeatPlans.vue') },
 
   { path: '/orders', name: 'Orders', component: () => import('@/pages/Orders.vue') },
+  { path: '/orders/:name', name: 'OrderDetail', component: () => import('@/pages/OrderDetail.vue'), props: true },
   { path: '/payments', name: 'Payments', component: () => import('@/pages/Payments.vue') },
+  { path: '/catalog', name: 'Catalog', component: () => import('@/pages/catalog/Catalog.vue') },
+  { path: '/schemes', name: 'FreeCartonSchemes', component: () => import('@/pages/schemes/Schemes.vue') },
   { path: '/expenses', name: 'Expenses', component: () => import('@/pages/expenses/Expenses.vue') },
   { path: '/leave', name: 'Leave', component: () => import('@/pages/leave/Leave.vue') },
   { path: "/approvals/expenses", name: "ExpenseApprovals", component: () => import("@/pages/approvals/ExpenseApprovals.vue") },
@@ -22,7 +25,7 @@ const routes = [
 
   { path: '/form-templates', name: 'FormTemplates', component: () => import('@/pages/forms/FormTemplates.vue') },
   { path: '/form-templates/new', name: 'NewFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue') },
-  { path: '/form-templates/:name', name: 'EditFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue'), props: true },
+  { path: '/form-templates/:templateId', name: 'EditFormTemplate', component: () => import('@/pages/forms/FormTemplateEditor.vue'), props: true },
 
   { path: '/gamification', name: 'Gamification', component: () => import('@/pages/Gamification.vue') },
   { path: '/reports', name: 'Reports', component: () => import('@/pages/Reports.vue') },
@@ -31,6 +34,7 @@ const routes = [
   { path: '/targets/performance', name: 'TargetsPerformance', component: () => import('@/pages/TargetsPerformance.vue') },
   { path: '/settings', name: 'SettingsHub', component: () => import('@/pages/SettingsHub.vue') },
   { path: '/settings/team', name: 'SettingsTeam', component: () => import('@/pages/Settings.vue') },
+  { path: '/settings/team/:sp', name: 'RepProfile', component: () => import('@/pages/team/RepProfile.vue'), props: true },
   { path: '/settings/territories', name: 'SettingsTerritories', component: () => import('@/pages/SettingsTerritories.vue') },
   { path: '/settings/import-outlets', name: 'SettingsImportOutlets', component: () => import('@/pages/SettingsImportOutlets.vue') },
   { path: '/settings/beat-plan-permissions', name: 'BeatPlanPermissions', component: () => import('@/pages/BeatPlans.vue') },

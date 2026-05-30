@@ -4,6 +4,13 @@ from frappe.utils import time_diff_in_seconds
 
 
 def validate(doc, method):
+    # Auto-track check-in/out so field reps don't tap buttons:
+    #   check-in  = when the visit is created
+    #   check-out = when the visit is marked Completed
+    if doc.is_new() and not doc.check_in_time:
+        doc.check_in_time = now()
+    if doc.status == "Completed" and not doc.check_out_time:
+        doc.check_out_time = now()
     if doc.check_in_time and doc.check_out_time:
         doc.duration_minutes = int(
             (time_diff_in_seconds(doc.check_out_time, doc.check_in_time) or 0) / 60

@@ -22,7 +22,7 @@ def get_dashboard_data(period='week'):
 
     df, dt = str(date_from), str(date_to)
 
-    # Build territory/rep filter based on role
+    # Build territory/rep scope fragments based on role
     if ctx['is_rep']:
         visit_filter = f"AND v.sales_person = {frappe.db.escape(ctx['sales_person'])}"
         cust_filter  = f"AND c.custom_sfa_rep = {frappe.db.escape(ctx['sales_person'])}"
@@ -33,50 +33,73 @@ def get_dashboard_data(period='week'):
         visit_filter = ''
         cust_filter  = ''
 
-    # Visits
-    visits = frappe.db.sql(f"""
-        SELECT COUNT(*) as total,
-               SUM(CASE WHEN v.status='Completed' THEN 1 ELSE 0 END) as completed
+    # Visits: total (non-cancelled), completed, in-progress, distinct reps
+    v = frappe.db.sql(f"""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN v.status = 'Completed' THEN 1 ELSE 0 END) AS completed,
+            SUM(CASE WHEN v.status = 'In Progress' THEN 1 ELSE 0 END) AS active,
+            COUNT(DISTINCT v.sales_person) AS reps
         FROM `tabSFA Visit` v
         LEFT JOIN `tabCustomer` c2 ON c2.name = v.customer
         WHERE v.visit_date BETWEEN %s AND %s
           AND v.status != 'Cancelled'
           {visit_filter}
     """, (df, dt), as_dict=True)[0]
+    total_v = int(v.total or 0)
+    completed_v = int(v.completed or 0)
 
-    # Revenue
-    revenue = frappe.db.sql(f"""
-        SELECT IFNULL(SUM(o.grand_total), 0) as total
+    # Orders (submitted) + revenue
+    o = frappe.db.sql(f"""
+        SELECT COUNT(*) AS cnt, IFNULL(SUM(o.grand_total), 0) AS total
         FROM `tabSales Order` o
         INNER JOIN `tabCustomer` c ON c.name = o.customer
         WHERE DATE(o.transaction_date) BETWEEN %s AND %s
           AND o.docstatus = 1
           {cust_filter}
+    """, (df, dt), as_dict=True)[0]
+
+    # Payments collected (not cancelled)
+    payments = frappe.db.sql(f"""
+        SELECT IFNULL(SUM(p.amount), 0) AS total
+        FROM `tabSFA Payment` p
+        INNER JOIN `tabCustomer` c ON c.name = p.customer
+        WHERE p.payment_date BETWEEN %s AND %s
+          AND IFNULL(p.status, '') != 'Cancelled'
+          {cust_filter}
     """, (df, dt), as_dict=True)[0].total or 0
 
-    # Active customers
-    active_customers = frappe.db.sql(f"""
-        SELECT COUNT(DISTINCT v.customer) as cnt
-        FROM `tabSFA Visit` v
-        LEFT JOIN `tabCustomer` c2 ON c2.name = v.customer
-        WHERE v.visit_date BETWEEN %s AND %s
-          AND v.status = 'Completed'
-          {visit_filter}
+    # New customers created in the period
+    new_customers = frappe.db.sql(f"""
+        SELECT COUNT(*) AS cnt
+        FROM `tabCustomer` c
+        WHERE DATE(c.creation) BETWEEN %s AND %s
+          AND c.disabled = 0
+          {cust_filter}
     """, (df, dt), as_dict=True)[0].cnt or 0
 
-    # Total customers in scope
-    total_customers = frappe.db.sql(f"""
-        SELECT COUNT(*) as cnt FROM `tabCustomer` c
-        WHERE c.disabled = 0 {cust_filter}
-    """, as_dict=True)[0].cnt or 0
+    # Forms submitted in the period
+    forms = frappe.db.sql(f"""
+        SELECT COUNT(*) AS cnt
+        FROM `tabSFA Form Response` r
+        LEFT JOIN `tabCustomer` c ON c.name = r.customer
+        WHERE DATE(r.response_date) BETWEEN %s AND %s
+          {cust_filter}
+    """, (df, dt), as_dict=True)[0].cnt or 0
 
-    compliance = round((visits.completed / visits.total * 100) if visits.total else 0)
+    compliance = round((completed_v / total_v * 100) if total_v else 0)
 
     return {
-        'visits': {'total': visits.total, 'completed': visits.completed, 'compliance': compliance},
-        'revenue': float(revenue),
-        'active_customers': active_customers,
-        'total_customers': total_customers,
+        'active_visits': int(v.active or 0),
+        'completed_visits': completed_v,
+        'total_visits': total_v,
+        'compliance_rate': compliance,
+        'orders_count': int(o.cnt or 0),
+        'revenue': float(o.total or 0),
+        'payments_collected': float(payments or 0),
+        'active_reps': int(v.reps or 0),
+        'new_customers': int(new_customers),
+        'forms_submitted': int(forms),
         'period': period,
         'date_from': df,
         'date_to': dt,

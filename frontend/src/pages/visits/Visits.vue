@@ -10,6 +10,14 @@
         <option value="">All Statuses</option>
         <option>Planned</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
       </select>
+      <select v-model="repFilter" @change="applyFilters" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+        <option value="">All Reps</option>
+        <option v-for="r in salesPersons" :key="r" :value="r">{{ r }}</option>
+      </select>
+      <select v-model="territoryFilter" @change="applyFilters" class="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:border-gray-400 focus:outline-none">
+        <option value="">All Territories</option>
+        <option v-for="t in territories" :key="t" :value="t">{{ t }}</option>
+      </select>
       <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" @change="applyFilters" />
       <div class="flex-1" />
       <span class="text-xs text-gray-400">{{ total }} visits</span>
@@ -40,7 +48,7 @@
           <tr v-for="v in filtered" :key="v.name"
             class="cursor-pointer hover:bg-gray-50 transition-colors group"
             @click="$router.push('/visits/' + v.name)">
-            <td class="px-4 py-3 font-mono text-xs text-gray-400">{{ v.name }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-blue-600">{{ v.name }}</td>
             <td class="px-4 py-3 font-medium text-gray-900">{{ v.customer }}</td>
             <td class="px-4 py-3 text-gray-600">{{ v.sales_person }}</td>
             <td class="px-4 py-3 text-gray-600">{{ formatDate(v.visit_date) }}</td>
@@ -95,10 +103,12 @@ import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import { useLinkedData } from '@/composables/useLinkedData'
 import dayjs from 'dayjs'
 
-const { customers, salesPersons, beatPlans, loadCustomers, loadSalesPersons, loadBeatPlans } = useLinkedData()
+const { customers, salesPersons, territories, beatPlans, loadCustomers, loadSalesPersons, loadTerritories, loadBeatPlans } = useLinkedData()
 
 const search = ref('')
 const statusFilter = ref('')
+const repFilter = ref('')
+const territoryFilter = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
 const page = ref(1)
@@ -118,6 +128,8 @@ async function load(append = false) {
   try {
     const res = (await call('sfa_core.api.list.get_visits', {
       search: search.value || null,
+      rep: repFilter.value || null,
+      territory: territoryFilter.value || null,
       status: statusFilter.value || null,
       date_from: dateFrom.value || null,
       date_to: dateTo.value || null,
@@ -177,5 +189,5 @@ const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'
 const formatTime = (t) => t ? dayjs(t).format('HH:mm') : '—'
 const statusClass = (s) => ({ 'In Progress': 'bg-green-50 text-green-700', 'Completed': 'bg-blue-50 text-blue-700', 'Planned': 'bg-gray-100 text-gray-600', 'Cancelled': 'bg-red-50 text-red-700' })[s] || 'bg-gray-100 text-gray-600'
 
-onMounted(() => { loadCustomers(); loadSalesPersons(); loadBeatPlans() })
+onMounted(() => { loadCustomers(); loadSalesPersons(); loadTerritories(); loadBeatPlans(); load() })
 </script>

@@ -122,6 +122,7 @@ def get_users():
             'role': role,
             'has_user': bool(user),
             'can_export_reports': bool(user.custom_can_export_reports) if user else False,
+            'companies': frappe.get_all('SFA Sales Person Company', filters={'parent': sp.name}, pluck='company'),
         })
 
     return result
@@ -191,7 +192,7 @@ def create_user(first_name, last_name, email, password, role,
 @frappe.whitelist()
 def update_user(sales_person, role=None, territory=None, mobile_no=None,
                 sfa_active=None, first_name=None, last_name=None, reports_to=None,
-                can_export_reports=None):
+                can_export_reports=None, companies=None):
     """Update a user's role, territory, or status."""
     require_role('SFA Admin')
 
@@ -207,6 +208,15 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
         sp_update['parent_sales_person'] = reports_to or 'Sales Team'
     if sp_update:
         frappe.db.set_value('Sales Person', sales_person, sp_update)
+
+    if companies is not None:
+        import json
+        names = json.loads(companies) if isinstance(companies, str) else companies
+        sp_doc = frappe.get_doc('Sales Person', sales_person)
+        sp_doc.set('custom_sfa_companies', [])
+        for cn in (names or []):
+            sp_doc.append('custom_sfa_companies', {'company': cn})
+        sp_doc.save(ignore_permissions=True)
 
     # Update User
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')

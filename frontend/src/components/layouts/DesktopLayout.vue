@@ -45,6 +45,8 @@
 
         <SidebarLink :item="{ label: 'Orders', to: '/orders', icon: 'shopping-cart' }" :collapsed="collapsed" />
         <SidebarLink :item="{ label: 'Payments', to: '/payments', icon: 'credit-card' }" :collapsed="collapsed" />
+        <SidebarLink :item="{ label: 'Catalog', to: '/catalog', icon: 'package' }" :collapsed="collapsed" />
+        <SidebarLink :item="{ label: 'Free Schemes', to: '/schemes', icon: 'gift' }" :collapsed="collapsed" />
 
         <div v-show="!collapsed" class="px-2 pt-3 pb-1">
           <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Intelligence</p>

@@ -332,7 +332,7 @@ async function load() {
     }),
     getList('Sales Order', {
       fields: ['name', 'transaction_date', 'status', 'grand_total', 'total_qty'],
-      filters: { customer: d.customer }, orderBy: 'transaction_date desc', limit: 10,
+      filters: { custom_sfa_visit: props.name }, orderBy: 'transaction_date desc', limit: 10,
     }),
     getList('SFA Payment', {
       fields: ['name', 'payment_date', 'payment_type', 'amount', 'status'],

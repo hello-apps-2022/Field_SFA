@@ -22,7 +22,7 @@
           <div class="flex flex-wrap gap-4 text-xs text-gray-400">
             <span class="flex items-center gap-1">
               <FeatherIcon name="user" class="h-3 w-3" />
-              {{ response.sales_person || 'Unknown' }}
+              {{ response.sales_person || response.owner || 'Unknown' }}
             </span>
             <span class="flex items-center gap-1">
               <FeatherIcon name="users" class="h-3 w-3" />

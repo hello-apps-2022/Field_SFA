@@ -79,7 +79,7 @@
 
     <!-- SurveyJS Creator — takes all remaining height -->
     <div class="min-h-0 flex-1">
-      <SurveyCreatorComponent :model="creatorModel" />
+      <SurveyCreatorComponent v-if="ready" :model="creatorModel" />
     </div>
 
     <!-- Preview modal -->
@@ -125,6 +125,7 @@ const showPreview = ref(false)
 const previewModel = ref(null)
 const docModified = ref(null)
 const isEditing = ref(!!props.templateId)
+const ready = ref(false)
 
 const creatorModel = new SurveyCreatorModel({
   showLogicTab: true,
@@ -158,6 +159,7 @@ onMounted(async () => {
       frappe.show_alert({ message: 'Failed to load template', indicator: 'red' })
     }
   }
+  ready.value = true
 })
 
 onBeforeUnmount(() => creatorModel.dispose())

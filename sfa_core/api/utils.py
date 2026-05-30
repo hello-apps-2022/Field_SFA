@@ -29,7 +29,10 @@ def save_doc(doc):
             continue
         if hasattr(d, key):
             try:
-                setattr(d, key, value)
+                if isinstance(value, list):
+                    d.set(key, value)
+                else:
+                    setattr(d, key, value)
             except Exception:
                 pass
 

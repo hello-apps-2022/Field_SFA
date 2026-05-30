@@ -15,6 +15,8 @@ export const auth = {
   get salesPerson() { return getBoot().sales_person },
   get employee()    { return getBoot().employee },
   get territory()   { return getBoot().territory },
+  get companies()   { return getBoot().companies || [] },
+  get allowDiscretionaryFree() { return getBoot().allow_discretionary_free || false },
 
   canAccess(page) {
     const r = this
@@ -25,6 +27,8 @@ export const auth = {
       'beat-plans':          true,
       'orders':              true,
       'payments':            true,
+      'catalog':             r.isAdmin || r.isManager,
+      'schemes':             true,
       'expenses':            true,
       'leave':               true,
       'approvals/expenses':  r.isAdmin || r.isManager,
@@ -42,7 +46,16 @@ export const auth = {
       'settings/territories': r.isAdmin,
       'settings/beat-plan-permissions': r.isAdmin || r.isManager,
     }
-    return rules[page] ?? r.isAdmin
+    if (page.startsWith('settings/team/')) return r.isAdmin || r.isManager || r.isRep
+    // Exact match first, then match the longest rule key that is a path-segment
+    // prefix of the page (so "customers/<name>" resolves to the "customers" rule).
+    if (page in rules) return rules[page]
+    const parts = page.split('/')
+    for (let n = parts.length - 1; n >= 1; n--) {
+      const key = parts.slice(0, n).join('/')
+      if (key in rules) return rules[key]
+    }
+    return r.isAdmin
   },
 
   can(action) {

@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "FCS-.YYYY.-.#####",
+ "creation": "2026-05-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "target_type",
+  "customer",
+  "territory",
+  "customers",
+  "territories",
+  "offer_section",
+  "buy_item",
+  "buy_qty",
+  "column_break_offer",
+  "free_item",
+  "free_qty",
+  "validity_section",
+  "valid_from",
+  "valid_to",
+  "column_break_validity",
+  "enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "target_type",
+   "label": "Target Type",
+   "fieldtype": "Select",
+   "options": "Customer\nTerritory",
+   "default": "Customer",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "customer",
+   "label": "Customer",
+   "fieldtype": "Link",
+   "options": "Customer",
+   "depends_on": "eval:doc.target_type=='Customer'",
+   "mandatory_depends_on": "eval:doc.target_type=='Customer'",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "territory",
+   "label": "Territory",
+   "fieldtype": "Link",
+   "options": "Territory",
+   "depends_on": "eval:doc.target_type=='Territory'",
+   "mandatory_depends_on": "eval:doc.target_type=='Territory'",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "offer_section",
+   "label": "Offer",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "buy_item",
+   "label": "Buy Item",
+   "fieldtype": "Link",
+   "options": "Item",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "buy_qty",
+   "label": "Buy Qty",
+   "fieldtype": "Float",
+   "default": "1",
+   "reqd": 1,
+   "description": "Minimum quantity of Buy Item on an order to qualify."
+  },
+  {
+   "fieldname": "column_break_offer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "free_item",
+   "label": "Free Item",
+   "fieldtype": "Link",
+   "options": "Item",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "May be the same as Buy Item."
+  },
+  {
+   "fieldname": "free_qty",
+   "label": "Free Qty",
+   "fieldtype": "Float",
+   "default": "1",
+   "reqd": 1,
+   "description": "Free cartons granted per qualifying order."
+  },
+  {
+   "fieldname": "validity_section",
+   "label": "Validity",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "valid_from",
+   "label": "Valid From",
+   "fieldtype": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valid_to",
+   "label": "Valid To",
+   "fieldtype": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_validity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enabled",
+   "label": "Enabled",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "customers",
+   "label": "Customers",
+   "fieldtype": "Table",
+   "options": "SFA Free Carton Scheme Customer"
+  },
+  {
+   "fieldname": "territories",
+   "label": "Territories",
+   "fieldtype": "Table",
+   "options": "SFA Free Carton Scheme Territory"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-29 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Field SFA",
+ "name": "SFA Free Carton Scheme",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "SFA Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "SFA Rep",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "if_owner": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

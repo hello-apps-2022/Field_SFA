@@ -29,13 +29,42 @@
           </div>
         </div>
 
+        <div v-if="auth.isAdmin || auth.isManager">
+          <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 px-1 mb-2">Policies</p>
+          <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <label class="flex items-center gap-4 px-4 py-4 cursor-pointer">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-pink-50">
+                <FeatherIcon name="gift" class="h-4 w-4 text-pink-600" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900">Discretionary free cartons</p>
+                <p class="text-xs text-gray-400 mt-0.5">Let reps mark any order line free without a matching scheme.</p>
+              </div>
+              <input type="checkbox" v-model="allowFree" @change="saveFreePolicy" class="h-4 w-4 rounded border-gray-300" />
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import FeatherIcon from '@/components/ui/FeatherIcon.vue'
+import { call } from '@/utils/frappe'
+import { auth } from '@/utils/auth'
+import { successToast, errorToast } from '@/utils/toast'
+
+const allowFree = ref(auth.allowDiscretionaryFree)
+async function saveFreePolicy() {
+  try {
+    await call('sfa_core.field_sfa.api.free_carton.set_free_carton_policy', { allow: allowFree.value ? 1 : 0 })
+    if (window.frappe_boot && window.frappe_boot.sfa) window.frappe_boot.sfa.allow_discretionary_free = allowFree.value ? 1 : 0
+    successToast(allowFree.value ? 'Reps can now give free cartons at will' : 'Discretionary free cartons disabled')
+  } catch (e) { errorToast(e.message || 'Failed to save'); allowFree.value = !allowFree.value }
+}
 
 const sections = [
   {
@@ -77,6 +106,27 @@ const sections = [
         icon: 'map',
         iconBg: 'bg-amber-50',
         iconColor: 'text-amber-600',
+      },
+    ],
+  },
+  {
+    title: 'Commerce',
+    items: [
+      {
+        to: '/catalog',
+        label: 'Catalog',
+        desc: 'Define companies, product categories and products. Set prices.',
+        icon: 'package',
+        iconBg: 'bg-purple-50',
+        iconColor: 'text-purple-600',
+      },
+      {
+        to: '/schemes',
+        label: 'Free Schemes',
+        desc: 'Buy-X-get-Y free carton schemes per customer or territory.',
+        icon: 'gift',
+        iconBg: 'bg-pink-50',
+        iconColor: 'text-pink-600',
       },
     ],
   },

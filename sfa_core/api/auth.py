@@ -34,6 +34,13 @@ def get_current_sales_person():
     return sp
 
 
+def _allow_disc_free():
+    try:
+        return bool(frappe.db.get_single_value("SFA Brand Settings", "allow_discretionary_free"))
+    except Exception:
+        return False
+
+
 def get_user_context():
     """
     Full context for the current user.
@@ -52,6 +59,8 @@ def get_user_context():
             'sales_person_name': None,
             'employee': None,
             'territory': None,
+            'companies': [],
+            'allow_discretionary_free': _allow_disc_free(),
             'user': user,
         }
 
@@ -72,6 +81,8 @@ def get_user_context():
         'sales_person_name': sp.sales_person_name if sp else None,
         'employee': (sp.custom_employee if sp else None),
         'territory': territory,
+        'companies': frappe.get_all('SFA Sales Person Company', filters={'parent': sp.name}, pluck='company') if sp else [],
+        'allow_discretionary_free': _allow_disc_free(),
         'user': user,
     }
 

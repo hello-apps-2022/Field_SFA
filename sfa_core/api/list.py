@@ -96,7 +96,7 @@ def get_customers(search=None, territory=None, customer_group=None,
 
 @frappe.whitelist()
 def get_visits(search=None, rep=None, status=None, date_from=None,
-               date_to=None, customer=None, start=0, page_length=50):
+               date_to=None, customer=None, territory=None, start=0, page_length=50):
     ctx = get_user_context()
     filters = {}
 
@@ -114,7 +114,7 @@ def get_visits(search=None, rep=None, status=None, date_from=None,
         filters['customer'] = ['in', terr_customers]
 
     # Additional filters
-    if rep and ctx['is_admin']:
+    if rep and not ctx['is_rep']:
         filters['sales_person'] = rep
     if status:
         filters['status'] = status
@@ -126,6 +126,13 @@ def get_visits(search=None, rep=None, status=None, date_from=None,
         filters['visit_date'] = ['<=', date_to]
     if customer:
         filters['customer'] = customer
+    if territory:
+        tcs = set(frappe.get_all('Customer', filters={'territory': territory}, pluck='name'))
+        if isinstance(filters.get('customer'), list) and filters['customer'][0] == 'in':
+            tcs &= set(filters['customer'][1])
+        elif filters.get('customer'):
+            tcs &= {filters['customer']}
+        filters['customer'] = ['in', list(tcs) if tcs else ['__none__']]
 
     or_filters = None
     if search:
@@ -283,3 +290,15 @@ def get_payments(search=None, rep=None, status=None, date_from=None,
 
     return {'items': payments, 'total': total, 'sum_amount': sum_amount,
             'sum_cash': sum_cash, 'carton_count': carton_count}
+
+
+@frappe.whitelist()
+def get_customer_groups():
+    """Customer groups for SFA dropdowns. Reps lack a role permission on
+    Customer Group, so this reads with ignore_permissions (non-sensitive
+    reference data)."""
+    rows = frappe.get_all(
+        "Customer Group", fields=["name"], order_by="name",
+        ignore_permissions=True, limit_page_length=0,
+    )
+    return [r.name for r in rows]

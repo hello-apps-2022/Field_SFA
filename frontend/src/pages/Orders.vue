@@ -70,7 +70,7 @@
         <tbody class="divide-y divide-gray-50">
           <tr v-for="o in filtered" :key="o.name"
             class="cursor-pointer hover:bg-gray-50 transition-colors"
-            @click="$router.push('/customers/' + o.customer)"
+            @click="$router.push('/orders/' + o.name)"
           >
             <td class="px-5 py-3 font-mono text-xs text-blue-600">{{ o.name }}</td>
             <td class="px-5 py-3 font-medium text-gray-900">{{ o.customer }}</td>

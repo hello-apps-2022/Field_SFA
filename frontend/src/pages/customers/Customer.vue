@@ -231,13 +231,98 @@
       </div>
 
       <!-- ── VISITS ── -->
-      <div v-show="activeTab==='visits'" class="p-5">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="text-sm text-gray-500">{{ visits.length }} visits</p>
-          <Btn variant="solid" icon="plus" size="sm" @click="newVisitPanel=true">New Visit</Btn>
+      <div v-show="activeTab==='summary'" class="space-y-4 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm font-medium text-gray-700">Activity summary</p>
+          <DateRangeFilter v-model:from="sFrom" v-model:to="sTo" @change="fetchSummary" />
         </div>
-        <div v-if="visits.length" class="space-y-2">
-          <div v-for="v in visits" :key="v.name"
+
+        <div v-if="summaryLoading" class="py-10 text-center text-sm text-gray-400">Loading summary…</div>
+
+        <template v-else-if="summaryData">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Cartons purchased</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900">{{ summaryData.totals.paid_qty || 0 }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Free cartons</p>
+              <p class="mt-1 text-xl font-semibold text-green-600">{{ summaryData.totals.free_qty || 0 }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Order value</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900">{{ formatUGX(summaryData.totals.value) }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Visits</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900">{{ summaryData.visits.total || 0 }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Forms filled</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900">{{ summaryData.forms.total || 0 }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-3">
+              <p class="text-[11px] uppercase tracking-wide text-gray-400">Cash collected</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900">{{ formatUGX(summaryData.payments.cash_total) }}</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-gray-200 bg-white">
+            <p class="border-b border-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700">Products purchased</p>
+            <div v-if="summaryData.products.length" class="divide-y divide-gray-50">
+              <div class="flex items-center gap-2 px-4 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                <span class="flex-1">Item</span><span class="w-16 text-right">Bought</span><span class="w-16 text-right">Free</span><span class="w-24 text-right">Value</span>
+              </div>
+              <div v-for="p in summaryData.products" :key="p.item_code" class="flex items-center gap-2 px-4 py-2 text-sm">
+                <span class="flex-1 truncate text-gray-800">{{ p.item_name || p.item_code }}</span>
+                <span class="w-16 text-right text-gray-900">{{ p.paid_qty || 0 }}</span>
+                <span class="w-16 text-right text-green-600">{{ p.free_qty ? '+' + p.free_qty : '—' }}</span>
+                <span class="w-24 text-right text-gray-700">{{ formatUGX(p.amount) }}</span>
+              </div>
+            </div>
+            <p v-else class="px-4 py-4 text-center text-xs text-gray-400">No purchases in this range</p>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="rounded-xl border border-gray-200 bg-white">
+              <p class="border-b border-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700">Visits by rep</p>
+              <div v-if="summaryData.visits.by_rep.length" class="divide-y divide-gray-50">
+                <div v-for="r in summaryData.visits.by_rep" :key="r.sales_person || '_'" class="flex items-center justify-between px-4 py-2 text-sm">
+                  <span class="flex items-center gap-1.5 text-gray-800"><FeatherIcon name="user" class="h-3.5 w-3.5 text-gray-400" />{{ r.sales_person || 'Unassigned' }}</span>
+                  <span class="font-medium text-gray-900">{{ r.cnt }}</span>
+                </div>
+              </div>
+              <p v-else class="px-4 py-4 text-center text-xs text-gray-400">No visits in this range</p>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white">
+              <p class="border-b border-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700">Payments</p>
+              <div class="divide-y divide-gray-50">
+                <div v-for="r in summaryData.payments.by_type" :key="r.payment_type || '_'" class="flex items-center justify-between px-4 py-2 text-sm">
+                  <span class="text-gray-700">{{ r.payment_type || 'Cash' }} <span class="text-gray-400">×{{ r.cnt }}</span></span>
+                  <span class="font-medium text-gray-900">{{ formatUGX(r.amt) }}</span>
+                </div>
+                <div v-if="summaryData.payments.carton_count" class="flex items-center justify-between px-4 py-2 text-sm">
+                  <span class="text-gray-700">Cartons <span class="text-gray-400">×{{ summaryData.payments.carton_count }}</span></span>
+                  <span class="font-medium text-gray-900">{{ summaryData.payments.carton_total != null ? summaryData.payments.carton_total + ' ctns' : '—' }}</span>
+                </div>
+                <p v-if="!summaryData.payments.by_type.length && !summaryData.payments.carton_count" class="px-4 py-4 text-center text-xs text-gray-400">No payments in this range</p>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div v-show="activeTab==='visits'" class="p-5">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-gray-500">{{ fVisits.length }} visits</p>
+          <div class="flex items-center gap-2">
+            <DateRangeFilter v-model:from="vFrom" v-model:to="vTo" />
+            <Btn variant="solid" icon="plus" size="sm" @click="newVisitPanel=true">New Visit</Btn>
+          </div>
+        </div>
+        <div v-if="fVisits.length" class="space-y-2">
+          <div v-for="v in fVisits" :key="v.name"
             class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 cursor-pointer hover:bg-gray-50"
             @click="$router.push('/visits/'+v.name)"
           >
@@ -245,7 +330,7 @@
               <div class="h-2 w-2 rounded-full shrink-0"
                 :class="{'bg-green-500':v.status==='In Progress','bg-blue-400':v.status==='Completed','bg-gray-300':v.status==='Open','bg-red-400':v.status==='Cancelled'}" />
               <div>
-                <p class="text-sm font-medium text-gray-900">{{ formatDate(v.visit_date) }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ formatDate(v.visit_date) }}<span v-if="v.check_in_time" class="ml-1.5 text-xs font-normal text-gray-400">{{ formatTime(v.check_in_time) }}</span></p>
                 <p class="text-xs text-gray-500">{{ v.sales_person }}{{ v.visit_purpose?' · '+v.visit_purpose:'' }}</p>
               </div>
             </div>
@@ -264,12 +349,15 @@
 
       <!-- ── FORMS ── -->
       <div v-show="activeTab==='forms'" class="p-5">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="text-sm text-gray-500">{{ formResponses.length }} responses</p>
-          <Btn variant="solid" icon="file-text" size="sm" @click="fillFormPanel=true">Fill Form</Btn>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-gray-500">{{ fForms.length }} responses</p>
+          <div class="flex items-center gap-2">
+            <DateRangeFilter v-model:from="fFrom" v-model:to="fTo" />
+            <Btn variant="solid" icon="file-text" size="sm" @click="fillFormPanel=true">Fill Form</Btn>
+          </div>
         </div>
-        <div v-if="formResponses.length" class="space-y-2">
-          <div v-for="r in formResponses" :key="r.name"
+        <div v-if="fForms.length" class="space-y-2">
+          <div v-for="r in fForms" :key="r.name"
           class="rounded-xl border border-gray-200 bg-white p-4 cursor-pointer hover:bg-gray-50 transition-colors"
           @click="selectedResponseName = r.name; responsePanel = true"
         >
@@ -281,8 +369,8 @@
                 <div>
                   <p class="text-sm font-medium text-gray-900">{{ r.form_template }}</p>
                   <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                    <span v-if="r.sales_person" class="flex items-center gap-1">
-                      <FeatherIcon name="user" class="h-3 w-3" />{{ r.sales_person }}
+                    <span v-if="r.sales_person || r.owner" class="flex items-center gap-1">
+                      <FeatherIcon name="user" class="h-3 w-3" />{{ r.sales_person || r.owner }}
                     </span>
                     <span class="flex items-center gap-1">
                       <FeatherIcon name="calendar" class="h-3 w-3" />{{ formatDate(r.response_date) }}
@@ -310,22 +398,46 @@
 
       <!-- ── ORDERS ── -->
       <div v-show="activeTab==='orders'" class="p-5">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="text-sm text-gray-500">{{ orders.length }} orders · {{ formatUGX(orders.reduce((s,o)=>s+(o.grand_total||0),0)) }} total</p>
-          <Btn variant="solid" icon="plus" size="sm" @click="newOrderPanel=true">New Order</Btn>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-gray-500">{{ fOrders.length }} orders · {{ formatUGX(fOrders.reduce((s,o)=>s+(o.grand_total||0),0)) }} total</p>
+          <div class="flex items-center gap-2">
+            <DateRangeFilter v-model:from="oFrom" v-model:to="oTo" />
+            <Btn variant="solid" icon="plus" size="sm" @click="openNewOrder">New Order</Btn>
+          </div>
         </div>
-        <div v-if="orders.length" class="space-y-2">
-          <div v-for="o in orders" :key="o.name"
+        <div class="mb-3 flex flex-wrap gap-1.5">
+          <button v-for="s in ['','Draft','Confirmed','Delivered','Cancelled']" :key="s" type="button" @click="orderStatusFilter=s"
+            class="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+            :class="orderStatusFilter===s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+            {{ s || 'All' }}
+          </button>
+        </div>
+        <div v-if="fOrders.length" class="space-y-2">
+          <div v-for="o in fOrders" :key="o.name"
             class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 cursor-pointer hover:bg-gray-50"
-            @click="window.open('/app/sales-order/'+o.name,'_blank')"
+            @click="openOrder(o)"
           >
-            <div>
-              <p class="text-sm font-mono font-medium text-gray-900">{{ o.name }}</p>
-              <p class="text-xs text-gray-500">{{ formatDate(o.transaction_date) }} · {{ o.total_qty }} ctns</p>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-mono font-medium text-gray-900">{{ o.name }}</p>
+                <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                  <FeatherIcon :name="o.custom_sfa_order_type === 'Van Sale' ? 'truck' : 'clipboard'" class="h-3 w-3" />
+                  {{ o.custom_sfa_order_type || 'Booking' }}
+                </span>
+              </div>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-gray-500">
+                <span class="flex items-center gap-1"><FeatherIcon name="calendar" class="h-3 w-3 text-gray-400" />{{ formatDate(o.transaction_date) }}</span>
+                <span>{{ o.total_qty || 0 }} ctns</span>
+                <span v-if="o.custom_sfa_rep || o.owner" class="flex items-center gap-1"><FeatherIcon name="user" class="h-3 w-3 text-gray-400" />{{ o.custom_sfa_rep || o.owner }}</span>
+                <span v-if="o.custom_sfa_delivered_on" class="flex items-center gap-1 text-green-600"><FeatherIcon name="check-circle" class="h-3 w-3" />Delivered {{ formatDate(o.custom_sfa_delivered_on) }}</span>
+              </div>
             </div>
-            <div class="text-right">
-              <p class="text-sm font-semibold text-gray-900">{{ formatUGX(o.grand_total) }}</p>
-              <StatusBadge :status="o.status" />
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <p class="text-sm font-semibold text-gray-900">{{ formatUGX(o.grand_total) }}</p>
+                <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="orderStateColor(orderState(o))">{{ orderState(o) }}</span>
+              </div>
+              <FeatherIcon name="chevron-right" class="h-4 w-4 text-gray-300" />
             </div>
           </div>
         </div>
@@ -337,16 +449,20 @@
 
       <!-- ── PAYMENTS ── -->
       <div v-show="activeTab==='payments'" class="p-5">
-        <div class="mb-3 flex items-center justify-between">
-          <p class="text-sm text-gray-500">{{ payments.length }} payments</p>
-          <Btn variant="solid" icon="plus" size="sm" @click="newPaymentPanel=true">Record Payment</Btn>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-gray-500">{{ fPayments.length }} payments</p>
+          <div class="flex items-center gap-2">
+            <DateRangeFilter v-model:from="pFrom" v-model:to="pTo" />
+            <Btn variant="solid" icon="plus" size="sm" @click="newPaymentPanel=true">Record Payment</Btn>
+          </div>
         </div>
-        <div v-if="payments.length" class="space-y-2">
-          <div v-for="p in payments" :key="p.name"
+        <div v-if="fPayments.length" class="space-y-2">
+          <div v-for="p in fPayments" :key="p.name"
             class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
             <div>
               <p class="text-sm font-semibold text-gray-900">{{ formatUGX(p.amount) }}</p>
               <p class="text-xs text-gray-500">{{ p.payment_type }} · {{ formatDate(p.payment_date) }}</p>
+              <p v-if="p.sales_person" class="flex items-center gap-1 text-xs text-gray-400"><FeatherIcon name="user" class="h-3 w-3" />{{ p.sales_person }}</p>
               <p v-if="p.reference_no" class="text-xs text-gray-400">Ref: {{ p.reference_no }}</p>
             </div>
             <StatusBadge :status="p.status" />
@@ -414,12 +530,13 @@
   </SlidePanel>
 
   <!-- New Order Panel -->
-  <SlidePanel v-model="newOrderPanel" title="New Order" :saving="savingOrder" save-label="Create Order" @save="createOrder" width="560px">
+  <SlidePanel v-model="newOrderPanel" :title="editingOrder ? 'Edit Order' : (orderForm.order_type === 'Van Sale' ? 'Van Sale' : 'New Order')" :saving="savingOrder" :save-label="orderForm.order_type === 'Van Sale' ? 'Record Sale' : 'Save Draft'" @save="saveOrder" width="560px">
     <div class="space-y-4">
       <div class="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-sm text-gray-700">
         <span class="text-xs text-gray-400 block mb-0.5">Customer</span>
         {{ doc?.customer_name }}
       </div>
+      <FormField v-model="orderForm.order_type" label="Order Type" type="select" :options="[{value:'Booking',label:'Booking — deliver later'},{value:'Van Sale',label:'Van Sale — immediate'}]" />
       <FormField v-model="orderForm.transaction_date" label="Order Date" type="date" required />
       <FormField v-model="orderForm.delivery_date" label="Delivery Date" type="date" :min="orderForm.transaction_date" />
       <div>
@@ -429,11 +546,32 @@
             <FeatherIcon name="plus" class="h-3 w-3" /> Add Item
           </button>
         </div>
+        <div class="mb-2 space-y-2">
+          <div v-if="categories.length" class="flex gap-1 overflow-x-auto pb-0.5">
+            <button type="button" @click="itemCategory=''"
+              class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+              :class="itemCategory==='' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">All</button>
+            <button v-for="c in categories" :key="c" type="button" @click="itemCategory=c"
+              class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+              :class="itemCategory===c ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">{{ c }}</button>
+          </div>
+          <input v-model="itemSearch" ref="productSearch" type="text" placeholder="Search products to add…"
+            class="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm focus:border-gray-400 focus:outline-none" />
+          <div v-if="itemSearch || itemCategory" class="max-h-44 divide-y divide-gray-50 overflow-y-auto rounded-lg border border-gray-100">
+            <button v-for="it in filteredItems" :key="it.value" type="button" @click="addProduct(it)"
+              class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50">
+              <span class="truncate text-gray-800">{{ it.label }}</span>
+              <FeatherIcon name="plus-circle" class="ml-2 h-4 w-4 shrink-0 text-gray-400" />
+            </button>
+            <div v-if="!filteredItems.length" class="px-3 py-3 text-center text-xs text-gray-400">No products match</div>
+          </div>
+        </div>
         <!-- Column headers -->
         <div v-if="orderForm.items.length" class="mb-1 flex items-center gap-2 px-0.5">
           <span class="flex-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">Item</span>
           <span class="w-14 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">Qty</span>
           <span class="w-20 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">Rate ({{ currencyLabel() }})</span>
+          <span v-if="showFreeCol" class="w-16 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">Free</span>
           <span class="w-5" />
         </div>
         <div class="space-y-2">
@@ -442,24 +580,38 @@
               <select v-model="row.item_code" @change="onItemChange(row)"
                 class="flex-1 rounded-md border border-gray-200 bg-white px-2 py-2 text-sm focus:border-gray-400 focus:outline-none">
                 <option value="">Select item...</option>
-                <option v-for="it in items" :key="it.value" :value="it.value">{{ it.label }}</option>
+                <option v-for="it in filteredItems" :key="it.value" :value="it.value">{{ it.label }}</option>
+                <option v-if="row.item_code && !inFiltered(row.item_code)" :value="row.item_code">{{ row.item_name || row.item_code }}</option>
               </select>
-              <input v-model.number="row.qty" type="number" min="1"
+              <input v-model.number="row.qty" type="number" min="1" @change="applyFreeSchemes"
                 class="w-14 rounded-md border border-gray-200 px-2 py-2 text-sm text-center focus:border-gray-400 focus:outline-none"
                 title="Quantity" />
-              <input v-model.number="row.rate" type="number" min="0"
+              <input v-model.number="row.rate" type="number" min="0" :readonly="row.is_free"
                 class="w-20 rounded-md border border-gray-200 px-2 py-2 text-sm text-right focus:border-gray-400 focus:outline-none"
+                :class="row.is_free ? 'bg-gray-50 text-gray-400' : ''"
                 title="Unit rate" />
+              <div v-if="showFreeCol" class="flex w-16 shrink-0 justify-center">
+                <span v-if="row.is_free && row._scheme" class="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-green-700" title="Scheme free item">Free</span>
+                <button v-else-if="auth.allowDiscretionaryFree" type="button" @click="toggleFree(row)"
+                  class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase transition-colors"
+                  :class="row.is_free ? 'bg-green-100 text-green-700' : 'border border-gray-200 text-gray-400 hover:border-green-300 hover:text-green-600'"
+                  :title="row.is_free ? 'Unmark free' : 'Give this line free'">
+                  <FeatherIcon v-if="row.is_free" name="check" class="h-3 w-3" /> Free
+                </button>
+              </div>
               <button @click="removeItem(i)" class="shrink-0 text-gray-300 hover:text-red-500 transition-colors" title="Remove">
                 <FeatherIcon name="x" class="h-3.5 w-3.5" />
               </button>
             </div>
-            <div v-if="row.item_code && row.qty && row.rate" class="pr-6 text-right text-xs text-gray-400">
+            <div v-if="row.is_free" class="pr-6 text-right text-xs text-green-600">
+              {{ row.qty }} × free<span v-if="row._for"> · with {{ row._for }}</span> = <span class="font-medium">{{ formatUGX(0) }}</span>
+            </div>
+            <div v-else-if="row.item_code && row.qty && row.rate" class="pr-6 text-right text-xs text-gray-400">
               {{ row.qty }} × {{ formatUGX(row.rate) }} = <span class="font-medium text-gray-700">{{ formatUGX(row.qty * row.rate) }}</span>
             </div>
           </div>
           <div v-if="!orderForm.items.length" class="rounded-lg border border-dashed border-gray-200 py-4 text-center text-xs text-gray-400">
-            No items added — click "+ Add Item" above
+            No items yet — search above and tap a product, or use “+ Add Item”
           </div>
         </div>
         <div v-if="orderTotal > 0" class="mt-2 text-right text-sm font-semibold text-gray-800">
@@ -467,6 +619,58 @@
         </div>
       </div>
       <FormField v-model="orderForm.remarks" label="Remarks" type="textarea" />
+    </div>
+  </SlidePanel>
+
+  <!-- Order view -->
+  <SlidePanel v-model="orderViewPanel" :title="viewOrderDoc ? viewOrderDoc.name : 'Order'" save-label="" width="520px">
+    <div v-if="viewOrderDoc" class="space-y-4">
+      <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <div>
+          <p class="text-xs text-gray-400">{{ formatDate(viewOrderDoc.transaction_date) }}</p>
+          <p class="text-sm font-semibold text-gray-900">{{ formatUGX(viewOrderDoc.grand_total) }}</p>
+        </div>
+        <span class="rounded px-2 py-0.5 text-xs font-medium" :class="orderStateColor(viewState)">{{ viewState }}</span>
+      </div>
+      <div class="flex items-center gap-4 px-1 text-xs text-gray-500">
+        <span class="flex items-center gap-1">
+          <FeatherIcon :name="viewOrderDoc.custom_sfa_order_type === 'Van Sale' ? 'truck' : 'clipboard'" class="h-3.5 w-3.5" />
+          {{ viewOrderDoc.custom_sfa_order_type || 'Booking' }}
+        </span>
+        <span v-if="viewState === 'Delivered' && viewOrderDoc.custom_sfa_delivered_on" class="text-green-600">
+          Delivered {{ formatDate(viewOrderDoc.custom_sfa_delivered_on) }}
+        </span>
+      </div>
+      <div>
+        <p class="mb-2 text-xs font-medium text-gray-600">Items</p>
+        <div class="divide-y divide-gray-50 rounded-lg border border-gray-100">
+          <div v-for="(it, idx) in (viewOrderDoc.items || [])" :key="idx" class="flex items-center justify-between px-3 py-2.5 text-sm">
+            <div class="min-w-0">
+              <p class="truncate text-gray-800">
+                {{ it.item_name || it.item_code }}
+                <span v-if="it.is_free_item" class="ml-1 rounded bg-green-100 px-1 text-[9px] font-semibold uppercase text-green-700">Free</span>
+              </p>
+              <p class="text-[11px] text-gray-400">{{ it.qty }} × {{ it.is_free_item ? 'free' : formatUGX(it.rate) }}</p>
+            </div>
+            <span class="text-sm text-gray-700">{{ formatUGX(it.amount) }}</span>
+          </div>
+          <div v-if="!(viewOrderDoc.items || []).length" class="px-3 py-6 text-center text-xs text-gray-400">No items</div>
+        </div>
+      </div>
+      <div v-if="viewOrderDoc.remarks" class="rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
+        <span class="mb-0.5 block text-xs text-gray-400">Remarks</span>{{ viewOrderDoc.remarks }}
+      </div>
+      <div v-if="viewState === 'Draft' || viewState === 'Confirmed'" class="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+        <template v-if="viewState === 'Draft'">
+          <Btn variant="solid" size="sm" icon="check" :loading="savingAction" @click="doConfirm(viewOrderDoc.name)">Confirm</Btn>
+          <Btn variant="subtle" size="sm" icon="edit-2" @click="openEditDraft(viewOrderDoc)">Edit</Btn>
+          <Btn variant="ghost" size="sm" icon="trash-2" @click="deleteDraft(viewOrderDoc.name)">Delete</Btn>
+        </template>
+        <template v-else>
+          <Btn variant="solid" size="sm" icon="truck" :loading="savingAction" @click="doDeliver(viewOrderDoc.name)">Mark Delivered</Btn>
+          <Btn variant="ghost" size="sm" icon="x-circle" @click="doCancel(viewOrderDoc.name)">Cancel Order</Btn>
+        </template>
+      </div>
     </div>
   </SlidePanel>
 
@@ -582,7 +786,7 @@
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { getDoc, getList, saveDoc, insertDoc } from '@/utils/frappe'
+import { getDoc, getList, saveDoc, insertDoc, deleteDoc, call } from '@/utils/frappe'
 import { successToast, errorToast } from '@/utils/toast'
 import { useLinkedData } from '@/composables/useLinkedData'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
@@ -591,6 +795,7 @@ import FormResponsePanel from '@/components/ui/FormResponsePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import Btn from '@/components/ui/Btn.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 import { formatCurrency, formatCurrencyShort, currencyLabel } from '@/utils/currency'
 import dayjs from 'dayjs'
 import { getL, ensureLeafletCSS } from '@/utils/leaflet'
@@ -606,12 +811,95 @@ const visits = ref([])
 const orders = ref([])
 const payments = ref([])
 const formResponses = ref([])
+const vFrom = ref(''), vTo = ref('')
+const fFrom = ref(''), fTo = ref('')
+const oFrom = ref(''), oTo = ref('')
+const orderStatusFilter = ref('')
+const summaryData = ref(null)
+const summaryLoading = ref(false)
+const sFrom = ref(''), sTo = ref('')
+const pFrom = ref(''), pTo = ref('')
+function inDateRange(d, from, to) {
+  if (!d) return true
+  const x = dayjs(d)
+  if (from && x.isBefore(dayjs(from).startOf('day'))) return false
+  if (to && x.isAfter(dayjs(to).endOf('day'))) return false
+  return true
+}
+const fVisits = computed(() => visits.value.filter(v => inDateRange(v.visit_date, vFrom.value, vTo.value)))
+const fForms = computed(() => formResponses.value.filter(r => inDateRange(r.response_date, fFrom.value, fTo.value)))
+const fOrders = computed(() => orders.value.filter(o => inDateRange(o.transaction_date, oFrom.value, oTo.value) && (!orderStatusFilter.value || orderState(o) === orderStatusFilter.value)))
+const fPayments = computed(() => payments.value.filter(p => inDateRange(p.payment_date, pFrom.value, pTo.value)))
 const activeTab = ref('details')
 
 const editPanel = ref(false)
 const locationPanel = ref(false)
 const newVisitPanel = ref(false)
 const newOrderPanel = ref(false)
+const orderViewPanel = ref(false)
+const viewOrderDoc = ref(null)
+async function openOrder(o) {
+  try {
+    viewOrderDoc.value = await getDoc('Sales Order', o.name)
+    orderViewPanel.value = true
+  } catch (e) { errorToast(e.message || 'Failed to load order') }
+}
+const editingOrder = ref(null)
+const savingAction = ref(false)
+function orderState(o) {
+  if (o.docstatus === 2) return 'Cancelled'
+  if (o.docstatus === 0) return 'Draft'
+  if (o.custom_sfa_delivery_status === 'Delivered') return 'Delivered'
+  return 'Confirmed'
+}
+function orderStateColor(s) {
+  return ({ Draft:'bg-yellow-50 text-yellow-700', Confirmed:'bg-indigo-50 text-indigo-700', Delivered:'bg-green-50 text-green-700', Cancelled:'bg-red-50 text-red-600' })[s] || 'bg-gray-100 text-gray-600'
+}
+const viewState = computed(() => viewOrderDoc.value ? orderState(viewOrderDoc.value) : '')
+function openNewOrder() {
+  editingOrder.value = null
+  orderForm.items = []
+  orderForm.transaction_date = dayjs().format('YYYY-MM-DD')
+  orderForm.delivery_date = ''
+  orderForm.remarks = ''
+  orderForm.order_type = 'Booking'
+  newOrderPanel.value = true
+}
+async function openEditDraft(o) {
+  try {
+    const d = await getDoc('Sales Order', o.name)
+    editingOrder.value = d.name
+    orderForm.transaction_date = d.transaction_date
+    orderForm.delivery_date = d.delivery_date || ''
+    orderForm.remarks = d.remarks || ''
+    orderForm.order_type = d.custom_sfa_order_type || 'Booking'
+    orderForm.items = (d.items || []).map(it => ({ item_code: it.item_code, item_name: it.item_name, qty: it.qty, rate: it.is_free_item ? 0 : it.rate, is_free: !!it.is_free_item }))
+    orderViewPanel.value = false
+    newOrderPanel.value = true
+  } catch (e) { errorToast(e.message || 'Failed to load order') }
+}
+async function doConfirm(name) {
+  savingAction.value = true
+  try { await call('sfa_core.field_sfa.api.order_actions.confirm_order', { name }); successToast('Order confirmed'); orderViewPanel.value = false; await load() }
+  catch (e) { errorToast(e.message || 'Failed to confirm') } finally { savingAction.value = false }
+}
+async function doDeliver(name) {
+  savingAction.value = true
+  try { await call('sfa_core.field_sfa.api.order_actions.mark_delivered', { name }); successToast('Marked delivered'); orderViewPanel.value = false; await load() }
+  catch (e) { errorToast(e.message || 'Failed') } finally { savingAction.value = false }
+}
+async function doCancel(name) {
+  if (!confirm('Cancel this order? This cannot be undone.')) return
+  savingAction.value = true
+  try { await call('sfa_core.field_sfa.api.order_actions.cancel_order', { name }); successToast('Order cancelled'); orderViewPanel.value = false; await load() }
+  catch (e) { errorToast(e.message || 'Failed to cancel') } finally { savingAction.value = false }
+}
+async function deleteDraft(name) {
+  if (!confirm('Delete this draft?')) return
+  savingAction.value = true
+  try { await deleteDoc('Sales Order', name); successToast('Draft deleted'); orderViewPanel.value = false; await load() }
+  catch (e) { errorToast(e.message || 'Failed to delete') } finally { savingAction.value = false }
+}
 const newPaymentPanel = ref(false)
 const fillFormPanel = ref(false)
 const responsePanel = ref(false)
@@ -630,7 +918,53 @@ import { auth } from '@/utils/auth'
 
 const visitForm = reactive({ sales_person: auth.salesPerson || '', beat_plan:'', visit_date:dayjs().format('YYYY-MM-DD'), visit_purpose:'', status:'Open', notes:'' })
 const visitErrors = reactive({})
-const orderForm = reactive({ transaction_date:dayjs().format('YYYY-MM-DD'), delivery_date:'', items:[], remarks:'' })
+const orderForm = reactive({ transaction_date:dayjs().format('YYYY-MM-DD'), delivery_date:'', items:[], remarks:'', order_type:'Booking' })
+
+// ── Free carton schemes (auto-suggest removable rate-0 lines) ───────────────
+const freeSchemes = ref([])
+const dismissedSchemes = ref(new Set())
+
+async function loadFreeSchemes() {
+  try {
+    const res = await call('sfa_core.field_sfa.api.free_carton.get_free_carton_schemes', { customer: props.name })
+    freeSchemes.value = res.message || []
+  } catch (e) { freeSchemes.value = [] }
+}
+
+function paidQtyMap() {
+  const m = {}
+  for (const r of orderForm.items) {
+    if (r.is_free || !r.item_code) continue
+    m[r.item_code] = (m[r.item_code] || 0) + (Number(r.qty) || 0)
+  }
+  return m
+}
+
+function applyFreeSchemes() {
+  const qmap = paidQtyMap()
+  // Recompute scheme-driven free rows from scratch (scaled by purchase multiples).
+  const desired = []
+  for (const s of freeSchemes.value) {
+    if (dismissedSchemes.value.has(s.name)) continue
+    const bought = qmap[s.buy_item] || 0
+    if (s.buy_qty > 0 && bought >= s.buy_qty) {
+      const multiples = Math.floor(bought / s.buy_qty)
+      const freeQty = multiples * (s.free_qty || 0)
+      if (freeQty > 0) desired.push({ scheme: s.name, free_item: s.free_item, qty: freeQty, buy_item: s.buy_item })
+    }
+  }
+  // Keep paid rows + discretionary free rows (no _scheme); replace all scheme free rows.
+  orderForm.items = orderForm.items.filter(r => !(r.is_free && r._scheme))
+  for (const d of desired) {
+    const it = items.value.find(i => i.value === d.free_item)
+    const buyIt = items.value.find(i => i.value === d.buy_item)
+    orderForm.items.push({ item_code: d.free_item, item_name: it ? it.label : d.free_item, qty: d.qty, rate: 0, is_free: true, _scheme: d.scheme, _for: buyIt ? buyIt.label : d.buy_item })
+  }
+}
+
+watch(newOrderPanel, (open) => {
+  if (open) { dismissedSchemes.value = new Set(); loadFreeSchemes() }
+})
 const paymentForm = reactive({
   sales_person: auth.salesPerson || '', payment_date: dayjs().format('YYYY-MM-DD'),
   payment_mode: 'Cash', payment_type: '', amount: '',
@@ -651,8 +985,40 @@ function onCartonItemChange(row) {
 }
 
 const orderTotal = computed(() => orderForm.items.reduce((s,i) => s+(i.qty||0)*(i.rate||0), 0))
+const showFreeCol = computed(() => auth.allowDiscretionaryFree || (freeSchemes.value && freeSchemes.value.length > 0))
+const allowedItems = computed(() => {
+  const cos = auth.companies || []
+  if (auth.isAdmin || auth.isManager || !cos.length) return items.value
+  return items.value.filter(it => !it.company || cos.includes(it.company))
+})
+const itemCategory = ref('')
+const itemSearch = ref('')
+const productSearch = ref(null)
+const categories = computed(() => {
+  const s = new Set()
+  for (const it of allowedItems.value) { if (it.category) s.add(it.category) }
+  return [...s].sort()
+})
+const filteredItems = computed(() => {
+  const q = itemSearch.value.trim().toLowerCase()
+  return allowedItems.value.filter(it =>
+    (!itemCategory.value || it.category === itemCategory.value) &&
+    (!q || (it.label || '').toLowerCase().includes(q)))
+})
+function inFiltered(code) { return filteredItems.value.some(it => it.value === code) }
+async function fetchSummary() {
+  summaryLoading.value = true
+  try {
+    const r = await call('sfa_core.field_sfa.api.customer_summary.get_customer_summary', { customer: props.name, date_from: sFrom.value || null, date_to: sTo.value || null })
+    summaryData.value = r && r.message ? r.message : r
+  } catch (e) { errorToast(e.message || 'Failed to load summary') }
+  finally { summaryLoading.value = false }
+}
+watch(activeTab, (v) => { if (v === 'summary' && !summaryData.value) fetchSummary() })
+
 const tabs = computed(() => [
   { id:'details', label:'Details' },
+  { id:'summary', label:'Summary' },
   { id:'visits', label:'Visits', count: visits.value.length||null },
   { id:'forms', label:'Forms', count: formResponses.value.length||null },
   { id:'orders', label:'Orders', count: orders.value.length||null },
@@ -662,10 +1028,10 @@ const tabs = computed(() => [
 async function load() {
   const [d, v, fr, o, p] = await Promise.all([
     getDoc('Customer', props.name),
-    getList('SFA Visit', { fields:['name','visit_date','sales_person','status','visit_purpose','duration_minutes'], filters:{customer:props.name}, orderBy:'visit_date desc', limit:50 }),
-    getList('SFA Form Response', { fields:['name','form_template','response_date','sync_status','sales_person','visit'], filters:{customer:props.name}, orderBy:'response_date desc', limit:30 }),
-    getList('Sales Order', { fields:['name','transaction_date','status','grand_total','total_qty'], filters:{customer:props.name}, orderBy:'transaction_date desc', limit:50 }),
-    getList('SFA Payment', { fields:['name','payment_date','payment_type','amount','status','reference_no'], filters:{customer:props.name}, orderBy:'payment_date desc', limit:50 }),
+    getList('SFA Visit', { fields:['name','visit_date','sales_person','status','visit_purpose','duration_minutes','check_in_time'], filters:{customer:props.name}, orderBy:'visit_date desc, creation desc', limit:50 }),
+    getList('SFA Form Response', { fields:['name','form_template','response_date','sync_status','sales_person','visit','owner'], filters:{customer:props.name}, orderBy:'response_date desc', limit:30 }),
+    getList('Sales Order', { fields:['name','transaction_date','status','docstatus','grand_total','total_qty','custom_sfa_rep','delivery_date','custom_sfa_order_type','custom_sfa_delivery_status','custom_sfa_delivered_on','custom_sfa_delivered_by','owner'], filters:{customer:props.name}, orderBy:'transaction_date desc, creation desc', limit:50 }),
+    getList('SFA Payment', { fields:['name','payment_date','payment_type','amount','status','reference_no','sales_person'], filters:{customer:props.name}, orderBy:'payment_date desc, creation desc', limit:50 }),
   ])
   doc.value = d
   visits.value = v
@@ -828,30 +1194,88 @@ async function createVisit() {
 }
 
 function addItem() { orderForm.items.push({ item_code:'', qty:1, rate:0, item_name:'' }) }
-function removeItem(i) { orderForm.items.splice(i,1) }
+function addProduct(it) {
+  orderForm.items.push({ item_code: it.value, item_name: it.label, qty: 1, rate: it.rate || 0, is_free: false })
+  applyFreeSchemes()
+  nextTick(() => { productSearch.value?.focus() })
+}
+function removeItem(i) {
+  const r = orderForm.items[i]
+  if (r && r.is_free && r._scheme) dismissedSchemes.value.add(r._scheme)
+  orderForm.items.splice(i,1)
+}
 function onItemChange(row) {
+  // Duplicate lines are allowed: the same SKU can be both paid and free.
   const item = items.value.find(i => i.value===row.item_code)
-  if (item) { row.item_name = item.label; row.rate = item.rate||0 }
+  if (item) { row.item_name = item.label; if (!row.is_free) row.rate = item.rate||0 }
+  applyFreeSchemes()
+}
+function toggleFree(row) {
+  row.is_free = !row.is_free
+  if (row.is_free) { row.rate = 0; delete row._scheme; delete row._for }
+  else { const it = items.value.find(i => i.value === row.item_code); row.rate = it ? (it.rate || 0) : 0 }
+  applyFreeSchemes()
 }
 
-async function createOrder() {
+async function saveOrder() {
   if (!orderForm.items.some(i => i.item_code)) { errorToast('Add at least one item'); return }
   savingOrder.value = true
   try {
-    await insertDoc({
-      doctype:'Sales Order', customer:props.name, naming_series:'SAL-ORD-.YYYY.-',
-      transaction_date: orderForm.transaction_date,
-      delivery_date: orderForm.delivery_date || orderForm.transaction_date,
-      remarks: orderForm.remarks,
-      items: orderForm.items.filter(i=>i.item_code).map(i=>({
-        doctype:'Sales Order Item', item_code:i.item_code, item_name:i.item_name,
-        qty:i.qty, rate:i.rate, delivery_date:orderForm.delivery_date||orderForm.transaction_date,
-      })),
-    })
-    successToast('Order created')
+    // Aggregate duplicate lines by item + free-flag: paid X lines merge into one,
+    // free X lines merge into one, but a paid line and a free line of the same
+    // SKU stay distinct.
+    const _agg = {}
+    for (const i of orderForm.items) {
+      if (!i.item_code) continue
+      const free = i.is_free ? 1 : 0
+      const key = i.item_code + '|' + free
+      if (!_agg[key]) _agg[key] = { item_code:i.item_code, item_name:i.item_name, qty:0, rate: free ? 0 : (Number(i.rate)||0), is_free_item: free }
+      _agg[key].qty += (Number(i.qty)||0)
+      if (!free && (Number(i.rate)||0)) _agg[key].rate = Number(i.rate)||0
+    }
+    const payloadItems = Object.values(_agg).filter(r => r.qty > 0).map(r => ({
+      doctype:'Sales Order Item', item_code:r.item_code, item_name:r.item_name,
+      qty:r.qty, rate:r.rate, is_free_item:r.is_free_item,
+      delivery_date: orderForm.delivery_date||orderForm.transaction_date,
+    }))
+    let name = editingOrder.value
+    if (name) {
+      await saveDoc({
+        doctype: 'Sales Order', name,
+        transaction_date: orderForm.transaction_date,
+        delivery_date: orderForm.delivery_date || orderForm.transaction_date,
+        remarks: orderForm.remarks,
+        custom_sfa_order_type: orderForm.order_type,
+        items: payloadItems,
+      })
+    } else {
+      const created = await insertDoc({
+        doctype:'Sales Order', customer:props.name, naming_series:'SAL-ORD-.YYYY.-',
+        transaction_date: orderForm.transaction_date,
+        delivery_date: orderForm.delivery_date || orderForm.transaction_date,
+        remarks: orderForm.remarks,
+        custom_sfa_order_type: orderForm.order_type,
+        ...(auth.salesPerson ? { custom_sfa_rep: auth.salesPerson } : {}),
+        items: payloadItems,
+      })
+      name = created.name
+    }
+    if (orderForm.order_type === 'Van Sale') {
+      await call('sfa_core.field_sfa.api.order_actions.confirm_order', { name })
+      await call('sfa_core.field_sfa.api.order_actions.mark_delivered', { name })
+      successToast('Sale recorded')
+    } else {
+      successToast(editingOrder.value ? 'Draft updated' : 'Draft saved')
+    }
+    const savedName = name
+    const wasVanSale = orderForm.order_type === 'Van Sale'
     newOrderPanel.value = false
+    editingOrder.value = null
     orderForm.items = []
     await load()
+    if (!wasVanSale && savedName) {
+      try { viewOrderDoc.value = await getDoc('Sales Order', savedName); orderViewPanel.value = true } catch (e) {}
+    }
   } catch (e) { errorToast(e.message || 'Failed') }
   finally { savingOrder.value = false }
 }
