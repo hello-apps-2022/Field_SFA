@@ -9,3 +9,4 @@ __pycache__/
 /public/
 sfa_core/public/sfa/
 sfa_core/public/js/
+sfa_core.egg-info/
