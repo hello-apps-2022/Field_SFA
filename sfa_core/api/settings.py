@@ -155,7 +155,7 @@ def get_users():
 def create_user(first_name, last_name, email, password, role,
                 territory=None, mobile_no=None, reports_to=None):
     """Create a Frappe User + Sales Person and link them."""
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin')
 
     # Validate role
     if role not in ('SFA Admin', 'SFA Manager', 'SFA Supervisor', 'SFA Rep', 'SFA Field Helper'):
@@ -218,7 +218,7 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
                 sfa_active=None, first_name=None, last_name=None, reports_to=None,
                 can_export_reports=None, companies=None):
     """Update a user's role, territory, or status."""
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin')
 
     # Update Sales Person
     sp_update = {}
@@ -279,7 +279,7 @@ def update_user(sales_person, role=None, territory=None, mobile_no=None,
 @frappe.whitelist()
 def reset_password(sales_person, new_password):
     """Reset a user's password."""
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin')
     _guard_no_admin_escalation(target_sales_person=sales_person)
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')
     if not user_id:
@@ -292,7 +292,7 @@ def reset_password(sales_person, new_password):
 @frappe.whitelist()
 def toggle_user_active(sales_person, enabled):
     """Enable or disable a user account."""
-    require_role('SFA Admin', 'SFA Manager')
+    require_role('SFA Admin')
     _guard_no_admin_escalation(target_sales_person=sales_person)
     user_id = frappe.db.get_value('Sales Person', sales_person, 'custom_user_id')
     if user_id:

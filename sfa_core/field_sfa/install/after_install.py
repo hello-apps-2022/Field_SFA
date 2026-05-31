@@ -526,6 +526,14 @@ def setup_custom_fields():
             "depends_on": "eval:doc.custom_payment_mode == 'Cartons'",
             "description": "Auto-calculated from carton items \u00d7 rate per carton",
         },
+        {
+            "dt": "SFA Payment",
+            "fieldname": "custom_sales_order",
+            "label": "Against Order",
+            "fieldtype": "Link",
+            "options": "Sales Order",
+            "insert_after": "visit",
+        },
     ]
 
     for field in fields:

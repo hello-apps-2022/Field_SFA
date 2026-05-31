@@ -436,6 +436,7 @@
               <div class="text-right">
                 <p class="text-sm font-semibold text-gray-900">{{ formatUGX(o.grand_total) }}</p>
                 <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="orderStateColor(orderState(o))">{{ orderState(o) }}</span>
+                <p v-if="['Confirmed','Delivered'].includes(orderState(o))" class="mt-0.5 text-[10px] font-medium" :class="orderPayColor(o)">{{ orderPayBadge(o) }}</p>
               </div>
               <FeatherIcon name="chevron-right" class="h-4 w-4 text-gray-300" />
             </div>
@@ -453,13 +454,13 @@
           <p class="text-sm text-gray-500">{{ fPayments.length }} payments</p>
           <div class="flex items-center gap-2">
             <DateRangeFilter v-model:from="pFrom" v-model:to="pTo" />
-            <Btn variant="solid" icon="plus" size="sm" @click="openNewPayment()">Record Payment</Btn>
+            <Btn variant="solid" icon="plus" size="sm" @click="payPanel?.openNew()">Record Payment</Btn>
           </div>
         </div>
         <div v-if="fPayments.length" class="space-y-2">
           <div v-for="p in fPayments" :key="p.name"
-            @click="p.status === 'Draft' && openEditPayment(p)"
-            :class="['flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4', p.status === 'Draft' ? 'cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors' : '']">
+            @click="payPanel?.openView(p)"
+            class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
             <div>
               <p class="text-sm font-semibold text-gray-900">{{ formatUGX(p.amount) }}</p>
               <p class="text-xs text-gray-500">{{ p.payment_type }} · {{ formatDate(p.payment_date) }}</p>
@@ -634,6 +635,11 @@
         </div>
         <span class="rounded px-2 py-0.5 text-xs font-medium" :class="orderStateColor(viewState)">{{ viewState }}</span>
       </div>
+
+      <button @click="goToOrder(viewOrderDoc.name)"
+        class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">
+        Open full order <FeatherIcon name="arrow-right" class="h-3.5 w-3.5" />
+      </button>
       <div class="flex items-center gap-4 px-1 text-xs text-gray-500">
         <span class="flex items-center gap-1">
           <FeatherIcon :name="viewOrderDoc.custom_sfa_order_type === 'Van Sale' ? 'truck' : 'clipboard'" class="h-3.5 w-3.5" />
@@ -674,109 +680,27 @@
           <Btn variant="ghost" size="sm" icon="x-circle" @click="doCancel(viewOrderDoc.name)">Cancel Order</Btn>
         </template>
       </div>
+
+      <div v-if="['Confirmed','Delivered'].includes(viewState)" class="border-t border-gray-100 pt-4 space-y-2">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-500">Payment</span>
+          <span class="text-xs font-medium" :class="orderPayColor(viewOrderDoc)">{{ orderPayLabel(viewOrderDoc) }}</span>
+        </div>
+        <Btn v-if="orderNeedsCollection(viewOrderDoc)" variant="solid" size="sm" icon="dollar-sign" class="w-full" @click="orderViewPanel = false; payPanel?.openCollect(viewOrderDoc)">Collect Payment</Btn>
+      </div>
     </div>
   </SlidePanel>
 
-  <!-- New Payment Panel -->
-  <SlidePanel v-model="newPaymentPanel" :title="editingPayment ? 'Edit Payment' : 'Record Payment'" :saving="savingPayment" save-label="Save as Draft" @save="createPayment">
-    <div class="space-y-4">
-      <!-- Customer context -->
-      <div class="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-sm text-gray-700">
-        <span class="text-xs text-gray-400 block mb-0.5">Customer</span>
-        {{ doc?.customer_name }}
-      </div>
-
-      <FormField v-model="paymentForm.sales_person" label="Sales Person" type="select" :options="salesPersons" required :error="paymentErrors.sales_person" />
-      <FormField v-model="paymentForm.payment_date" label="Payment Date" type="date" required />
-
-      <!-- Payment Mode toggle -->
-      <div>
-        <label class="mb-1.5 block text-xs font-medium text-gray-600">Payment Mode</label>
-        <div class="flex rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            class="flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
-            :class="paymentForm.payment_mode === 'Cash' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
-            @click="paymentForm.payment_mode = 'Cash'"
-          >
-            <FeatherIcon name="credit-card" class="h-3.5 w-3.5" /> Cash
-          </button>
-          <button
-            class="flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 border-l border-gray-200"
-            :class="paymentForm.payment_mode === 'Cartons' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
-            @click="paymentForm.payment_mode = 'Cartons'"
-          >
-            <FeatherIcon name="package" class="h-3.5 w-3.5" /> Cartons
-          </button>
-        </div>
-        <p class="mt-1 text-[10px] text-gray-400">
-          {{ paymentForm.payment_mode === 'Cartons' ? 'Record items and carton quantities — no pricing required' : 'Enter the cash amount collected' }}
-        </p>
-      </div>
-
-      <!-- Cash mode -->
-      <template v-if="paymentForm.payment_mode === 'Cash'">
-        <FormField v-model="paymentForm.payment_type" label="Payment Type" type="select"
-          :options="['Cash','Cheque','Bank Transfer','Credit Note']" required :error="paymentErrors.payment_type" />
-        <FormField v-model="paymentForm.amount" :label="`Amount (${currencyLabel()})`" type="number" required :error="paymentErrors.amount" />
-        <FormField v-model="paymentForm.reference_no" label="Reference / Receipt No" />
-      </template>
-
-      <!-- Carton mode -->
-      <template v-else>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="text-xs font-medium text-gray-600">Items <span class="text-red-500">*</span></label>
-            <button class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800" @click="addCartonItem">
-              <FeatherIcon name="plus" class="h-3 w-3" /> Add Item
-            </button>
-          </div>
-
-          <div v-if="paymentForm.carton_items.length" class="mb-1.5 flex items-center gap-2 px-0.5">
-            <span class="flex-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">Item</span>
-            <span class="w-20 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">Cartons</span>
-            <span class="w-5" />
-          </div>
-
-          <div class="space-y-2">
-            <div v-for="(row, i) in paymentForm.carton_items" :key="i" class="flex items-center gap-2">
-              <select v-model="row.item_code" @change="onCartonItemChange(row)"
-                class="flex-1 rounded-md border border-gray-200 bg-white px-2 py-2 text-sm focus:border-gray-400 focus:outline-none">
-                <option value="">Select item…</option>
-                <option v-for="it in items" :key="it.value" :value="it.value">{{ it.label }}</option>
-              </select>
-              <input v-model.number="row.cartons" type="number" min="0" placeholder="0"
-                class="w-20 rounded-md border border-gray-200 px-2 py-2 text-sm text-center focus:border-gray-400 focus:outline-none" />
-              <button @click="removeCartonItem(i)" class="shrink-0 text-gray-300 hover:text-red-500 transition-colors">
-                <FeatherIcon name="x" class="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div v-if="!paymentForm.carton_items.length" class="rounded-lg border border-dashed border-gray-200 py-4 text-center text-xs text-gray-400">
-              No items added — click "+ Add Item" above
-            </div>
-          </div>
-
-          <div v-if="paymentForm.carton_items.some(r => r.item_code && r.cartons > 0)"
-            class="mt-3 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-            <p class="text-xs font-medium text-amber-700">
-              {{ paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0).reduce((s,r) => s + r.cartons, 0) }} total cartons
-            </p>
-            <p class="text-[10px] text-amber-600 mt-0.5">No monetary value — carton-based credit</p>
-          </div>
-        </div>
-        <FormField v-model="paymentForm.reference_no" label="Reference / Delivery Note No" />
-      </template>
-
-      <FormField v-model="paymentForm.notes" label="Notes" type="textarea" />
-
-      <div v-if="paymentForm.status === 'Draft'" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-        <button type="button" @click="submitPayment" :disabled="savingPayment"
-          class="w-full rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-          Submit Payment
-        </button>
-        <p class="mt-1.5 text-center text-xs text-gray-400">Submitting locks this payment from further edits</p>
-      </div>
-    </div>
-  </SlidePanel>
+  <CollectPaymentPanel
+    ref="payPanel"
+    :customer="props.name"
+    :customer-name="doc?.customer_name"
+    :rep="doc?.custom_sfa_rep"
+    :sales-persons="salesPersons"
+    :items="items"
+    :payments="payments"
+    @changed="load"
+  />
   <!-- Fill Form Panel -->
   <FillFormPanel
     v-model="fillFormPanel"
@@ -795,9 +719,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { getDoc, getList, saveDoc, insertDoc, deleteDoc, call } from '@/utils/frappe'
+import * as orderPay from '@/utils/orders'
+import CollectPaymentPanel from '@/components/ui/CollectPaymentPanel.vue'
 import { successToast, errorToast } from '@/utils/toast'
 import { useLinkedData } from '@/composables/useLinkedData'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
@@ -812,6 +738,7 @@ import dayjs from 'dayjs'
 import { getL, ensureLeafletCSS } from '@/utils/leaflet'
 
 const props = defineProps({ name: String })
+const router = useRouter()
 const {
   customerGroups, territories, salesPersons, beatPlans, items, paymentTypes, reportingChain,
   loadCustomerGroups, loadTerritories, loadSalesPersons, loadBeatPlans, loadItems, loadPaymentTypes, loadReportingChain,
@@ -855,6 +782,7 @@ async function openOrder(o) {
     orderViewPanel.value = true
   } catch (e) { errorToast(e.message || 'Failed to load order') }
 }
+function goToOrder(name) { orderViewPanel.value = false; router.push('/orders/' + name) }
 const editingOrder = ref(null)
 const editingConfirmed = ref(false)
 const savingAction = ref(false)
@@ -914,7 +842,7 @@ async function deleteDraft(name) {
   try { await deleteDoc('Sales Order', name); successToast('Draft deleted'); orderViewPanel.value = false; await load() }
   catch (e) { errorToast(e.message || 'Failed to delete') } finally { savingAction.value = false }
 }
-const newPaymentPanel = ref(false)
+const payPanel = ref(null)
 const fillFormPanel = ref(false)
 const responsePanel = ref(false)
 const selectedResponseName = ref('')
@@ -923,7 +851,6 @@ const saving = ref(false)
 const savingLocation = ref(false)
 const savingVisit = ref(false)
 const savingOrder = ref(false)
-const savingPayment = ref(false)
 const geocoding = ref(false)
 
 const form = reactive({ customer_name:'', customer_type:'Company', customer_group:'', territory:'', mobile_no:'', email_id:'', customer_details:'', custom_sfa_rep:'', custom_visit_frequency:'' })
@@ -981,25 +908,16 @@ function applyFreeSchemes() {
 watch(newOrderPanel, (open) => {
   if (open) { dismissedSchemes.value = new Set(); loadFreeSchemes() }
 })
-const paymentForm = reactive({
-  sales_person: auth.salesPerson || '', payment_date: dayjs().format('YYYY-MM-DD'),
-  payment_mode: 'Cash', payment_type: '', amount: '',
-  reference_no: '', notes: '', status: 'Draft',
-  carton_items: [],
-})
-const paymentErrors = reactive({})
-const editingPayment = ref(null)
-
-const cartonTotal = computed(() => 0) // No pricing in carton mode
-
-function addCartonItem() {
-  paymentForm.carton_items.push({ item_code: '', item_name: '', cartons: 1, rate_per_carton: 0 })
-}
-function removeCartonItem(i) { paymentForm.carton_items.splice(i, 1) }
-function onCartonItemChange(row) {
-  const item = items.value.find(i => i.value === row.item_code)
-  if (item) row.item_name = item.label
-}
+function orderIsCarton(o) { return orderPay.orderIsCarton(o) }
+function orderPaid(o) { return orderPay.orderPaid(o, payments.value) }
+function orderCartonsPaid(o) { return orderPay.orderCartonsPaid(o, payments.value) }
+function orderOutstanding(o) { return orderPay.orderOutstanding(o, payments.value) }
+function orderCartonsOutstanding(o) { return orderPay.orderCartonsOutstanding(o, payments.value) }
+function orderNeedsCollection(o) { return orderPay.orderNeedsCollection(o, payments.value) }
+function orderPayStatus(o) { return orderPay.orderPayStatus(o, payments.value) }
+function orderPayBadge(o) { return orderPay.orderPayBadge(o, payments.value, formatUGX) }
+function orderPayColor(o) { return orderPay.orderPayColor(o, payments.value) }
+function orderPayLabel(o) { return orderPay.orderPayLabel(o, payments.value, formatUGX) }
 
 const orderTotal = computed(() => orderForm.items.reduce((s,i) => s+(i.qty||0)*(i.rate||0), 0))
 const showFreeCol = computed(() => auth.allowDiscretionaryFree || (freeSchemes.value && freeSchemes.value.length > 0))
@@ -1048,7 +966,7 @@ async function load() {
     getList('SFA Visit', { fields:['name','visit_date','sales_person','status','visit_purpose','duration_minutes','check_in_time'], filters:{customer:props.name}, orderBy:'visit_date desc, creation desc', limit:50 }),
     getList('SFA Form Response', { fields:['name','form_template','response_date','sync_status','sales_person','visit','owner'], filters:{customer:props.name}, orderBy:'response_date desc', limit:30 }),
     getList('Sales Order', { fields:['name','transaction_date','status','docstatus','grand_total','total_qty','custom_sfa_rep','delivery_date','custom_sfa_order_type','custom_sfa_delivery_status','custom_sfa_delivered_on','custom_sfa_delivered_by','owner'], filters:{customer:props.name}, orderBy:'transaction_date desc, creation desc', limit:50 }),
-    getList('SFA Payment', { fields:['name','payment_date','payment_type','amount','status','reference_no','sales_person'], filters:{customer:props.name}, orderBy:'payment_date desc, creation desc', limit:50 }),
+    getList('SFA Payment', { fields:['name','payment_date','payment_type','amount','status','reference_no','sales_person','custom_sales_order','custom_carton_total'], filters:{customer:props.name}, orderBy:'payment_date desc, creation desc', limit:50 }),
   ])
   doc.value = d
   visits.value = v
@@ -1240,7 +1158,7 @@ async function saveOrder() {
   try {
     if (editingConfirmed.value && editingOrder.value) {
       const _items = orderForm.items.filter(i => i.item_code && (Number(i.qty) || 0) > 0).map(i => {
-        const row = { item_code: i.item_code, qty: Number(i.qty) || 0, rate: i.is_free ? 0 : (Number(i.rate) || 0) }
+        const row = { item_code: i.item_code, qty: Number(i.qty) || 0, rate: i.is_free ? 0 : (Number(i.rate) || 0), is_free_item: i.is_free ? 1 : 0 }
         if (i.docname) row.docname = i.docname
         return row
       })
@@ -1309,99 +1227,6 @@ async function saveOrder() {
     }
   } catch (e) { errorToast(e.message || 'Failed') }
   finally { savingOrder.value = false }
-}
-
-function openNewPayment() {
-  editingPayment.value = null
-  Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
-  paymentForm.sales_person = auth.salesPerson || ''
-  paymentForm.payment_date = dayjs().format('YYYY-MM-DD')
-  paymentForm.payment_mode = 'Cash'
-  paymentForm.payment_type = ''
-  paymentForm.amount = ''
-  paymentForm.reference_no = ''
-  paymentForm.notes = ''
-  paymentForm.status = 'Draft'
-  paymentForm.carton_items = []
-  newPaymentPanel.value = true
-}
-
-async function openEditPayment(p) {
-  try {
-    const d = await getDoc('SFA Payment', p.name)
-    editingPayment.value = d.name
-    Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
-    paymentForm.sales_person = d.sales_person || ''
-    paymentForm.payment_date = d.payment_date || dayjs().format('YYYY-MM-DD')
-    paymentForm.payment_mode = d.custom_payment_mode === 'Cartons' ? 'Cartons' : 'Cash'
-    paymentForm.payment_type = d.payment_type || ''
-    paymentForm.amount = d.amount || ''
-    paymentForm.reference_no = d.reference_no || ''
-    paymentForm.notes = d.notes || ''
-    paymentForm.status = d.status || 'Draft'
-    paymentForm.carton_items = (d.custom_carton_items || []).map(r => ({
-      item_code: r.item_code, item_name: r.item_name, cartons: r.cartons, rate_per_carton: 0,
-    }))
-    newPaymentPanel.value = true
-  } catch (e) { errorToast(e.message || 'Failed to load payment') }
-}
-
-async function submitPayment() {
-  paymentForm.status = 'Submitted'
-  await createPayment()
-}
-
-async function createPayment() {
-  Object.keys(paymentErrors).forEach(k => delete paymentErrors[k])
-  if (!paymentForm.sales_person) { paymentErrors.sales_person = 'Required'; return }
-
-  if (paymentForm.payment_mode === 'Cash') {
-    if (!paymentForm.payment_type) { paymentErrors.payment_type = 'Required'; return }
-    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) { paymentErrors.amount = 'Enter a valid amount'; return }
-  } else {
-    const validItems = paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0)
-    if (!validItems.length) { errorToast('Add at least one item with cartons'); return }
-  }
-
-  savingPayment.value = true
-  try {
-    const isCarton = paymentForm.payment_mode === 'Cartons'
-    const finalAmount = isCarton ? 0 : Number(paymentForm.amount)
-    const cartonItems = isCarton
-      ? paymentForm.carton_items.filter(r => r.item_code && r.cartons > 0).map(r => ({
-          doctype: 'SFA Payment Carton Item',
-          item_code: r.item_code, item_name: r.item_name,
-          cartons: r.cartons,
-        }))
-      : []
-
-    const payload = {
-      doctype: 'SFA Payment', customer: props.name,
-      sales_person: paymentForm.sales_person,
-      payment_date: paymentForm.payment_date,
-      payment_type: isCarton ? 'Cartons' : paymentForm.payment_type,
-      amount: isCarton ? 0 : finalAmount,
-      custom_payment_mode: paymentForm.payment_mode,
-      custom_carton_total: 0,
-      custom_carton_items: cartonItems,
-      reference_no: paymentForm.reference_no,
-      notes: paymentForm.notes,
-      status: paymentForm.status,
-    }
-    if (editingPayment.value) {
-      await saveDoc({ name: editingPayment.value, ...payload })
-    } else {
-      await insertDoc(payload)
-    }
-
-    successToast(editingPayment.value ? 'Payment updated' : 'Payment recorded')
-    newPaymentPanel.value = false
-    editingPayment.value = null
-    paymentForm.carton_items = []
-    paymentForm.payment_mode = 'Cash'
-    await load()
-  } catch (e) { errorToast(e.message || 'Failed') }
-  finally { savingPayment.value = false }
 }
 
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '—'

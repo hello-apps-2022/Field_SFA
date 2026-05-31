@@ -7,6 +7,7 @@ const routes = [
 
   { path: '/customers', name: 'Customers', component: () => import('@/pages/customers/Customers.vue') },
   { path: '/customers/:name', name: 'Customer', component: () => import('@/pages/customers/Customer.vue'), props: true },
+  { path: '/orders/:name', name: 'Order', component: () => import('@/pages/orders/Order.vue'), props: true },
 
   { path: '/visits', name: 'Visits', component: () => import('@/pages/visits/Visits.vue') },
   { path: '/visits/:name', name: 'Visit', component: () => import('@/pages/visits/Visit.vue'), props: true },

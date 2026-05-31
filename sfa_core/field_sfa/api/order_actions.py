@@ -88,6 +88,16 @@ def update_order_items(name, items):
             row["docname"] = it.get("docname")
         trans_items.append(row)
     update_child_qty_rate("Sales Order", json.dumps(trans_items), name)
+    # Re-apply free-carton flags. update_child_qty_rate does not carry
+    # is_free_item, so a line the client marked free (priced at 0) is re-flagged
+    # here, and a line that is no longer free is cleared. Free lines stay at 0.
+    free_codes = {it.get("item_code") for it in items if it.get("is_free_item")}
+    doc.reload()
+    for row in doc.items:
+        want_free = 1 if (row.item_code in free_codes and flt(row.rate) == 0) else 0
+        if int(row.is_free_item or 0) != want_free:
+            frappe.db.set_value("Sales Order Item", row.name, "is_free_item", want_free)
+    frappe.db.commit()
     try:
         from sfa_core.field_sfa.doc_events.sales_order import _refresh_customer_order_stats
         _refresh_customer_order_stats(doc.customer)

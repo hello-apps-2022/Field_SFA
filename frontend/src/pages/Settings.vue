@@ -8,7 +8,7 @@
       </router-link>
       <h1 class="text-sm font-semibold text-gray-900">Team</h1>
       <div class="flex-1" />
-      <Btn icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
+      <Btn v-if="auth.isAdmin" icon="plus" variant="solid" size="sm" @click="openCreate">Add User</Btn>
     </div>
 
     <!-- Tabs -->
@@ -42,7 +42,7 @@
       <div v-else class="flex flex-col items-center py-20 text-gray-400">
         <FeatherIcon name="users" class="h-10 w-10 mb-3" />
         <p class="text-sm font-medium text-gray-600">No team members yet</p>
-        <Btn icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add First User</Btn>
+        <Btn v-if="auth.isAdmin" icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add First User</Btn>
       </div>
     </div>
 
@@ -82,6 +82,7 @@
           <div class="col-span-1 text-xs text-gray-400">{{ user.last_seen ? fmtDate(user.last_seen) : 'Never' }}</div>
           <div class="col-span-1 flex justify-center">
             <button
+              v-if="auth.isAdmin"
               class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors"
               :class="user.sfa_active ? 'bg-gray-900' : 'bg-gray-200'"
               @click="toggleActive(user)"
@@ -89,17 +90,18 @@
               <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
                 :class="user.sfa_active ? 'translate-x-4' : 'translate-x-0'" />
             </button>
+            <span v-else class="text-xs" :class="user.sfa_active ? 'text-gray-600' : 'text-gray-400'">{{ user.sfa_active ? 'Active' : 'Inactive' }}</span>
           </div>
           <div class="col-span-1 flex justify-end gap-1">
             <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-blue-600"
               @click="openProfile(user)" title="View profile">
               <FeatherIcon name="user" class="h-3.5 w-3.5" />
             </button>
-            <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            <button v-if="auth.isAdmin" class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
               @click="openEdit(user)">
               <FeatherIcon name="edit-2" class="h-3.5 w-3.5" />
             </button>
-            <button class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-amber-600"
+            <button v-if="auth.isAdmin" class="h-7 w-7 flex items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-amber-600"
               @click="openResetPassword(user)">
               <FeatherIcon name="key" class="h-3.5 w-3.5" />
             </button>
@@ -109,7 +111,7 @@
         <div v-if="!users.length" class="flex flex-col items-center py-16 text-gray-400">
           <FeatherIcon name="users" class="h-10 w-10 mb-3" />
           <p class="text-sm font-medium text-gray-600">No users yet</p>
-          <Btn icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add User</Btn>
+          <Btn v-if="auth.isAdmin" icon="plus" variant="solid" size="sm" class="mt-4" @click="openCreate">Add User</Btn>
         </div>
       </div>
     </div>
@@ -393,6 +395,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { call } from '@/utils/frappe'
 import { useRouter } from 'vue-router'
 import { successToast, errorToast } from '@/utils/toast'
+import { auth } from '@/utils/auth'
 import Btn from '@/components/ui/Btn.vue'
 import SlidePanel from '@/components/ui/SlidePanel.vue'
 import FormField from '@/components/ui/FormField.vue'
