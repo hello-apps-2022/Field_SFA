@@ -62,6 +62,8 @@ def submit_form_response(form_template, visit, customer, sales_person,
     survey_response_json: flat dict of { question_name: answer_value } as produced
     by SurveyJS Model.getData()
     """
+    from sfa_core.api.auth import resolve_sales_person
+    sales_person = resolve_sales_person(sales_person)
     # Avoid duplicate submission for the same visit + template
     existing = frappe.db.exists("SFA Form Response", {
         "form_template": form_template,

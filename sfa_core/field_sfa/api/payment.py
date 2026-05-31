@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
 def create_payment(customer, amount, payment_type, sales_person, visit=None, **kwargs):
     """Create payment from mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     payment = frappe.get_doc({
         "doctype": "SFA Payment",
         "customer": customer,
@@ -22,6 +24,7 @@ def create_payment(customer, amount, payment_type, sales_person, visit=None, **k
 @frappe.whitelist()
 def get_payments(sales_person=None, customer=None, limit=50):
     """Get payments for mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     filters = {"docstatus": 1}
     if sales_person:
         filters["sales_person"] = sales_person

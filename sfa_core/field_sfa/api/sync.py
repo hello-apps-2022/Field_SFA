@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
 def get_sync_data(sales_person, last_sync=None):
     """Get data for mobile sync (WatermelonDB pattern)"""
+    sales_person = resolve_sales_person(sales_person)
     data = {
         "customers": [],
         "beat_plans": [],

@@ -8,6 +8,8 @@ def get_rep_activity(sales_person, date_from=None, date_to=None,
     """
     Returns GPS track points + visits for a rep across a date/time range.
     """
+    from sfa_core.api.auth import resolve_sales_person
+    sales_person = resolve_sales_person(sales_person)
     if not date_from:
         date_from = nowdate()
     if not date_to:

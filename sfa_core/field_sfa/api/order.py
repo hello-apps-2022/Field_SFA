@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
 def create_order(customer, items, sales_person, visit=None, **kwargs):
     """Create sales order from mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     order_items = []
     for item in items:
         if item.get("is_free") or item.get("is_free_item"):
@@ -39,6 +41,7 @@ def create_order(customer, items, sales_person, visit=None, **kwargs):
 @frappe.whitelist()
 def get_orders(sales_person=None, customer=None, limit=50):
     """Get orders for mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     filters = {"docstatus": 1}
     if sales_person:
         filters["custom_sfa_rep"] = sales_person

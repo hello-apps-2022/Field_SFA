@@ -1,10 +1,12 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 from frappe.utils import getdate, now
 
 @frappe.whitelist()
 def get_visits(sales_person=None, date=None, status=None, limit=50):
     """Get visits for mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     filters = {}
     if sales_person:
         filters["sales_person"] = sales_person
@@ -25,6 +27,7 @@ def get_visits(sales_person=None, date=None, status=None, limit=50):
 @frappe.whitelist()
 def create_visit(customer, sales_person, visit_date=None, **kwargs):
     """Create a new visit from mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     if not visit_date:
         visit_date = getdate()
 

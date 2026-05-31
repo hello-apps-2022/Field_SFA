@@ -1,14 +1,16 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
 def upload_gps_track(points):
     """Upload GPS track points from mobile app"""
+    sp = resolve_sales_person()
     created = 0
     for point in points:
         track = frappe.get_doc({
             "doctype": "SFA GPS Track Point",
-            "sales_person": point.get("sales_person"),
+            "sales_person": sp,
             "timestamp": point.get("timestamp"),
             "latitude": point.get("latitude"),
             "longitude": point.get("longitude"),
@@ -27,6 +29,7 @@ def upload_gps_track(points):
 @frappe.whitelist()
 def get_gps_tracks(sales_person, date=None, limit=1000):
     """Get GPS tracks for a sales person"""
+    sales_person = resolve_sales_person(sales_person)
     filters = {"sales_person": sales_person}
     if date:
         filters["timestamp"] = ["like", f"{date}%"]

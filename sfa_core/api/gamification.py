@@ -67,6 +67,8 @@ def get_leaderboard(period=None, date_from=None, date_to=None, territory=None, l
 @frappe.whitelist()
 def get_rep_badges(sales_person):
     """Get badges for a sales person"""
+    from sfa_core.api.auth import resolve_sales_person
+    sales_person = resolve_sales_person(sales_person)
     badges = frappe.get_all("SFA Rep Badge",
         filters={"sales_person": sales_person},
         fields=["name", "badge", "awarded_date", "awarded_by"],
@@ -77,6 +79,8 @@ def get_rep_badges(sales_person):
 @frappe.whitelist()
 def get_rep_points(sales_person):
     """Get total points for a sales person"""
+    from sfa_core.api.auth import resolve_sales_person
+    sales_person = resolve_sales_person(sales_person)
     result = frappe.db.sql(
         "SELECT SUM(points) FROM `tabSFA Rep Points Ledger` WHERE sales_person = %s",
         (sales_person,)

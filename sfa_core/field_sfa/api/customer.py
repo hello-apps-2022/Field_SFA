@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
+from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
 def get_customers(sales_person=None, territory=None, limit=200):
     """Get customers for mobile app"""
+    sales_person = resolve_sales_person(sales_person)
     filters = {"custom_sfa_status": ["!=", "Inactive"]}
 
     if sales_person:

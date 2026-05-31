@@ -288,3 +288,33 @@ def redirect_sfa_users():
         raise
     except Exception:
         pass
+
+
+def resolve_sales_person(passed=None):
+    """Authoritative acting Sales Person for the current session.
+
+    Never trust a client-passed value. Reps/helpers always resolve to their
+    own Sales Person (a mismatched value is rejected). Supervisors may target
+    a rep in their territory scope; admins/managers may target any existing
+    Sales Person. Returns None for Administrator (no Sales Person link).
+    """
+    ctx = get_user_context()
+    own = ctx.get("sales_person")
+    if ctx["is_admin"] or ctx["is_manager"]:
+        if passed:
+            if not frappe.db.exists("Sales Person", passed):
+                frappe.throw(_("Unknown sales person"), frappe.PermissionError)
+            return passed
+        return own
+    if ctx["is_supervisor"]:
+        if passed and passed != own:
+            if passed not in get_scoped_sales_persons():
+                frappe.throw(_("Not permitted for that sales person"), frappe.PermissionError)
+            return passed
+        return own
+    # rep / helper — always self
+    if not own:
+        frappe.throw(_("No Sales Person is linked to your user"), frappe.PermissionError)
+    if passed and passed != own:
+        frappe.throw(_("You can only act as yourself"), frappe.PermissionError)
+    return own
