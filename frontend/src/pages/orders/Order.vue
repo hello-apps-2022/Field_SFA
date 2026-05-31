@@ -69,9 +69,11 @@
         <div v-if="state === 'Draft' || state === 'Confirmed'" class="flex flex-wrap gap-2">
           <template v-if="state === 'Draft'">
             <Btn variant="solid" size="sm" icon="check" :loading="savingAction" @click="doConfirm">Confirm</Btn>
+            <Btn variant="subtle" size="sm" icon="edit-2" @click="orderFormPanel?.openEdit(order)">Edit</Btn>
             <Btn variant="ghost" size="sm" icon="trash-2" @click="doDelete">Delete</Btn>
           </template>
           <template v-else>
+            <Btn v-if="(order.custom_sfa_order_type || 'Booking') === 'Booking'" variant="subtle" size="sm" icon="edit-2" @click="orderFormPanel?.openEdit(order)">Edit Items</Btn>
             <Btn variant="solid" size="sm" icon="truck" :loading="savingAction" @click="doDeliver">Mark Delivered</Btn>
             <Btn variant="ghost" size="sm" icon="x-circle" @click="doCancel">Cancel Order</Btn>
           </template>
@@ -118,6 +120,14 @@
       :payments="payments"
       @changed="load"
     />
+    <OrderFormPanel
+      v-if="order"
+      ref="orderFormPanel"
+      :customer="order.customer"
+      :customer-name="order.customer_name"
+      :items="items"
+      @saved="load"
+    />
   </div>
 </template>
 
@@ -132,6 +142,7 @@ import { useLinkedData } from '@/composables/useLinkedData'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import Btn from '@/components/ui/Btn.vue'
 import CollectPaymentPanel from '@/components/ui/CollectPaymentPanel.vue'
+import OrderFormPanel from '@/components/ui/OrderFormPanel.vue'
 import dayjs from 'dayjs'
 
 const props = defineProps({ name: String })
@@ -143,6 +154,7 @@ const payments = ref([])
 const loading = ref(true)
 const savingAction = ref(false)
 const payPanel = ref(null)
+const orderFormPanel = ref(null)
 
 const formatUGX = formatCurrency
 const formatDate = (d) => d ? dayjs(d).format('D MMM YYYY') : '\u2014'

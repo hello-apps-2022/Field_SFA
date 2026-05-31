@@ -81,6 +81,32 @@ def update_order_items(name, items):
         items = json.loads(items)
     if not items:
         frappe.throw(_("An order must have at least one item."))
+    # Consolidate duplicate product lines (same SKU) into one row. Two paid
+    # rows of the same product should not survive on a confirmed order; free
+    # lines are kept separate (is_free_item) so a SKU can appear paid + free.
+    # The first row keeps its docname (updated in place); the duplicate row is
+    # left out of trans_items so update_child_qty_rate removes it.
+    _agg, _order = {}, []
+    for it in items:
+        _code = it.get("item_code")
+        if not _code:
+            continue
+        _free = 1 if it.get("is_free_item") else 0
+        _key = (_code, _free)
+        if _key not in _agg:
+            _agg[_key] = {"item_code": _code, "qty": flt(it.get("qty")),
+                          "rate": flt(it.get("rate")), "is_free_item": _free,
+                          "docname": it.get("docname")}
+            _order.append(_key)
+        else:
+            _g = _agg[_key]
+            _g["qty"] += flt(it.get("qty"))
+            _r = flt(it.get("rate"))
+            if not _free and _r:
+                _g["rate"] = max(_g["rate"], _r)
+            if not _g.get("docname") and it.get("docname"):
+                _g["docname"] = it.get("docname")
+    items = [_agg[_k] for _k in _order]
     trans_items = []
     for it in items:
         row = {"item_code": it.get("item_code"), "qty": flt(it.get("qty")), "rate": flt(it.get("rate"))}

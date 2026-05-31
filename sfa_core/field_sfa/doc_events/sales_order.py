@@ -1,5 +1,12 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
+
+def before_validate(doc, method):
+    """Capture the rate the SFA app submitted for each line, before ERPNext's
+    price-list lookup can backfill it from a historical Item Price."""
+    doc.flags.sfa_submitted_rates = [flt(getattr(it, "rate", 0)) for it in doc.items]
+
 
 def validate(doc, method):
     """Link SFA visit and validate carton quantities"""
@@ -19,6 +26,47 @@ def validate(doc, method):
     entitled = free_entitlement_for_order(doc.customer, paid_qty)
     beyond = any(qty > entitled.get(code, 0) for code, qty in free_given.items())
     doc.custom_free_beyond_entitlement = 1 if beyond else 0
+
+    # Pin each paid line to the rate the SFA app submitted. ERPNext backfills
+    # a line's rate from the selling price list during validate, so a price
+    # auto-stored from an earlier order would otherwise leak into this one.
+    # Restoring the submitted rate keeps the catalog / rep-entered price
+    # authoritative and stops historical prices from carrying over.
+    _recompute = False
+    subs = doc.flags.get("sfa_submitted_rates")
+    if subs and len(subs) == len(doc.items):
+        for item, want in zip(doc.items, subs):
+            if getattr(item, "is_free_item", 0):
+                continue
+            want = flt(want)
+            if (flt(item.rate) != want or flt(item.price_list_rate) != want
+                    or flt(getattr(item, "discount_percentage", 0))):
+                item.rate = want
+                item.price_list_rate = want
+                item.discount_percentage = 0
+                item.discount_amount = 0
+                item.margin_type = ""
+                item.margin_rate_or_amount = 0
+                item.rate_with_margin = 0
+                _recompute = True
+
+    # Free lines must never be charged. ERPNext backfills a rate-0 line from
+    # the price list during validate, which would put the free value into
+    # grand_total (and the customer's due). Force them back to zero and
+    # recompute totals so free cartons never appear as owed.
+    for item in doc.items:
+        if getattr(item, "is_free_item", 0) and (item.rate or item.amount or item.price_list_rate):
+            item.price_list_rate = 0
+            item.discount_percentage = 0
+            item.discount_amount = 0
+            item.margin_rate_or_amount = 0
+            item.rate = 0
+            item.amount = 0
+            item.base_rate = 0
+            item.base_amount = 0
+            _recompute = True
+    if _recompute:
+        doc.calculate_taxes_and_totals()
 
 def on_submit(doc, method):
     """Award points for order placement"""

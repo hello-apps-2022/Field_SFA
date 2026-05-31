@@ -26,19 +26,21 @@
         <option v-for="r in repOptions" :key="r">{{ r }}</option>
       </select>
 
-      <select v-model="statusFilter" @change="applyFilters" class="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none">
-        <option value="">All Statuses</option>
-        <option value="Draft">Draft</option>
-        <option value="To Deliver and Bill">To Deliver and Bill</option>
-        <option value="To Bill">To Bill</option>
-        <option value="Completed">Completed</option>
-        <option value="Cancelled">Cancelled</option>
-      </select>
-
       <DateRangeFilter v-model:from="dateFrom" v-model:to="dateTo" default-preset="this_month" @change="applyFilters" />
 
       <button @click="clearFilters" class="h-8 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-500 hover:bg-gray-50">
         Clear
+      </button>
+    </div>
+
+    <!-- Status chips -->
+    <div class="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-gray-100 bg-white px-4 py-2">
+      <button v-for="ch in statusChips" :key="ch.value" type="button" @click="setStatus(ch.value)"
+        :class="['inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                 statusFilter === ch.value ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
+        {{ ch.label }}
+        <span :class="['rounded-full px-1.5 text-[10px] leading-4',
+                       statusFilter === ch.value ? 'bg-white/20 text-white' : 'bg-white text-gray-500']">{{ ch.count }}</span>
       </button>
     </div>
 
@@ -79,7 +81,7 @@
             <td class="px-5 py-3 text-right text-gray-700">{{ o.total_qty || '—' }}</td>
             <td class="px-5 py-3 text-right font-medium text-gray-900">{{ fmt(o.grand_total) }}</td>
             <td class="px-5 py-3">
-              <StatusBadge :status="o.status" />
+              <StatusBadge :status="o.sfa_status || o.status" />
             </td>
           </tr>
         </tbody>
@@ -126,6 +128,7 @@ const pageSize = 50
 const total = ref(0)
 const sumRevenue = ref(0)
 const sumCartons = ref(0)
+const counts = ref({ all: 0, Draft: 0, Confirmed: 0, Delivered: 0, Cancelled: 0 })
 
 // Rep options come from all sales persons (not just the current page).
 const repOptions = ref([])
@@ -135,6 +138,14 @@ const linked = useLinkedData()
 const filtered = computed(() => orders.value)
 const totalRevenue = computed(() => sumRevenue.value)
 const totalCartons = computed(() => sumCartons.value)
+const statusChips = computed(() => [
+  { value: '', label: 'All', count: counts.value.all },
+  { value: 'Draft', label: 'Draft', count: counts.value.Draft },
+  { value: 'Confirmed', label: 'Confirmed', count: counts.value.Confirmed },
+  { value: 'Delivered', label: 'Delivered', count: counts.value.Delivered },
+  { value: 'Cancelled', label: 'Cancelled', count: counts.value.Cancelled },
+])
+function setStatus(v) { statusFilter.value = v; applyFilters() }
 
 let searchTimer = null
 function onSearchInput() {
@@ -159,6 +170,7 @@ async function load(append = false) {
     total.value = res.total || 0
     sumRevenue.value = res.sum_revenue || 0
     sumCartons.value = res.sum_qty || 0
+    if (res.counts) counts.value = res.counts
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }

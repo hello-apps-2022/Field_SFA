@@ -169,34 +169,64 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
                date_to=None, customer=None, start=0, page_length=50):
     ctx = get_user_context()
 
-    conditions = ["o.docstatus = 1"]
+    DELIV = "o.custom_sfa_delivery_status"
+    _zero = {'all': 0, 'Draft': 0, 'Confirmed': 0, 'Delivered': 0, 'Cancelled': 0}
+
+    # Scope conditions (everything except the status chip) — shared by the row
+    # query and the per-status counts, so the chip counts always reflect the full
+    # distribution within the current rep/date/customer/search scope.
+    scope = []
     values = []
 
     if ctx['is_rep']:
         sps = get_customer_scope_sp()
         if not sps:
-            return {'items': [], 'total': 0}
+            return {'items': [], 'total': 0, 'counts': dict(_zero),
+                    'sum_revenue': 0, 'sum_qty': 0}
         ph = ', '.join(['%s'] * len(sps))
-        conditions.append(f"c.custom_sfa_rep IN ({ph})")
+        scope.append(f"c.custom_sfa_rep IN ({ph})")
         values.extend(sps)
     elif ctx['is_manager'] and ctx['territory']:
-        conditions.append("c.territory = %s")
+        scope.append("c.territory = %s")
         values.append(ctx['territory'])
 
-    # UI filters
     if rep and (ctx['is_admin'] or ctx['is_manager']):
-        conditions.append("c.custom_sfa_rep = %s"); values.append(rep)
-    if status:
-        conditions.append("o.status = %s"); values.append(status)
+        scope.append("c.custom_sfa_rep = %s"); values.append(rep)
     if date_from and date_to:
-        conditions.append("DATE(o.transaction_date) BETWEEN %s AND %s")
+        scope.append("DATE(o.transaction_date) BETWEEN %s AND %s")
         values += [date_from, date_to]
     if customer:
-        conditions.append("o.customer = %s"); values.append(customer)
+        scope.append("o.customer = %s"); values.append(customer)
     if search:
-        conditions.append("o.customer LIKE %s"); values.append(f"%{search}%")
+        scope.append("o.customer LIKE %s"); values.append(f"%{search}%")
 
-    where = " AND ".join(conditions)
+    scope_where = " AND ".join(scope) if scope else "1=1"
+
+    # Friendly status -> docstatus / delivery condition. Static literals only
+    # (no user input), so these add no query parameters.
+    status_sql = {
+        'Draft':     "o.docstatus = 0",
+        'Confirmed': f"o.docstatus = 1 AND ({DELIV} IS NULL OR {DELIV} != 'Delivered')",
+        'Delivered': f"o.docstatus = 1 AND {DELIV} = 'Delivered'",
+        'Cancelled': "o.docstatus = 2",
+    }
+    row_cond = status_sql.get(status, "o.docstatus < 2")  # All = exclude cancelled
+    where = scope_where + " AND " + row_cond
+
+    # Per-status counts over the scope (independent of the active chip).
+    cr = frappe.db.sql(f"""
+        SELECT
+            SUM(CASE WHEN o.docstatus = 0 THEN 1 ELSE 0 END),
+            SUM(CASE WHEN o.docstatus = 1 AND ({DELIV} IS NULL OR {DELIV} != 'Delivered') THEN 1 ELSE 0 END),
+            SUM(CASE WHEN o.docstatus = 1 AND {DELIV} = 'Delivered' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN o.docstatus = 2 THEN 1 ELSE 0 END)
+        FROM `tabSales Order` o
+        INNER JOIN `tabCustomer` c ON c.name = o.customer
+        WHERE {scope_where}
+    """, values)[0]
+    d, cf, dl, cn = [int(x or 0) for x in cr]
+    counts = {'all': d + cf + dl, 'Draft': d, 'Confirmed': cf,
+              'Delivered': dl, 'Cancelled': cn}
 
     total = frappe.db.sql(f"""
         SELECT COUNT(*) FROM `tabSales Order` o
@@ -204,7 +234,6 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
         WHERE {where}
     """, values)[0][0]
 
-    # Aggregate totals across ALL matching orders (not just this page).
     agg = frappe.db.sql(f"""
         SELECT COALESCE(SUM(o.grand_total), 0), COALESCE(SUM(o.total_qty), 0)
         FROM `tabSales Order` o
@@ -215,19 +244,22 @@ def get_orders(search=None, rep=None, status=None, date_from=None,
     orders = frappe.db.sql(f"""
         SELECT o.name, o.customer, o.transaction_date, o.grand_total,
                o.status, o.total_qty, c.custom_sfa_rep as sales_person,
-               c.territory
+               c.territory,
+               CASE
+                   WHEN o.docstatus = 0 THEN 'Draft'
+                   WHEN o.docstatus = 2 THEN 'Cancelled'
+                   WHEN {DELIV} = 'Delivered' THEN 'Delivered'
+                   ELSE 'Confirmed'
+               END AS sfa_status
         FROM `tabSales Order` o
         INNER JOIN `tabCustomer` c ON c.name = o.customer
         WHERE {where}
-        ORDER BY o.transaction_date DESC
+        ORDER BY o.transaction_date DESC, o.creation DESC
         LIMIT %s OFFSET %s
     """, values + [int(page_length), int(start)], as_dict=True)
 
-    return {'items': orders, 'total': total,
+    return {'items': orders, 'total': total, 'counts': counts,
             'sum_revenue': float(agg[0]), 'sum_qty': float(agg[1])}
-
-
-# ── Payments ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_payments(search=None, rep=None, status=None, date_from=None,

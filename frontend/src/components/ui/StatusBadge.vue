@@ -17,6 +17,8 @@ const defaultColors = {
   'Active': 'bg-green-50 text-green-700',
   'Inactive': 'bg-gray-100 text-gray-500',
   'Completed': 'bg-blue-50 text-blue-700',
+  'Confirmed': 'bg-blue-50 text-blue-700',
+  'Delivered': 'bg-green-50 text-green-700',
   'In Progress': 'bg-green-50 text-green-700',
   'Planned': 'bg-gray-100 text-gray-600',
   'Cancelled': 'bg-red-50 text-red-600',

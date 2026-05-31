@@ -15,7 +15,6 @@ const routes = [
   { path: '/beat-plans', name: 'BeatPlans', component: () => import('@/pages/BeatPlans.vue') },
 
   { path: '/orders', name: 'Orders', component: () => import('@/pages/Orders.vue') },
-  { path: '/orders/:name', name: 'OrderDetail', component: () => import('@/pages/OrderDetail.vue'), props: true },
   { path: '/payments', name: 'Payments', component: () => import('@/pages/Payments.vue') },
   { path: '/catalog', name: 'Catalog', component: () => import('@/pages/catalog/Catalog.vue') },
   { path: '/schemes', name: 'FreeCartonSchemes', component: () => import('@/pages/schemes/Schemes.vue') },

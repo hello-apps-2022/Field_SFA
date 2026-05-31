@@ -33,6 +33,7 @@ doc_events = {
         "after_insert": "sfa_core.field_sfa.doc_events.customer.after_insert",
     },
     "Sales Order": {
+        "before_validate": "sfa_core.field_sfa.doc_events.sales_order.before_validate",
         "validate": "sfa_core.field_sfa.doc_events.sales_order.validate",
         "on_submit": "sfa_core.field_sfa.doc_events.sales_order.on_submit",
         "on_cancel": "sfa_core.field_sfa.doc_events.sales_order.on_cancel",
