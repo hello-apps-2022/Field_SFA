@@ -57,6 +57,10 @@ def _create_one(data, rep=None):
 		doc.custom_latitude = data.get("latitude")
 	if data.get("longitude"):
 		doc.custom_longitude = data.get("longitude")
+	if data.get("accuracy"):
+		doc.custom_sfa_gps_accuracy = data.get("accuracy")
+	if data.get("captured_at"):
+		doc.custom_sfa_captured_at = data.get("captured_at")
 
 	doc.custom_sfa_status = "Active"
 	if rep:
@@ -89,7 +93,7 @@ def _resolve_group(value):
 def create_customer(customer_name, territory=None, mobile_no=None,
                     customer_group=None, outlet_tier=None,
                     latitude=None, longitude=None,
-                    location_area=None, location_city=None):
+                    location_area=None, location_city=None, accuracy=None, captured_at=None):
 	"""Create a single outlet. Used by the in-app New Customer / rep field-add
 	flow. Reps get the new outlet auto-assigned to themselves and scoped to
 	their territory."""
@@ -122,6 +126,8 @@ def create_customer(customer_name, territory=None, mobile_no=None,
 		"longitude": longitude,
 		"location_area": location_area,
 		"location_city": location_city,
+		"accuracy": accuracy,
+		"captured_at": captured_at,
 	}, rep=rep)
 
 	return {"name": new_name, "customer_name": name}

@@ -3,7 +3,7 @@ from frappe import _
 from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
-def create_payment(customer, amount, payment_type, sales_person, visit=None, **kwargs):
+def create_payment(customer, amount, payment_type, sales_person, visit=None, latitude=None, longitude=None, accuracy=None, captured_at=None, **kwargs):
     """Create payment from mobile app"""
     sales_person = resolve_sales_person(sales_person)
     payment = frappe.get_doc({
@@ -13,6 +13,10 @@ def create_payment(customer, amount, payment_type, sales_person, visit=None, **k
         "payment_type": payment_type,
         "sales_person": sales_person,
         "visit": visit,
+        "custom_sfa_latitude": latitude,
+        "custom_sfa_longitude": longitude,
+        "custom_sfa_gps_accuracy": accuracy,
+        "custom_sfa_captured_at": captured_at,
         "payment_date": frappe.utils.nowdate(),
         **kwargs
     })

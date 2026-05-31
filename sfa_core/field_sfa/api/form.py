@@ -55,7 +55,7 @@ def get_form_templates(customer=None, visit=None):
 
 @frappe.whitelist()
 def submit_form_response(form_template, visit, customer, sales_person,
-                         survey_response_json, latitude=None, longitude=None, **kwargs):
+                         survey_response_json, latitude=None, longitude=None, accuracy=None, captured_at=None, **kwargs):
     """
     Submit a completed form response from the mobile app.
 
@@ -84,6 +84,8 @@ def submit_form_response(form_template, visit, customer, sales_person,
         "response_date": now_datetime(),
         "latitude": latitude,
         "longitude": longitude,
+        "custom_sfa_gps_accuracy": accuracy,
+        "custom_sfa_captured_at": captured_at,
         "sync_status": "Synced",
         "survey_version": survey_version,
         "survey_response_json": survey_response_json

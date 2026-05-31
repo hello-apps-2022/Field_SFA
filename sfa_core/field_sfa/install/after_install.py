@@ -4,6 +4,8 @@ from frappe import _
 
 def after_install():
     """Post-install setup for SFA Core"""
+    setup_gps_capture_fields()
+    setup_security_defaults()
     create_sfa_roles()
     frappe.db.commit()
     setup_sfa_module()
@@ -630,3 +632,55 @@ def seed_gamification_defaults():
             doc.insert(ignore_permissions=True)
         except Exception as e:
             frappe.log_error(f"SFA Core: failed to seed badge {badge['badge_name']}: {e}")
+
+
+SECURITY_DEFAULTS = {
+    "session_expiry": "336:00:00",        # 14-day sliding idle window
+    "deny_multiple_sessions": 1,          # one active session per user
+    "logout_on_password_reset": 1,        # a reset logs out all sessions
+    "disable_user_pass_login": 0,         # keep email/password login on
+}
+
+
+def setup_security_defaults():
+    """Apply Field SFA session-security System Settings.
+
+    Baked into install so every new tenant site gets the same security posture
+    without manual DB edits. Idempotent — safe to run on every install/migrate.
+    """
+    for field, value in SECURITY_DEFAULTS.items():
+        frappe.db.set_single_value("System Settings", field, value)
+    frappe.db.commit()
+
+
+GPS_CAPTURE_FIELDS = {
+    "Sales Order": [
+        {"fieldname": "custom_sfa_latitude", "label": "Capture Latitude", "fieldtype": "Float", "precision": "6", "insert_after": "custom_sfa_rep", "read_only": 1},
+        {"fieldname": "custom_sfa_longitude", "label": "Capture Longitude", "fieldtype": "Float", "precision": "6", "insert_after": "custom_sfa_latitude", "read_only": 1},
+        {"fieldname": "custom_sfa_gps_accuracy", "label": "Capture GPS Accuracy (m)", "fieldtype": "Float", "insert_after": "custom_sfa_longitude", "read_only": 1},
+        {"fieldname": "custom_sfa_captured_at", "label": "Captured At", "fieldtype": "Datetime", "insert_after": "custom_sfa_gps_accuracy", "read_only": 1},
+    ],
+    "SFA Payment": [
+        {"fieldname": "custom_sfa_latitude", "label": "Capture Latitude", "fieldtype": "Float", "precision": "6", "insert_after": "sales_person", "read_only": 1},
+        {"fieldname": "custom_sfa_longitude", "label": "Capture Longitude", "fieldtype": "Float", "precision": "6", "insert_after": "custom_sfa_latitude", "read_only": 1},
+        {"fieldname": "custom_sfa_gps_accuracy", "label": "Capture GPS Accuracy (m)", "fieldtype": "Float", "insert_after": "custom_sfa_longitude", "read_only": 1},
+        {"fieldname": "custom_sfa_captured_at", "label": "Captured At", "fieldtype": "Datetime", "insert_after": "custom_sfa_gps_accuracy", "read_only": 1},
+    ],
+    "Customer": [
+        {"fieldname": "custom_sfa_gps_accuracy", "label": "Capture GPS Accuracy (m)", "fieldtype": "Float", "insert_after": "custom_longitude", "read_only": 1},
+        {"fieldname": "custom_sfa_captured_at", "label": "Captured At", "fieldtype": "Datetime", "insert_after": "custom_sfa_gps_accuracy", "read_only": 1},
+    ],
+    "SFA Form Response": [
+        {"fieldname": "custom_sfa_gps_accuracy", "label": "Capture GPS Accuracy (m)", "fieldtype": "Float", "insert_after": "longitude", "read_only": 1},
+        {"fieldname": "custom_sfa_captured_at", "label": "Captured At", "fieldtype": "Datetime", "insert_after": "custom_sfa_gps_accuracy", "read_only": 1},
+    ],
+}
+
+
+def setup_gps_capture_fields():
+    """Capture-GPS custom fields on the records reps create in the field
+    (where/when each capture happened). Baked into install so new tenant sites
+    get them; a patch applies them to existing sites. Idempotent."""
+    from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+    create_custom_fields(GPS_CAPTURE_FIELDS, ignore_validate=True)
+    frappe.db.commit()

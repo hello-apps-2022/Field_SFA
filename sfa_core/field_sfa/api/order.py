@@ -3,7 +3,7 @@ from frappe import _
 from sfa_core.api.auth import resolve_sales_person
 
 @frappe.whitelist()
-def create_order(customer, items, sales_person, visit=None, **kwargs):
+def create_order(customer, items, sales_person, visit=None, latitude=None, longitude=None, accuracy=None, captured_at=None, **kwargs):
     """Create sales order from mobile app"""
     sales_person = resolve_sales_person(sales_person)
     order_items = []
@@ -29,6 +29,10 @@ def create_order(customer, items, sales_person, visit=None, **kwargs):
         "customer": customer,
         "custom_sfa_visit": visit,
         "custom_sfa_rep": sales_person,
+        "custom_sfa_latitude": latitude,
+        "custom_sfa_longitude": longitude,
+        "custom_sfa_gps_accuracy": accuracy,
+        "custom_sfa_captured_at": captured_at,
         "delivery_date": frappe.utils.add_days(frappe.utils.nowdate(), 1),
         "items": order_items,
         **kwargs
