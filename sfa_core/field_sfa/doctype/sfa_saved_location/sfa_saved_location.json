@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:location_name",
+ "autoname": "hash",
  "creation": "2026-05-25 19:47:00.000000",
  "doctype": "DocType",
  "editable_grid": 0,
@@ -11,10 +11,12 @@
   "latitude",
   "longitude",
   "accuracy",
+  "captured_at",
   "address",
   "location_type",
   "linked_customer",
   "is_active",
+  "custom_client_uuid",
   "created_by"
  ],
  "fields": [
@@ -22,24 +24,32 @@
    "fieldname": "location_name",
    "label": "Location Name",
    "fieldtype": "Data",
-   "reqd": 1
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "latitude",
    "label": "Latitude",
    "fieldtype": "Float",
+   "precision": "6",
    "reqd": 1
   },
   {
    "fieldname": "longitude",
    "label": "Longitude",
    "fieldtype": "Float",
+   "precision": "6",
    "reqd": 1
   },
   {
    "fieldname": "accuracy",
    "label": "Accuracy (m)",
    "fieldtype": "Float"
+  },
+  {
+   "fieldname": "captured_at",
+   "label": "Captured At",
+   "fieldtype": "Datetime"
   },
   {
    "fieldname": "address",
@@ -49,9 +59,10 @@
   {
    "fieldname": "location_type",
    "label": "Location Type",
-   "fieldtype": "Select",
-   "options": "Customer\nWarehouse\nOffice\nCompetitor\nOther",
-   "reqd": 1
+   "fieldtype": "Link",
+   "options": "SFA Location Type",
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "linked_customer",
@@ -64,7 +75,15 @@
    "fieldname": "is_active",
    "label": "Is Active",
    "fieldtype": "Check",
-   "default": 1
+   "default": "1"
+  },
+  {
+   "fieldname": "custom_client_uuid",
+   "label": "Client UUID",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "no_copy": 1,
+   "search_index": 1
   },
   {
    "fieldname": "created_by",
@@ -77,11 +96,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-25 19:47:00.000000",
+ "modified": "2026-06-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Field SFA",
  "name": "SFA Saved Location",
- "naming_rule": "By fieldname",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {

@@ -95,8 +95,14 @@ TABLES = [
     {"key": "form_responses", "doctype": "SFA Form Response",   "scope": lambda sp, ctx: {"sales_person": sp},
      "child_fields": None},  # embed all children (answers)
     {"key": "gps_tracks",     "doctype": "SFA GPS Track Point", "scope": lambda sp, ctx: {"sales_person": sp}},
+    {"key": "leads",          "doctype": "Lead",                "scope": lambda sp, ctx: {"custom_sfa_rep": sp},
+     "fields": ["name", "lead_name", "company_name", "email_id", "mobile_no",
+                "custom_sfa_status", "custom_sfa_rep", "territory", "source", "customer",
+                "custom_sfa_latitude", "custom_sfa_longitude", "custom_sfa_gps_accuracy",
+                "custom_sfa_captured_at", "creation", "modified"]},
     {"key": "saved_locations","doctype": "SFA Saved Location",  "scope": lambda sp, ctx: {"is_active": 1, "owner": frappe.session.user}},
     {"key": "points_config",  "doctype": "SFA Points Config",   "scope": lambda sp, ctx: {"is_active": 1}},
+    {"key": "location_types", "doctype": "SFA Location Type",   "scope": lambda sp, ctx: {"is_active": 1}},
 ]
 
 EMBED_ALL = object()  # sentinel: spec present but child_fields key absent -> none
@@ -271,12 +277,39 @@ def _h_gps(rec, sp, uuid):
     return track.name
 
 
+def _h_saved_location(rec, sp, uuid):
+    from sfa_core.field_sfa.api.saved_location import create_saved_location
+    r = create_saved_location(location_name=rec.get("location_name"),
+                              latitude=rec.get("latitude"), longitude=rec.get("longitude"),
+                              location_type=rec.get("location_type"),
+                              accuracy=rec.get("accuracy"), address=rec.get("address"),
+                              linked_customer=rec.get("linked_customer"),
+                              captured_at=rec.get("captured_at"), client_uuid=uuid)
+    return (r or {}).get("name")
+
+
+def _h_lead(rec, sp, uuid):
+    from sfa_core.field_sfa.api.leads import create_lead
+    r = create_lead(lead_name=rec.get("lead_name"),
+                    latitude=rec.get("latitude") or rec.get("custom_sfa_latitude"),
+                    longitude=rec.get("longitude") or rec.get("custom_sfa_longitude"),
+                    mobile_no=rec.get("mobile_no"), email_id=rec.get("email_id"),
+                    company_name=rec.get("company_name"), territory=rec.get("territory"),
+                    source=rec.get("source"),
+                    accuracy=rec.get("accuracy") or rec.get("custom_sfa_gps_accuracy"),
+                    captured_at=rec.get("captured_at") or rec.get("custom_sfa_captured_at"),
+                    notes=rec.get("notes"), client_uuid=uuid)
+    return (r or {}).get("name")
+
+
 PUSH_TABLES = {
     "visits":         {"doctype": "SFA Visit",           "handler": _h_visit},
     "orders":         {"doctype": "Sales Order",         "handler": _h_order},
     "payments":       {"doctype": "SFA Payment",         "handler": _h_payment},
     "form_responses": {"doctype": "SFA Form Response",   "handler": _h_form},
     "gps_tracks":     {"doctype": "SFA GPS Track Point", "handler": _h_gps},
+    "leads":          {"doctype": "Lead",                "handler": _h_lead},
+    "saved_locations": {"doctype": "SFA Saved Location",  "handler": _h_saved_location},
 }
 
 

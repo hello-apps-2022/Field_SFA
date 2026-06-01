@@ -107,6 +107,14 @@ const sections = [
         iconBg: 'bg-amber-50',
         iconColor: 'text-amber-600',
       },
+      {
+        to: '/settings/location-types',
+        label: 'Location Types',
+        desc: 'Manage the categories for saved GPS locations (customer, warehouse, competitor…).',
+        icon: 'tag',
+        iconBg: 'bg-teal-50',
+        iconColor: 'text-teal-600',
+      },
     ],
   },
   {

@@ -7,6 +7,8 @@ def after_install():
     setup_attendance_fields()
     setup_gps_capture_fields()
     setup_sync_fields()
+    setup_lead_fields()
+    setup_location_types()
     setup_security_defaults()
     create_sfa_roles()
     frappe.db.commit()
@@ -642,6 +644,48 @@ SECURITY_DEFAULTS = {
     "logout_on_password_reset": 1,        # a reset logs out all sessions
     "disable_user_pass_login": 0,         # keep email/password login on
 }
+
+
+DEFAULT_LOCATION_TYPES = [
+    ("Customer", "A customer / outlet location"),
+    ("Warehouse", "A storage or distribution point"),
+    ("Office", "A company office"),
+    ("Competitor", "A competitor outlet"),
+    ("Other", "Any other saved place"),
+]
+
+
+def setup_location_types():
+    """Seed the configurable saved-location type list. Idempotent."""
+    for option_name, description in DEFAULT_LOCATION_TYPES:
+        if not frappe.db.exists("SFA Location Type", option_name):
+            frappe.get_doc({
+                "doctype": "SFA Location Type",
+                "option_name": option_name,
+                "description": description,
+                "is_active": 1,
+            }).insert(ignore_permissions=True)
+
+
+LEAD_FIELDS = {
+    "Lead": [
+        {"fieldname": "custom_sfa_rep", "label": "SFA Rep", "fieldtype": "Link", "options": "Sales Person", "insert_after": "territory"},
+        {"fieldname": "custom_sfa_status", "label": "SFA Status", "fieldtype": "Select", "options": "New\nContacted\nQualified\nConverted\nDropped", "default": "New", "insert_after": "custom_sfa_rep"},
+        {"fieldname": "custom_sfa_latitude", "label": "Capture Latitude", "fieldtype": "Float", "precision": "6", "insert_after": "custom_sfa_status", "read_only": 1},
+        {"fieldname": "custom_sfa_longitude", "label": "Capture Longitude", "fieldtype": "Float", "precision": "6", "insert_after": "custom_sfa_latitude", "read_only": 1},
+        {"fieldname": "custom_sfa_gps_accuracy", "label": "Capture GPS Accuracy (m)", "fieldtype": "Float", "insert_after": "custom_sfa_longitude", "read_only": 1},
+        {"fieldname": "custom_sfa_captured_at", "label": "Captured At", "fieldtype": "Datetime", "insert_after": "custom_sfa_gps_accuracy", "read_only": 1},
+        {"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1, "insert_after": "custom_sfa_captured_at"},
+    ],
+}
+
+
+def setup_lead_fields():
+    """SFA fields on the ERPNext Lead: assigned rep, SFA lifecycle status,
+    GPS capture quad, and the offline-sync client uuid. Idempotent."""
+    from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+    create_custom_fields(LEAD_FIELDS, ignore_validate=True)
+    frappe.db.commit()
 
 
 def setup_security_defaults():

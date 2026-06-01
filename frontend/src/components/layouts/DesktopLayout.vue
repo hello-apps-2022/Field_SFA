@@ -35,8 +35,10 @@
         <div v-show="collapsed" class="my-2 border-t border-gray-200" />
 
         <SidebarLink :item="{ label: 'Customers', to: '/customers', icon: 'users' }" :collapsed="collapsed" />
+        <SidebarLink :item="{ label: 'Leads', to: '/leads', icon: 'user-plus' }" :collapsed="collapsed" />
         <SidebarLink :item="{ label: 'Visits', to: '/visits', icon: 'map-pin' }" :collapsed="collapsed" />
         <SidebarLink :item="{ label: 'Beat Plans', to: '/beat-plans', icon: 'map' }" :collapsed="collapsed" />
+        <SidebarLink :item="{ label: 'Saved Locations', to: '/saved-locations', icon: 'map-pin' }" :collapsed="collapsed" />
 
         <div v-show="!collapsed" class="px-2 pt-3 pb-1">
           <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Commerce</p>
@@ -115,6 +117,9 @@ const pageTitleMap = {
   Gamification: 'Gamification',
   Reports: 'Reports',
   Settings: 'Settings',
+  Leads: 'Leads',
+  SavedLocations: 'Saved Locations',
+  SettingsLocationTypes: 'Location Types',
 }
 
 const pageTitle = computed(() => pageTitleMap[route.name] || 'SFA')

@@ -6,6 +6,7 @@ const routes = [
   { path: '/dashboard', name: 'Dashboard', component: () => import('@/pages/Dashboard.vue') },
 
   { path: '/customers', name: 'Customers', component: () => import('@/pages/customers/Customers.vue') },
+  { path: '/leads', name: 'Leads', component: () => import('@/pages/Leads.vue') },
   { path: '/customers/:name', name: 'Customer', component: () => import('@/pages/customers/Customer.vue'), props: true },
   { path: '/orders/:name', name: 'Order', component: () => import('@/pages/orders/Order.vue'), props: true },
 
@@ -39,11 +40,13 @@ const routes = [
   { path: '/settings/team/:sp', name: 'RepProfile', component: () => import('@/pages/team/RepProfile.vue'), props: true },
   { path: '/settings/territories', name: 'SettingsTerritories', component: () => import('@/pages/SettingsTerritories.vue') },
   { path: '/settings/import-outlets', name: 'SettingsImportOutlets', component: () => import('@/pages/SettingsImportOutlets.vue') },
+  { path: '/settings/location-types', name: 'SettingsLocationTypes', component: () => import('@/pages/SettingsLocationTypes.vue') },
   { path: '/settings/beat-plan-permissions', name: 'BeatPlanPermissions', component: () => import('@/pages/BeatPlans.vue') },
 
   // Maps
   { path: '/rep-activity-map', name: 'RepActivityMap', component: () => import('@/pages/RepActivityMap.vue') },
   { path: '/customer-map', name: 'CustomerMap', component: () => import('@/pages/CustomerMap.vue') },
+  { path: '/saved-locations', name: 'SavedLocations', component: () => import('@/pages/SavedLocations.vue') },
 
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/pages/NotFound.vue') },
 ]

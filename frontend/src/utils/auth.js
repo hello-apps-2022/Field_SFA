@@ -25,6 +25,8 @@ export const auth = {
     const rules = {
       'dashboard':           true,
       'customers':           true,
+      'leads':               true,
+      'saved-locations':     true,
       'visits':              true,
       'beat-plans':          true,
       'orders':              true,
@@ -48,6 +50,7 @@ export const auth = {
       'settings':            r.isAdmin || r.isManager,
       'settings/team':       r.isAdmin || r.isManager,
       'settings/territories': r.isAdmin || r.isManager,
+      'settings/location-types': r.isAdmin || r.isManager,
       'settings/beat-plan-permissions': r.isAdmin || r.isManager || r.isSupervisor,
     }
     if (page.startsWith('settings/team/')) return r.isAdmin || r.isManager || r.isRep || r.isSupervisor
