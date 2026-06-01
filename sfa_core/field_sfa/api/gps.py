@@ -1,8 +1,11 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 from sfa_core.api.auth import resolve_sales_person
+from frappe.utils import cint
 
 @frappe.whitelist()
+@mobile_api
 def upload_gps_track(points):
     """Upload GPS track points from mobile app"""
     sp = resolve_sales_person()
@@ -27,7 +30,8 @@ def upload_gps_track(points):
     return {"created": created}
 
 @frappe.whitelist()
-def get_gps_tracks(sales_person, date=None, limit=1000):
+@mobile_api
+def get_gps_tracks(sales_person, date=None, start=0, page_length=1000):
     """Get GPS tracks for a sales person"""
     sales_person = resolve_sales_person(sales_person)
     filters = {"sales_person": sales_person}
@@ -38,7 +42,8 @@ def get_gps_tracks(sales_person, date=None, limit=1000):
         filters=filters,
         fields=["name", "timestamp", "latitude", "longitude", "accuracy", 
                 "altitude", "speed", "battery_level"],
-        limit=limit,
+        limit_start=cint(start),
+        limit_page_length=min(cint(page_length) or 1000, 5000),
         order_by="timestamp")
 
-    return tracks
+    return {"items": tracks, "total": frappe.db.count("SFA GPS Track Point", filters)}

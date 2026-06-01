@@ -1,4 +1,5 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from sfa_core.api.auth import get_user_context
 
 
@@ -11,12 +12,14 @@ def _require_manager():
 
 # ── Companies ───────────────────────────────────────────────────────────────
 @frappe.whitelist()
+@mobile_api
 def get_companies():
     return frappe.get_all("SFA Company", fields=["name", "company_name", "enabled"],
                           order_by="company_name asc", ignore_permissions=True)
 
 
 @frappe.whitelist()
+@mobile_api
 def save_company(company_name, enabled=1, name=None):
     _require_manager()
     if name:
@@ -32,6 +35,7 @@ def save_company(company_name, enabled=1, name=None):
 
 
 @frappe.whitelist()
+@mobile_api
 def delete_company(name):
     _require_manager()
     frappe.delete_doc("SFA Company", name, ignore_permissions=True)
@@ -40,6 +44,7 @@ def delete_company(name):
 
 # ── Categories (ERPNext Item Groups) ─────────────────────────────────────────
 @frappe.whitelist()
+@mobile_api
 def get_categories():
     cats = frappe.get_all("Item Group", filters={"is_group": 0},
                           fields=["name", "custom_sfa_enabled"],
@@ -50,6 +55,7 @@ def get_categories():
 
 
 @frappe.whitelist()
+@mobile_api
 def set_category_enabled(name, enabled):
     _require_manager()
     frappe.db.set_value("Item Group", name, "custom_sfa_enabled", int(enabled))
@@ -57,6 +63,7 @@ def set_category_enabled(name, enabled):
 
 
 @frappe.whitelist()
+@mobile_api
 def save_category(category_name, name=None):
     _require_manager()
     if name and name != category_name:
@@ -75,6 +82,7 @@ def save_category(category_name, name=None):
 
 # ── Products (ERPNext Items) ─────────────────────────────────────────────────
 @frappe.whitelist()
+@mobile_api
 def get_products(search=None):
     filters = {"is_sales_item": 1}
     if search:
@@ -88,6 +96,7 @@ def get_products(search=None):
 
 
 @frappe.whitelist()
+@mobile_api
 def save_product(item_name, item_group, custom_sfa_company=None, custom_size=None,
                  custom_packaging=None, custom_pack_config=None, standard_rate=0,
                  name=None, stock_uom="Nos"):
@@ -121,6 +130,7 @@ def save_product(item_name, item_group, custom_sfa_company=None, custom_size=Non
 
 
 @frappe.whitelist()
+@mobile_api
 def delete_product(name):
     """Disable rather than hard-delete — orders may reference the item."""
     _require_manager()
@@ -129,6 +139,7 @@ def delete_product(name):
 
 
 @frappe.whitelist()
+@mobile_api
 def set_product_enabled(name, enabled):
     _require_manager()
     frappe.db.set_value("Item", name, "disabled", 0 if int(enabled) else 1)
@@ -136,6 +147,7 @@ def set_product_enabled(name, enabled):
 
 
 @frappe.whitelist()
+@mobile_api
 def get_orderable_items(search=None):
     """Rep-facing: sellable items that are enabled and in an enabled category."""
     disabled_cats = frappe.get_all("Item Group", filters={"custom_sfa_enabled": 0}, pluck="name")

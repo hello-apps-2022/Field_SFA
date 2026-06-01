@@ -1,11 +1,20 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 from sfa_core.api.auth import resolve_sales_person
+from frappe.utils import cint
 
 @frappe.whitelist()
+@mobile_api
 def create_order(customer, items, sales_person, visit=None, latitude=None, longitude=None, accuracy=None, captured_at=None, **kwargs):
     """Create sales order from mobile app"""
     sales_person = resolve_sales_person(sales_person)
+    client_uuid = kwargs.pop("client_uuid", None) or kwargs.get("custom_client_uuid")
+    if client_uuid:
+        _dupe = frappe.db.get_value("Sales Order", {"custom_client_uuid": client_uuid}, "name")
+        if _dupe:
+            return {"name": _dupe, "status": "duplicate"}
+        kwargs["custom_client_uuid"] = client_uuid
     order_items = []
     for item in items:
         if item.get("is_free") or item.get("is_free_item"):
@@ -43,7 +52,8 @@ def create_order(customer, items, sales_person, visit=None, latitude=None, longi
     return {"name": so.name, "status": "submitted"}
 
 @frappe.whitelist()
-def get_orders(sales_person=None, customer=None, limit=50):
+@mobile_api
+def get_orders(sales_person=None, customer=None, start=0, page_length=50):
     """Get orders for mobile app"""
     sales_person = resolve_sales_person(sales_person)
     filters = {"docstatus": 1}
@@ -56,7 +66,8 @@ def get_orders(sales_person=None, customer=None, limit=50):
         filters=filters,
         fields=["name", "customer", "transaction_date", "grand_total", "status", 
                 "custom_sfa_visit", "custom_sfa_rep"],
-        limit=limit,
+        limit_start=cint(start),
+        limit_page_length=min(cint(page_length) or 50, 1000),
         order_by="transaction_date desc")
 
-    return orders
+    return {"items": orders, "total": frappe.db.count("Sales Order", filters)}

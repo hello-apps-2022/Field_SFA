@@ -1,4 +1,5 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 from frappe.utils import now_datetime
 
@@ -19,6 +20,7 @@ def _can_manage(doc):
 
 
 @frappe.whitelist()
+@mobile_api
 def confirm_order(name):
     # Draft -> Submitted. Counts toward revenue/targets once submitted.
     doc = frappe.get_doc("Sales Order", name)
@@ -33,6 +35,7 @@ def confirm_order(name):
 
 
 @frappe.whitelist()
+@mobile_api
 def mark_delivered(name):
     # Any rep/manager/admin can mark a confirmed order delivered (locks it).
     doc = frappe.get_doc("Sales Order", name)
@@ -51,6 +54,7 @@ def mark_delivered(name):
 
 
 @frappe.whitelist()
+@mobile_api
 def cancel_order(name):
     doc = frappe.get_doc("Sales Order", name)
     if not _can_manage(doc):
@@ -61,6 +65,7 @@ def cancel_order(name):
 
 
 @frappe.whitelist()
+@mobile_api
 def update_order_items(name, items):
     """Edit line items on a confirmed Booking order (before delivery)."""
     import json

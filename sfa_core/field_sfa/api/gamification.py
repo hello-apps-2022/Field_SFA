@@ -1,7 +1,9 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 
 @frappe.whitelist()
+@mobile_api
 def get_leaderboard(period=None, limit=50):
     """Get points leaderboard"""
     from frappe.utils import getdate, add_months
@@ -38,6 +40,7 @@ def get_leaderboard(period=None, limit=50):
     return leaderboard
 
 @frappe.whitelist()
+@mobile_api
 def get_rep_badges(sales_person):
     """Get badges for a sales person"""
     from sfa_core.api.auth import resolve_sales_person
@@ -50,6 +53,7 @@ def get_rep_badges(sales_person):
     return badges
 
 @frappe.whitelist()
+@mobile_api
 def get_rep_points(sales_person):
     """Get total points for a sales person"""
     from sfa_core.api.auth import resolve_sales_person

@@ -1,4 +1,5 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe.utils import nowdate
 
 _FIELDS = ["name", "target_type", "customer", "territory",
@@ -35,6 +36,7 @@ def _legacy_fallback(row, custs, terrs):
 
 
 @frappe.whitelist()
+@mobile_api
 def get_free_carton_schemes(customer):
     # Active schemes applying to a customer directly or via its territory.
     if not customer:
@@ -73,6 +75,7 @@ def free_entitlement_for_order(customer, paid_qty_map):
 
 
 @frappe.whitelist()
+@mobile_api
 def get_schemes():
     # CRUD-screen list, each row enriched with its customer/territory lists.
     rows = frappe.get_list(
@@ -99,6 +102,7 @@ def _norm_list(val):
 
 
 @frappe.whitelist()
+@mobile_api
 def save_scheme(data):
     if isinstance(data, str):
         data = frappe.parse_json(data)
@@ -127,6 +131,7 @@ def save_scheme(data):
 
 
 @frappe.whitelist()
+@mobile_api
 def delete_scheme(name):
     frappe.delete_doc("SFA Free Carton Scheme", name)
     frappe.db.commit()
@@ -134,11 +139,13 @@ def delete_scheme(name):
 
 
 @frappe.whitelist()
+@mobile_api
 def get_free_carton_policy():
     return {"allow_discretionary_free": bool(frappe.db.get_single_value("SFA Brand Settings", "allow_discretionary_free"))}
 
 
 @frappe.whitelist()
+@mobile_api
 def set_free_carton_policy(allow):
     from sfa_core.api.auth import require_role
     require_role("SFA Admin", "SFA Manager")

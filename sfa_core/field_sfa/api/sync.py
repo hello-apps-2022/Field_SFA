@@ -19,6 +19,7 @@ import datetime
 import json
 
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 import pytz
 from frappe import _
 from frappe.utils import get_datetime, get_system_timezone, now_datetime
@@ -64,7 +65,15 @@ def _customer_scope(sp, ctx):
         filters={"sales_person": sp, "is_active": 1},
         pluck="customer",
     ))
-    return {"custom_sfa_status": ["!=", "Inactive"], "name": ["in", list(names) or [""]]}
+    # Referential closure: also include any customer referenced by the rep's
+    # own visits / orders / payments, so the device never holds a dangling
+    # reference to a customer that fell outside the assigned/shared scope.
+    names.update(frappe.get_all("SFA Visit", filters={"sales_person": sp}, pluck="customer"))
+    names.update(frappe.get_all("Sales Order", filters={"custom_sfa_rep": sp}, pluck="customer"))
+    names.update(frappe.get_all("SFA Payment", filters={"sales_person": sp}, pluck="customer"))
+    names.discard(None)
+    names.discard("")
+    return {"name": ["in", list(names) or [""]]}
 
 
 # Each table: device key -> how to pull it.
@@ -72,7 +81,10 @@ def _customer_scope(sp, ctx):
 #   scope(sp,ctx) filter dict, scoped to the rep
 #   child_fields  table fieldnames to embed (None = none; [] also none)
 TABLES = [
-    {"key": "customers",      "doctype": "Customer",            "scope": _customer_scope},
+    {"key": "customers",      "doctype": "Customer",            "scope": _customer_scope, "full": True,
+     "fields": ["name", "customer_name", "customer_group", "territory",
+                "custom_sfa_status", "custom_sfa_rep", "custom_last_visit_date",
+                "custom_visit_frequency", "disabled", "creation", "modified"]},
     {"key": "beat_plans",     "doctype": "SFA Beat Plan",       "scope": lambda sp, ctx: {"sales_person": sp},
      "child_fields": ["customers", "route_waypoints"]},
     {"key": "visits",         "doctype": "SFA Visit",           "scope": lambda sp, ctx: {"sales_person": sp}},
@@ -149,10 +161,11 @@ def _deletions(doctype, boundary_str):
 def _pull_table(spec, sp, ctx, boundary, boundary_str):
     doctype = spec["doctype"]
     filters = dict(spec["scope"](sp, ctx))
-    if boundary_str:
+    if boundary_str and not spec.get("full"):
         filters["modified"] = [">", boundary_str]
 
-    rows = frappe.get_all(doctype, filters=filters, fields=["*"], order_by="modified asc")
+    fields = spec.get("fields") or ["*"]
+    rows = frappe.get_all(doctype, filters=filters, fields=fields, order_by="modified asc")
     allow = spec["child_fields"] if "child_fields" in spec else EMBED_ALL
     if allow is not EMBED_ALL:
         _attach_children(doctype, rows, allow)
@@ -170,6 +183,7 @@ def _pull_table(spec, sp, ctx, boundary, boundary_str):
 
 
 @frappe.whitelist()
+@mobile_api
 def pull_changes(last_pulled_at=None, schema_version=None):
     """WatermelonDB pull. `last_pulled_at` is the ms-epoch the device received
     from its previous pull (omit/null/0 for a first full sync). `schema_version`
@@ -303,6 +317,7 @@ def _apply_table(table, tc, sp):
 
 
 @frappe.whitelist()
+@mobile_api
 def push_changes(changes=None, last_pulled_at=None):
     """WatermelonDB push. Applies device-created records idempotently (by
     client_uuid) by routing each through its typed create endpoint, so

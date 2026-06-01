@@ -1,10 +1,12 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 import json
 from frappe.utils import now_datetime
 
 
 @frappe.whitelist()
+@mobile_api
 def get_form_templates(customer=None, visit=None):
     """
     Return active form templates applicable to a visit/customer.
@@ -54,6 +56,7 @@ def get_form_templates(customer=None, visit=None):
 
 
 @frappe.whitelist()
+@mobile_api
 def submit_form_response(form_template, visit, customer, sales_person,
                          survey_response_json, latitude=None, longitude=None, accuracy=None, captured_at=None, **kwargs):
     """
@@ -64,6 +67,11 @@ def submit_form_response(form_template, visit, customer, sales_person,
     """
     from sfa_core.api.auth import resolve_sales_person
     sales_person = resolve_sales_person(sales_person)
+    client_uuid = kwargs.pop("client_uuid", None) or kwargs.get("custom_client_uuid")
+    if client_uuid:
+        _dupe = frappe.db.get_value("SFA Form Response", {"custom_client_uuid": client_uuid}, "name")
+        if _dupe:
+            return {"name": _dupe, "status": "duplicate"}
     # Avoid duplicate submission for the same visit + template
     existing = frappe.db.exists("SFA Form Response", {
         "form_template": form_template,
@@ -87,6 +95,7 @@ def submit_form_response(form_template, visit, customer, sales_person,
         "custom_sfa_gps_accuracy": accuracy,
         "custom_sfa_captured_at": captured_at,
         "sync_status": "Synced",
+        "custom_client_uuid": client_uuid,
         "survey_version": survey_version,
         "survey_response_json": survey_response_json
             if isinstance(survey_response_json, str)
@@ -101,6 +110,7 @@ def submit_form_response(form_template, visit, customer, sales_person,
 
 
 @frappe.whitelist()
+@mobile_api
 def get_form_responses(form_template=None, visit=None, customer=None,
                        sales_person=None, from_date=None, to_date=None, limit=50):
     """
@@ -138,6 +148,7 @@ def get_form_responses(form_template=None, visit=None, customer=None,
 
 
 @frappe.whitelist()
+@mobile_api
 def get_response_detail(response_name):
     """
     Return full response including all response_items.
@@ -147,6 +158,7 @@ def get_response_detail(response_name):
 
 
 @frappe.whitelist()
+@mobile_api
 def duplicate_form_template(template_name):
     """
     Duplicate a form template (called from FormTemplates.vue).

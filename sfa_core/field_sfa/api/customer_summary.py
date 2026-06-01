@@ -1,4 +1,5 @@
 import frappe
+from sfa_core.field_sfa.api.response import mobile_api
 from frappe import _
 
 
@@ -10,6 +11,7 @@ def _f(v):
 
 
 @frappe.whitelist()
+@mobile_api
 def get_customer_summary(customer, date_from=None, date_to=None):
     """Date-filtered activity roll-up for one customer."""
     if not customer or not frappe.db.exists("Customer", customer):
