@@ -20,6 +20,8 @@ const routes = [
   { path: '/schemes', name: 'FreeCartonSchemes', component: () => import('@/pages/schemes/Schemes.vue') },
   { path: '/expenses', name: 'Expenses', component: () => import('@/pages/expenses/Expenses.vue') },
   { path: '/leave', name: 'Leave', component: () => import('@/pages/leave/Leave.vue') },
+  { path: '/attendance', name: 'Attendance', component: () => import('@/pages/Attendance.vue') },
+  { path: '/attendance-report', name: 'AttendanceReport', component: () => import('@/pages/AttendanceReport.vue') },
   { path: "/approvals/expenses", name: "ExpenseApprovals", component: () => import("@/pages/approvals/ExpenseApprovals.vue") },
   { path: "/approvals/leave", name: "LeaveApprovals", component: () => import("@/pages/approvals/LeaveApprovals.vue") },
 

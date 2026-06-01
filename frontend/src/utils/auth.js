@@ -33,6 +33,8 @@ export const auth = {
       'schemes':             true,
       'expenses':            true,
       'leave':               true,
+      'attendance':          true,
+      'attendance-report':   r.isAdmin || r.isManager || r.isSupervisor,
       'approvals/expenses':  r.isAdmin || r.isManager,
       'approvals/leave':     r.isAdmin || r.isManager,
       'form-templates':      r.isAdmin || r.isManager,

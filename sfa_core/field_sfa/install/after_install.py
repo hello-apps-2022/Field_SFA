@@ -4,6 +4,7 @@ from frappe import _
 
 def after_install():
     """Post-install setup for SFA Core"""
+    setup_attendance_fields()
     setup_gps_capture_fields()
     setup_security_defaults()
     create_sfa_roles()
@@ -683,4 +684,19 @@ def setup_gps_capture_fields():
     get them; a patch applies them to existing sites. Idempotent."""
     from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
     create_custom_fields(GPS_CAPTURE_FIELDS, ignore_validate=True)
+    frappe.db.commit()
+
+
+ATTENDANCE_FIELDS = {
+    "Employee Checkin": [
+        {"fieldname": "custom_sfa_day_priorities", "label": "Day Priorities", "fieldtype": "Small Text", "insert_after": "device_id"},
+        {"fieldname": "custom_sfa_day_focus", "label": "Day Focus Areas", "fieldtype": "Small Text", "insert_after": "custom_sfa_day_priorities"},
+    ],
+}
+
+
+def setup_attendance_fields():
+    """Custom field for the rep's top priorities captured at day-start."""
+    from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+    create_custom_fields(ATTENDANCE_FIELDS, ignore_validate=True)
     frappe.db.commit()

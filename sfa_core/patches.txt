@@ -12,3 +12,5 @@ sfa_core.patches.v1_0.drop_sfa_reports_to
 sfa_core.patches.v1_0.add_payment_carton_fields
 sfa_core.patches.v1_0.add_payment_order_link
 sfa_core.patches.v1_0.add_gps_capture_fields
+sfa_core.patches.v1_0.add_attendance_priorities_field
+sfa_core.patches.v1_0.add_attendance_focus_field

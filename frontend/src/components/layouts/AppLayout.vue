@@ -45,6 +45,8 @@
         <NavSection label="Workforce" :collapsed="!isExpanded" />
         <NavLink :item="{ label: 'Expenses', to: '/expenses', icon: 'receipt' }" :collapsed="!isExpanded" />
         <NavLink :item="{ label: 'Leave', to: '/leave', icon: 'calendar' }" :collapsed="!isExpanded" />
+        <NavLink :item="{ label: 'Attendance', to: '/attendance', icon: 'clock' }" :collapsed="!isExpanded" />
+        <NavLink v-if="auth.canAccess('attendance-report')" :item="{ label: 'Attendance Report', to: '/attendance-report', icon: 'user-check' }" :collapsed="!isExpanded" />
 
         <!-- Approvals submenu (managers/admins only) -->
         <NavGroup
