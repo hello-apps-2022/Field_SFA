@@ -6,6 +6,7 @@ def after_install():
     """Post-install setup for SFA Core"""
     setup_attendance_fields()
     setup_gps_capture_fields()
+    setup_sync_fields()
     setup_security_defaults()
     create_sfa_roles()
     frappe.db.commit()
@@ -699,4 +700,22 @@ def setup_attendance_fields():
     """Custom field for the rep's top priorities captured at day-start."""
     from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
     create_custom_fields(ATTENDANCE_FIELDS, ignore_validate=True)
+    frappe.db.commit()
+
+
+SYNC_FIELDS = {
+    "SFA Visit":           [{"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1}],
+    "Sales Order":         [{"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1}],
+    "SFA Payment":         [{"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1}],
+    "SFA Form Response":   [{"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1}],
+    "SFA GPS Track Point": [{"fieldname": "custom_client_uuid", "label": "Client UUID", "fieldtype": "Data", "read_only": 1, "no_copy": 1, "search_index": 1}],
+}
+
+
+def setup_sync_fields():
+    """Client UUID on each device-pushable DocType so offline sync upserts are
+    idempotent (push looks records up by it). Baked into install; a patch applies
+    it to existing sites. Idempotent."""
+    from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+    create_custom_fields(SYNC_FIELDS, ignore_validate=True)
     frappe.db.commit()

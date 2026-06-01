@@ -9,12 +9,15 @@ def get_customers(sales_person=None, territory=None, limit=200):
     filters = {"custom_sfa_status": ["!=", "Inactive"]}
 
     if sales_person:
-        # Get customers assigned to this sales person via share log
-        shared_customers = frappe.get_all("SFA Customer Share Log",
+        # Customers assigned to this rep: primary rep on the Customer
+        # (custom_sfa_rep) plus any explicitly shared via the active share log.
+        # Empty -> nothing (never the whole book).
+        names = set(frappe.get_all("Customer",
+            filters={"custom_sfa_rep": sales_person}, pluck="name"))
+        names.update(frappe.get_all("SFA Customer Share Log",
             filters={"sales_person": sales_person, "is_active": 1},
-            pluck="customer")
-        if shared_customers:
-            filters["name"] = ["in", shared_customers]
+            pluck="customer"))
+        filters["name"] = ["in", list(names) or [""]]
 
     if territory:
         filters["territory"] = territory
